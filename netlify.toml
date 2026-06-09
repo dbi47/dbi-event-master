@@ -1,0 +1,16 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions."reminders"]
+  schedule = "0 7 * * *"
+
+[[redirects]]
+  from = "/api/*"
+  to   = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/ics"
+  to   = "/.netlify/functions/ics"
+  status = 200
