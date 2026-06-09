@@ -1,0 +1,9 @@
+{
+  "name": "dbi-event-master",
+  "version": "1.0.0",
+  "description": "DBI Event Master",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "node-fetch": "^2.7.0"
+  }
+}
