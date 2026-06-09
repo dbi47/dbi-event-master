@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBI Event Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,700;0,900;1,300&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & VARIABLES ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1a1433;--paper:#f4f3f8;--cream:#eae8f4;--accent:#c2185b;
+  --mid:#6b6485;--line:#d4d0e8;
+  --red-bg:#fde8f0;--red-fg:#b0175a;
+  --amb-bg:#fff4e0;--amb-fg:#8a5c00;
+  --grn-bg:#e0f0ea;--grn-fg:#1a6040;
+  --blu-bg:#e8ecf8;--blu-fg:#2d3a8c;
+  --yell:#f8f6ff;--radius:6px;
+  --shadow:0 2px 20px rgba(45,58,140,.12);
+  --sidebar-w:220px;--header-h:60px;--main-pad:32px 36px 80px;
+}
+html,body{height:100%}
+body{font-family:'Instrument Sans',sans-serif;background:var(--paper);color:var(--ink);
+  display:flex;flex-direction:column;font-size:14px;line-height:1.5}
+
+/* ── TOP BAR ── */
+.topbar{height:var(--header-h);background:linear-gradient(135deg,#1a1433 0%,#2d3a8c 100%);
+  display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;
+  position:sticky;top:0;z-index:200}
+.topbar-logo{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:700;color:#f4f3f8;
+  letter-spacing:-.02em;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.topbar-logo span{background:linear-gradient(90deg,#c2185b,#9b59b6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.topbar-title{flex:1;font-size:.72rem;font-weight:500;color:#9088b8;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-date{font-family:'DM Mono',monospace;font-size:.72rem;color:#6860a0;white-space:nowrap;flex-shrink:0}
+.role-badge{font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.role-badge-hub{background:rgba(194,24,91,.25);color:#f0c8d8}
+.role-badge-proj{background:rgba(45,58,140,.25);color:#c0c8f0}
+
+/* ── LAYOUT ── */
+.app-body{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1a1433 0%,#130f2a 100%);
+  flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+  padding:16px 0 60px;transition:transform .25s ease,width .25s ease;z-index:150}
+.sidebar-section{padding:12px 16px 4px;font-size:.62rem;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:#4a4270;white-space:nowrap}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;
+  font-size:.82rem;color:#b0a8d8;border-left:3px solid transparent;
+  transition:all .15s;user-select:none;touch-action:manipulation;white-space:nowrap}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#f0eeff}
+.nav-item.active{background:rgba(194,24,91,.18);color:#f0eeff;border-left-color:var(--accent)}
+.nav-icon{font-size:1.05rem;flex-shrink:0}
+.nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.nav-badge{flex-shrink:0;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:10px;
+  background:var(--accent);color:white;display:none}
+.nav-badge.show{display:inline}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:var(--main-pad);min-width:0}
+.page{display:none}
+.page.active{display:block}
+.page-title{font-family:'Fraunces',serif;font-size:clamp(1.3rem,3vw,1.7rem);
+  font-weight:700;color:var(--ink);margin-bottom:4px;letter-spacing:-.02em}
+.page-sub{font-size:.82rem;color:var(--mid);margin-bottom:24px;line-height:1.5}
+
+/* ── CARDS / TABLES ── */
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.dash-card{background:white;border-radius:var(--radius);padding:18px 16px;
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.card-label{font-size:.67rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);margin-bottom:6px}
+.card-value{font-family:'Fraunces',serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;line-height:1;margin-bottom:4px}
+.card-sub{font-size:.72rem;color:var(--mid)}
+.card-red{border-top:3px solid var(--red-fg)}.card-red .card-value{color:var(--red-fg)}
+.card-amb{border-top:3px solid var(--amb-fg)}.card-amb .card-value{color:var(--amb-fg)}
+.card-grn{border-top:3px solid var(--grn-fg)}.card-grn .card-value{color:var(--grn-fg)}
+.card-ink{border-top:3px solid var(--ink)}.card-ink .card-value{color:var(--ink)}
+.progress-bar-wrap{background:var(--cream);border-radius:4px;height:7px;overflow:hidden;margin-top:8px}
+.progress-bar{height:100%;background:var(--grn-fg);border-radius:4px;transition:width .4s ease}
+
+.section-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;margin-bottom:10px;color:var(--ink)}
+.table-wrap{background:white;border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);margin-bottom:28px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:480px}
+thead th{background:linear-gradient(135deg,#1a1433 0%,#2d3a8c 100%);color:#f0eeff;
+  font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 12px;text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--line);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#edeaf6}
+tbody td{padding:10px 12px;font-size:.82rem;vertical-align:middle}
+tbody tr.row-event{background:linear-gradient(135deg,#1a1433 0%,#2d3a8c 100%)}
+tbody tr.row-event td{color:#f0eeff;font-weight:600}
+.td-label{font-weight:500}
+.td-date{font-family:'DM Mono',monospace;font-size:.73rem;white-space:nowrap}
+.td-days{font-family:'DM Mono',monospace;font-size:.73rem;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;
+  font-size:.7rem;font-weight:700;white-space:nowrap}
+.pill-red{background:var(--red-bg);color:var(--red-fg)}
+.pill-amb{background:var(--amb-bg);color:var(--amb-fg)}
+.pill-grn{background:var(--grn-bg);color:var(--grn-fg)}
+.pill-blu{background:var(--blu-bg);color:var(--blu-fg)}
+.pill-grey{background:var(--cream);color:var(--mid)}
+tr.status-red{background:#fce8f3!important}
+tr.status-amb{background:#fef9e0!important}
+tr.status-grn{background:#edf8f3!important}
+tr.status-blu{background:#eceef8!important}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mid)}
+.form-label .req{color:var(--accent);margin-left:2px}
+input[type=text],input[type=date],input[type=email],select,textarea{
+  border:1px solid var(--line);background:var(--yell);padding:10px 12px;
+  font-family:'Instrument Sans',sans-serif;font-size:.9rem;color:var(--ink);
+  border-radius:4px;outline:none;transition:border-color .15s,background .15s;
+  width:100%;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:white}
+select{cursor:pointer}
+.card-box{background:white;border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;margin-bottom:20px;box-shadow:var(--shadow)}
+.card-box-title{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--mid);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.btn{background:var(--accent);color:white;border:none;padding:12px 24px;
+  font-family:'Instrument Sans',sans-serif;font-size:.85rem;font-weight:600;
+  cursor:pointer;border-radius:4px;transition:background .15s,transform .1s;
+  touch-action:manipulation;min-height:44px}
+.btn:hover{background:#96104a;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-secondary{background:white;color:var(--ink);border:1px solid var(--line)}
+.btn-secondary:hover{background:var(--cream);background-color:var(--cream)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.alert{display:none;padding:11px 15px;border-radius:4px;font-size:.82rem;font-weight:500;
+  margin-bottom:18px;line-height:1.5}
+.alert.show{display:block}
+.alert-red{background:var(--red-bg);color:var(--red-fg);border-left:4px solid var(--red-fg)}
+.alert-amb{background:var(--amb-bg);color:var(--amb-fg);border-left:4px solid var(--amb-fg)}
+.alert-grn{background:var(--grn-bg);color:var(--grn-fg);border-left:4px solid var(--grn-fg)}
+.alert-blu{background:var(--blu-bg);color:var(--blu-fg);border-left:4px solid var(--blu-fg)}
+.wf-section-header td{background:linear-gradient(90deg,#eae8f4,#e8ecf8);font-weight:700;
+  font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);padding:8px 12px}
+.erledigt-input{border:1px solid var(--line);background:var(--yell);padding:5px 8px;
+  font-family:'DM Mono',monospace;font-size:.73rem;color:var(--ink);border-radius:3px;
+  width:118px;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.erledigt-input:focus{border-color:var(--accent);background:white}
+.erledigt-input.done{background:var(--blu-bg);border-color:var(--blu-fg);color:var(--blu-fg)}
+
+/* ── EVENT LIST CARDS ── */
+.event-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px}
+.event-card{background:white;border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;box-shadow:var(--shadow);cursor:pointer;transition:all .15s;position:relative}
+.event-card:hover{border-color:#2d3a8c;transform:translateY(-2px);box-shadow:0 6px 28px rgba(45,58,140,.18)}
+.event-card.active-event{border-left:4px solid var(--accent)}
+.event-card-name{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:4px}
+.event-card-date{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--grn-fg);margin-bottom:10px}
+.event-card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.event-card-actions{display:flex;gap:8px}
+.new-event-card{background:var(--cream);border:2px dashed var(--line);border-radius:var(--radius);
+  padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;min-height:120px;gap:8px}
+.new-event-card:hover{border-color:var(--accent);background:var(--red-bg)}
+.new-event-card-icon{font-size:1.8rem}
+.new-event-card-label{font-size:.82rem;font-weight:600;color:var(--mid)}
+
+/* ── PM TOKENS ── */
+.token-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--line);font-size:.82rem}
+.token-row:last-child{border-bottom:none}
+.token-name{font-weight:600}
+.token-link{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--blu-fg);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.token-copy{background:var(--blu-bg);color:var(--blu-fg);border:none;padding:4px 10px;
+  border-radius:3px;font-size:.7rem;cursor:pointer;white-space:nowrap;font-weight:600}
+.token-copy:hover{background:#c0c8f0}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:20px;
+  background:linear-gradient(135deg,#1a1433 0%,#2d3a8c 100%);color:#f0eeff;
+  padding:12px 18px;border-radius:6px;font-size:.82rem;font-weight:500;
+  box-shadow:0 4px 20px rgba(0,0,0,.28);
+  transform:translateY(80px);opacity:0;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:999;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── LOADING SPINNER ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px 20px;flex-direction:column;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--line);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:.82rem;color:var(--mid)}
+
+/* ── ROLE MODAL ── */
+.role-overlay{position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#1a1433 0%,#2d3a8c 60%,#6b2460 100%);
+  display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.role-modal{background:white;border-radius:14px;padding:44px 40px;
+  max-width:460px;width:100%;box-shadow:0 32px 100px rgba(0,0,0,.5);text-align:center}
+.role-modal-logo{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;
+  color:#1a1433;margin-bottom:6px;letter-spacing:-.02em}
+.role-modal-logo span{color:#c2185b}
+.role-modal-sub{font-size:.82rem;color:var(--mid);margin-bottom:32px}
+.role-btn{display:block;width:100%;padding:16px 20px;border:2px solid var(--line);
+  border-radius:8px;background:white;cursor:pointer;margin-bottom:12px;
+  text-align:left;transition:all .15s;touch-action:manipulation}
+.role-btn:hover{border-color:#2d3a8c;background:#f4f3f8}
+.role-btn.orga{border-color:#c2185b}
+.role-btn.orga:hover{background:#fce8f3}
+.role-btn-icon{font-size:1.4rem;margin-bottom:4px;display:block}
+.role-btn-title{font-weight:700;font-size:.95rem;color:var(--ink);display:block}
+.role-btn-sub{font-size:.75rem;color:var(--mid);display:block;margin-top:2px}
+.pw-wrap{margin-top:16px;display:none}
+.pw-wrap.show{display:block}
+.pw-input{width:100%;padding:11px 14px;border:2px solid var(--line);border-radius:6px;
+  font-size:.95rem;font-family:'Instrument Sans',sans-serif;outline:none;
+  transition:border-color .15s;margin-bottom:10px;-webkit-appearance:none}
+.pw-input:focus{border-color:#c2185b}
+.pw-error{color:#b0175a;font-size:.8rem;margin-bottom:8px;display:none}
+.pw-error.show{display:block}
+.pw-confirm-btn{width:100%;padding:12px;background:#c2185b;color:white;border:none;
+  border-radius:6px;font-size:.9rem;font-weight:700;cursor:pointer;
+  font-family:'Instrument Sans',sans-serif;transition:background .15s}
+.pw-confirm-btn:hover{background:#96104a}
+
+/* ── HUB ONLY / PROJ ONLY ── */
+.hub-only{display:none}
+body.role-hub .hub-only{display:flex}
+.proj-only{display:none}
+body.role-proj .proj-only{display:flex}
+
+@media(max-width:600px){
+  :root{--main-pad:16px 14px 80px}
+  .topbar{padding:0 14px;height:54px}
+  .topbar-date{display:none}
+  .sidebar{display:none}
+  .app-body{flex-direction:column;overflow:visible;height:auto}
+  .main{overflow-y:visible;padding:var(--main-pad)}
+  body{overflow-y:auto}
+  .dash-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .form-grid{grid-template-columns:1fr;gap:12px}
+  .event-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ROLE MODAL -->
+<div class="role-overlay" id="role-overlay">
+  <div class="role-modal">
+    <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#2d3a8c,#c2185b);margin:0 auto 16px;display:flex;align-items:center;justify-content:center">
+      <span style="color:white;font-size:1.5rem;font-weight:900;font-family:'Fraunces',serif">D</span>
+    </div>
+    <div class="role-modal-logo">DBI <span>Event</span> Master</div>
+    <div class="role-modal-sub">Bitte wähle deine Rolle für diese Sitzung</div>
+    <button class="role-btn orga" onclick="showPWField()">
+      <span class="role-btn-icon">👑</span>
+      <span class="role-btn-title">Event-HUB / Kommunikation</span>
+      <span class="role-btn-sub">Vollzugriff · alle Events · Passwort erforderlich</span>
+    </button>
+    <div class="pw-wrap" id="pw-wrap">
+      <input type="password" class="pw-input" id="hub-pw" placeholder="Passwort eingeben…"
+        onkeydown="if(event.key==='Enter')confirmHubPW()">
+      <div class="pw-error" id="pw-error">Falsches Passwort – bitte erneut versuchen.</div>
+      <button class="pw-confirm-btn" onclick="confirmHubPW()">Bestätigen →</button>
+    </div>
+    <button class="role-btn" onclick="checkPMToken()" id="pm-btn">
+      <span class="role-btn-icon">🎯</span>
+      <span class="role-btn-title">Projektverantwortliche:r</span>
+      <span class="role-btn-sub">Meine Aufgaben über den mir zugesandten Link</span>
+    </button>
+    <div id="pm-no-token" style="display:none;font-size:.8rem;color:var(--red-fg);margin-top:4px">
+      Kein gültiger Token-Link erkannt. Bitte den Link aus der E-Mail öffnen.
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo" onclick="showRoleModal()" title="Rolle wechseln">DBI <span>Event</span> Master</div>
+  <div class="topbar-title" id="topbar-title"></div>
+  <span class="role-badge" id="role-badge" style="display:none"></span>
+  <div class="topbar-date" id="topbar-date"></div>
+</div>
+
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Navigation</div>
+    <div class="nav-item active hub-only" onclick="showPage('hub-events')" id="nav-hub-events">
+      <span class="nav-icon">🗂</span><span class="nav-label">Alle Events</span>
+      <span class="nav-badge" id="badge-hub-events"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">🚦</span><span class="nav-label">Dashboard</span>
+      <span class="nav-badge" id="badge-dashboard"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('eventdaten')" id="nav-eventdaten">
+      <span class="nav-icon">🎯</span><span class="nav-label">Eventdaten</span>
+    </div>
+    <div class="sidebar-section">Workflows</div>
+    <div class="nav-item proj-only" onclick="showPage('proj-todos')" id="nav-proj-todos">
+      <span class="nav-icon">✏️</span><span class="nav-label">Meine Aufgaben</span>
+      <span class="nav-badge" id="badge-proj-todos"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('pflicht')" id="nav-pflicht">
+      <span class="nav-icon">📋</span><span class="nav-label">Pflichtinhalte</span>
+      <span class="nav-badge" id="badge-pflicht"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('einladung')" id="nav-einladung">
+      <span class="nav-icon">✉️</span><span class="nav-label">Einladung</span>
+      <span class="nav-badge" id="badge-einladung"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('social')" id="nav-social">
+      <span class="nav-icon">📱</span><span class="nav-label">Social Media</span>
+      <span class="nav-badge" id="badge-social"></span>
+    </div>
+    <div class="nav-item hub-only" onclick="showPage('pixlip')" id="nav-pixlip">
+      <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
+      <span class="nav-badge" id="badge-pixlip"></span>
+    </div>
+    <div class="sidebar-section">System</div>
+    <div class="nav-item hub-only" onclick="showPage('pm-manager')" id="nav-pm-manager">
+      <span class="nav-icon">👥</span><span class="nav-label">PM-Zugänge</span>
+    </div>
+    <div class="nav-item hub-only" onclick="exportICS()">
+      <span class="nav-icon">📅</span><span class="nav-label">ICS-Feed kopieren</span>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- HUB: ALL EVENTS -->
+    <div class="page" id="page-hub-events">
+      <div class="page-title">Alle Events</div>
+      <div class="page-sub">Wähle ein Event zum Bearbeiten oder lege ein neues an.</div>
+      <div id="events-loading" class="loading"><div class="spinner"></div><div class="loading-text">Lade Events…</div></div>
+      <div class="event-grid" id="event-grid" style="display:none"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub" id="dash-sub"></div>
+      <div id="dash-alert-red" class="alert alert-red"></div>
+      <div id="dash-alert-amb" class="alert alert-amb"></div>
+      <div class="dash-grid">
+        <div class="dash-card card-red"><div class="card-label">🔴 Überschritten</div><div class="card-value" id="cnt-red">–</div><div class="card-sub">Fristen verpasst</div></div>
+        <div class="dash-card card-amb"><div class="card-label">🟡 Wird knapp</div><div class="card-value" id="cnt-amb">–</div><div class="card-sub">Weniger als 2 Wochen</div></div>
+        <div class="dash-card card-grn"><div class="card-label">🟢 On Track</div><div class="card-value" id="cnt-grn">–</div><div class="card-sub">Im Plan</div></div>
+        <div class="dash-card card-ink"><div class="card-label">✅ Erledigt</div><div class="card-value" id="cnt-done">–</div><div class="card-sub" id="progress-label">0% abgeschlossen</div><div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div></div>
+      </div>
+      <div class="section-title">Meilensteine</div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Meilenstein</th><th>Fristdatum</th><th style="text-align:center">Tage</th>
+        <th>Status</th><th>Erledigt am</th>
+      </tr></thead><tbody id="dash-milestones"></tbody></table></div>
+    </div>
+
+    <!-- EVENTDATEN -->
+    <div class="page" id="page-eventdaten">
+      <div class="page-title">Eventdaten</div>
+      <div class="page-sub">Nur dieses Tab ausfüllen – alle Fristen berechnen sich automatisch.</div>
+      <div id="ev-saving" class="alert alert-blu" style="display:none">Wird gespeichert…</div>
+      <div class="card-box">
+        <div class="card-box-title">Grunddaten</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Eventname <span class="req">*</span></label>
+            <input type="text" id="ev-name" placeholder="z. B. Business beim Brötchen" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">Eventdatum <span class="req">*</span></label>
+            <input type="date" id="ev-date" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">Größe <span class="req">*</span></label>
+            <select id="ev-size" onchange="schedSave()">
+              <option value="">– bitte wählen –</option>
+              <option value="12">Klein (30–60 Pers. · 12W)</option>
+              <option value="18">Mittel (60–150 Pers. · 18W)</option>
+              <option value="24">Groß (>150 Pers. · 24W)</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">Thema</label>
+            <input type="text" id="ev-topic" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">Verantwortliche:r <span class="req">*</span></label>
+            <input type="text" id="ev-owner" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">E-Mail</label>
+            <input type="email" id="ev-email" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">Telefon</label>
+            <input type="text" id="ev-phone" oninput="schedSave()"></div>
+          <div class="form-group"><label class="form-label">Komm-Hub Ansprechperson</label>
+            <input type="text" id="ev-hub" oninput="schedSave()"></div>
+        </div>
+      </div>
+      <div class="card-box">
+        <div class="card-box-title">Raum & Catering</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Raum</label>
+            <select id="ev-room" onchange="schedSave()">
+              <option value="dbi">Eventraum DBI (Standard)</option>
+              <option value="extern">Externer Raum → Rasmus abstimmen</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">Catering</label>
+            <select id="ev-catering" onchange="schedSave()">
+              <option value="brezel">Brezeln (Standard)</option>
+              <option value="broetchen">Belegte Brötchen</option>
+              <option value="extended">Erweitertes Catering</option>
+            </select></div>
+          <div class="form-group full"><label class="form-label">Externer Raum – Rasmus abgestimmt?</label>
+            <input type="text" id="ev-rasmus" placeholder="Ja / Nein + Details" oninput="schedSave()"></div>
+        </div>
+      </div>
+      <div class="card-box">
+        <div class="card-box-title">Teams & Ablage</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Teams-Chat</label>
+            <select id="ev-teams" onchange="schedSave()">
+              <option value="">– offen –</option>
+              <option value="ja">Ja – alle hinzugefügt</option>
+              <option value="nein">Nein</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">Dateien gesichert?</label>
+            <select id="ev-ablage" onchange="schedSave()">
+              <option value="">– offen –</option>
+              <option value="ja">Ja</option>
+              <option value="nein">Nein (⚠️ Chats werden gelöscht!)</option>
+            </select></div>
+          <div class="form-group full"><label class="form-label">Ablageort / Pfad</label>
+            <input type="text" id="ev-path" placeholder="Link oder Pfad" oninput="schedSave()"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="saveEventNow()">💾 Speichern</button>
+        <button class="btn btn-secondary" onclick="showPage('dashboard')">→ Dashboard</button>
+      </div>
+    </div>
+
+    <!-- PM MANAGER -->
+    <div class="page" id="page-pm-manager">
+      <div class="page-title">PM-Zugänge</div>
+      <div class="page-sub" id="pm-manager-sub">Erstelle individuelle Links für jede:n Projektverantwortliche:n.</div>
+      <div class="card-box" id="pm-manager-generate">
+        <div class="card-box-title">Neuen Zugang erstellen</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Name PM <span class="req">*</span></label>
+            <input type="text" id="pm-name-input" placeholder="z. B. Anna Müller"></div>
+          <div class="form-group"><label class="form-label">E-Mail PM (für Reminder)</label>
+            <input type="email" id="pm-email-input" placeholder="anna@beispiel.de"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="generatePMToken()">🔗 Link generieren</button>
+        </div>
+      </div>
+      <div class="card-box">
+        <div class="card-box-title">Aktive PM-Zugänge</div>
+        <div id="pm-tokens-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card-box" style="border-color:var(--blu-fg);background:var(--blu-bg)">
+        <div class="card-box-title" style="color:var(--blu-fg)">📅 ICS-Links für Kalender</div>
+        <div style="font-size:.83rem;line-height:1.9">
+          <div><strong>Dein Hub-Feed (alle Aufgaben):</strong></div>
+          <div id="hub-ics-link" style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--blu-fg);margin-bottom:8px;word-break:break-all"></div>
+          <div>PM-Feeds werden direkt in der Zugangs-Tabelle angezeigt.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKFLOW PAGES -->
+    <div class="page" id="page-pflicht"></div>
+    <div class="page" id="page-einladung"></div>
+    <div class="page" id="page-social"></div>
+    <div class="page" id="page-pixlip"></div>
+    <div class="page" id="page-proj-todos"></div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toast-msg"></span></div>
+
+<script>
+// ══ CONFIG ══
+const API = '/.netlify/functions/api';
+const ICS = '/.netlify/functions/ics';
+
+// ══ STATE ══
+let currentRole = null;   // 'hub' | 'proj'
+let hubPassword = '';
+let pmToken = null;        // set when PM logs in via ?token=
+let pmData  = null;        // { pm_name, event, milestones, workflow_rows }
+let currentEventId = null; // which event the hub is viewing
+let allEvents = [];        // hub: list of all events
+let eventDetail = null;    // { event, milestones, workflow_rows }
+
+// ══ ROLE MODAL ══
+function showPWField() {
+  document.getElementById('pw-wrap').classList.add('show');
+  document.getElementById('hub-pw').focus();
+}
+
+async function confirmHubPW() {
+  const val = document.getElementById('hub-pw').value;
+  hubPassword = val;
+  // Validate against API
+  try {
+    const r = await fetch(`${API}/events?password=${encodeURIComponent(val)}`);
+    const d = await r.json();
+    if (r.ok && d.role === 'hub') {
+      allEvents = d.events || [];
+      document.getElementById('pw-error').classList.remove('show');
+      selectRole('hub');
+    } else {
+      document.getElementById('pw-error').classList.add('show');
+      document.getElementById('hub-pw').value = '';
+      document.getElementById('hub-pw').focus();
+    }
+  } catch {
+    document.getElementById('pw-error').textContent = 'Verbindungsfehler – bitte erneut versuchen.';
+    document.getElementById('pw-error').classList.add('show');
+  }
+}
+
+async function checkPMToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) {
+    document.getElementById('pm-no-token').style.display = 'block';
+    return;
+  }
+  pmToken = token;
+  try {
+    const r = await fetch(`${API}/events?token=${token}`);
+    const d = await r.json();
+    if (r.ok && d.role === 'pm') {
+      pmData = d;
+      selectRole('proj');
+    } else {
+      document.getElementById('pm-no-token').style.display = 'block';
+      document.getElementById('pm-no-token').textContent = 'Token ungültig oder abgelaufen. Bitte neuen Link anfordern.';
+    }
+  } catch {
+    document.getElementById('pm-no-token').style.display = 'block';
+  }
+}
+
+function showRoleModal() {
+  document.getElementById('hub-pw').value = '';
+  document.getElementById('pw-error').classList.remove('show');
+  document.getElementById('pw-wrap').classList.remove('show');
+  document.getElementById('pm-no-token').style.display = 'none';
+  document.getElementById('role-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  currentRole = null;
+  document.body.classList.remove('role-hub','role-proj');
+}
+
+function selectRole(role) {
+  currentRole = role;
+  document.getElementById('role-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  document.body.classList.remove('role-hub','role-proj');
+  document.body.classList.add('role-'+role);
+  const badge = document.getElementById('role-badge');
+  badge.style.display = 'inline';
+  if (role === 'hub') {
+    badge.textContent = '👑 Event-HUB';
+    badge.className = 'role-badge role-badge-hub';
+    showPage('hub-events');
+    renderEventGrid();
+  } else {
+    badge.textContent = '🎯 ' + (pmData?.pm_name || 'Projektverantwortlich');
+    badge.className = 'role-badge role-badge-proj';
+    showPage('proj-todos');
+    renderProjTodosFromPMData();
+  }
+  document.getElementById('topbar-date').textContent = 'Heute: ' + fmtDE(TODAY());
+}
+
+// ══ NAVIGATION ══
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  if (pg) pg.classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+}
+
+// ══ EVENT GRID (Hub) ══
+function renderEventGrid() {
+  const grid = document.getElementById('event-grid');
+  const loading = document.getElementById('events-loading');
+  loading.style.display = 'none';
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  allEvents.forEach(ev => {
+    const card = document.createElement('div');
+    card.className = 'event-card' + (ev.id === currentEventId ? ' active-event' : '');
+    const evDate = parseISO(ev.event_date);
+    const diff = evDate ? daysDiff(evDate) : null;
+    const diffStr = diff !== null ? (diff > 0 ? 'in '+diff+' Tagen' : diff===0 ? 'Heute!' : 'vor '+Math.abs(diff)+' Tagen') : 'Kein Datum';
+    card.innerHTML = `
+      <div class="event-card-name">${esc(ev.name)}</div>
+      <div class="event-card-date">${evDate ? fmtDE(evDate) : '– kein Datum –'} · ${diffStr}</div>
+      <div class="event-card-badges">
+        <span class="pill pill-${evDate&&diff<0?'red':diff<=14?'amb':'grn'}">${ev.size==='12'?'Klein':ev.size==='18'?'Mittel':ev.size==='24'?'Groß':'–'}</span>
+        ${ev.owner?`<span class="pill pill-blu">${esc(ev.owner)}</span>`:''}
+      </div>
+      <div class="event-card-actions">
+        <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  // New event card
+  const newCard = document.createElement('div');
+  newCard.className = 'new-event-card';
+  newCard.innerHTML = `<div class="new-event-card-icon">+</div><div class="new-event-card-label">Neues Event anlegen</div>`;
+  newCard.onclick = createNewEvent;
+  grid.appendChild(newCard);
+}
+
+async function selectEvent(id) {
+  currentEventId = id;
+  // Load full event detail
+  const r = await fetch(`${API}/event?id=${id}&password=${encodeURIComponent(hubPassword)}`);
+  if (!r.ok) { showToast('❌ Fehler beim Laden'); return; }
+  eventDetail = await r.json();
+  populateEventForm(eventDetail.event);
+  document.getElementById('topbar-title').textContent = eventDetail.event.name || 'Event';
+  // Update ICS link in PM manager
+  document.getElementById('hub-ics-link').textContent = `${location.origin}${ICS}?event=${id}`;
+  showPage('dashboard');
+  renderDashboard();
+  renderAllWorkflows();
+  loadPMTokens(id);
+}
+
+async function createNewEvent() {
+  const r = await fetch(`${API}/event`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: hubPassword, event: { name:'Neues Event', archived:false } })
+  });
+  const d = await r.json();
+  if (!r.ok) { showToast('❌ Fehler: '+d.error); return; }
+  allEvents.push(d.event);
+  renderEventGrid();
+  await selectEvent(d.event.id);
+  showPage('eventdaten');
+}
+
+// ══ SAVE EVENT ══
+let saveTimer = null;
+function schedSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveEventNow, 1200); }
+
+async function saveEventNow() {
+  if (!currentEventId && currentRole === 'hub') {
+    // Create new if none selected
+    await createNewEvent();
+    return;
+  }
+  const fields = readEventForm();
+  const indicator = document.getElementById('ev-saving');
+  indicator.style.display = 'block';
+  try {
+    const r = await fetch(`${API}/event`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: hubPassword, event: { id: currentEventId, ...fields } })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      eventDetail = { ...eventDetail, event: d.event };
+      // Update allEvents list
+      const idx = allEvents.findIndex(e=>e.id===currentEventId);
+      if (idx>=0) allEvents[idx] = d.event;
+      document.getElementById('topbar-title').textContent = d.event.name || 'Event';
+      renderDashboard();
+      showToast('💾 Gespeichert');
+    } else { showToast('❌ '+d.error); }
+  } catch { showToast('❌ Verbindungsfehler'); }
+  indicator.style.display = 'none';
+}
+
+function readEventForm() {
+  return {
+    name:       document.getElementById('ev-name').value.trim(),
+    event_date: document.getElementById('ev-date').value || null,
+    size:       document.getElementById('ev-size').value,
+    topic:      document.getElementById('ev-topic').value.trim(),
+    owner:      document.getElementById('ev-owner').value.trim(),
+    owner_email:document.getElementById('ev-email').value.trim(),
+    phone:      document.getElementById('ev-phone').value.trim(),
+    hub_contact:document.getElementById('ev-hub').value.trim(),
+    room:       document.getElementById('ev-room').value,
+    catering:   document.getElementById('ev-catering').value,
+    rasmus:     document.getElementById('ev-rasmus').value.trim(),
+    teams:      document.getElementById('ev-teams').value,
+    ablage:     document.getElementById('ev-ablage').value,
+    file_path:  document.getElementById('ev-path').value.trim(),
+  };
+}
+
+function populateEventForm(ev) {
+  if (!ev) return;
+  const map = {
+    'ev-name':ev.name,'ev-date':ev.event_date||'','ev-size':ev.size||'',
+    'ev-topic':ev.topic||'','ev-owner':ev.owner||'','ev-email':ev.owner_email||'',
+    'ev-phone':ev.phone||'','ev-hub':ev.hub_contact||'','ev-room':ev.room||'dbi',
+    'ev-catering':ev.catering||'brezel','ev-rasmus':ev.rasmus||'',
+    'ev-teams':ev.teams||'','ev-ablage':ev.ablage||'','ev-path':ev.file_path||''
+  };
+  Object.entries(map).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
+}
+
+// ══ MILESTONE / WORKFLOW SAVE ══
+async function setMilestoneDone(key, dateVal, label) {
+  const ev = eventDetail?.event;
+  if (!ev) return;
+  const body = { event_id: ev.id, ms_key: key, done_date: dateVal || null };
+  if (currentRole === 'hub') body.password = hubPassword;
+  else body.token = pmToken;
+  const r = await fetch(`${API}/milestone`, { method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!r.ok) { showToast('❌ Fehler beim Speichern'); return; }
+  // Update local
+  const idx = (eventDetail.milestones||[]).findIndex(m=>m.ms_key===key);
+  if (idx>=0) eventDetail.milestones[idx].done_date = dateVal||null;
+  else (eventDetail.milestones=eventDetail.milestones||[]).push({event_id:ev.id,ms_key:key,done_date:dateVal||null});
+  if (dateVal) showToast(`✅ "${label}" erledigt`);
+  renderDashboard();
+}
+
+async function setWorkflowDone(workflowId, rowKey, label, dateVal) {
+  const ev = eventDetail?.event || pmData?.event;
+  if (!ev) return;
+  const body = { event_id: ev.id, workflow_id: workflowId, row_key: rowKey, done_date: dateVal||null };
+  if (currentRole === 'hub') body.password = hubPassword;
+  else body.token = pmToken;
+  const r = await fetch(`${API}/workflow`, { method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!r.ok) { showToast('❌ Fehler'); return; }
+  updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal||null });
+  if (dateVal) showToast(`✅ "${label}" erledigt`);
+  if (currentRole === 'hub') { renderAllWorkflows(); renderDashboard(); }
+  else renderProjTodosFromPMData();
+}
+
+async function setWorkflowInput(workflowId, rowKey, val) {
+  const ev = eventDetail?.event || pmData?.event;
+  if (!ev) return;
+  const body = { event_id: ev.id, workflow_id: workflowId, row_key: rowKey, input_value: val };
+  if (currentRole === 'hub') body.password = hubPassword;
+  else body.token = pmToken;
+  await fetch(`${API}/workflow`, { method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  updateLocalWorkflow(workflowId, rowKey, { input_value: val });
+}
+
+function updateLocalWorkflow(wid, rkey, patch) {
+  const rows = currentRole==='hub'
+    ? (eventDetail.workflow_rows = eventDetail.workflow_rows||[])
+    : (pmData.workflow_rows = pmData.workflow_rows||[]);
+  const idx = rows.findIndex(r=>r.workflow_id===wid&&r.row_key===rkey);
+  if (idx>=0) Object.assign(rows[idx], patch);
+  else rows.push({ workflow_id:wid, row_key:rkey, ...patch });
+}
+
+// ══ PM TOKEN MANAGER ══
+async function loadPMTokens(eventId) {
+  const r = await fetch(`${API}/pm-tokens?event_id=${eventId}&password=${encodeURIComponent(hubPassword)}`);
+  const d = await r.json();
+  const list = document.getElementById('pm-tokens-list');
+  const tokens = d.tokens || [];
+  if (!tokens.length) {
+    list.innerHTML = '<div style="padding:16px;font-size:.82rem;color:var(--mid)">Noch keine Zugänge erstellt.</div>';
+    return;
+  }
+  list.innerHTML = `<div class="table-wrap" style="margin-bottom:0"><table>
+    <thead><tr><th>Name</th><th>E-Mail</th><th>Link (kopieren)</th><th>ICS-Feed</th></tr></thead>
+    <tbody>${tokens.map(t=>`<tr>
+      <td style="font-weight:600">${esc(t.pm_name)}</td>
+      <td style="font-size:.75rem;color:var(--mid)">${esc(t.pm_email||'–')}</td>
+      <td><button class="token-copy" onclick="copyText('${esc(t.link)}','PM-Link kopiert!')">🔗 Link kopieren</button></td>
+      <td><button class="token-copy" onclick="copyText('${esc(t.ics_link)}','ICS-Link kopiert!')">📅 ICS kopieren</button></td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+async function generatePMToken() {
+  if (!currentEventId) { showToast('⚠️ Bitte zuerst ein Event öffnen'); return; }
+  const name = document.getElementById('pm-name-input').value.trim();
+  const email = document.getElementById('pm-email-input').value.trim();
+  if (!name) { showToast('⚠️ Name erforderlich'); return; }
+  const r = await fetch(`${API}/pm-token`, { method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: hubPassword, event_id: currentEventId, pm_name: name, pm_email: email||null }) });
+  const d = await r.json();
+  if (!r.ok) { showToast('❌ '+d.error); return; }
+  document.getElementById('pm-name-input').value = '';
+  document.getElementById('pm-email-input').value = '';
+  copyText(d.link, `✅ Link für ${name} kopiert!`);
+  loadPMTokens(currentEventId);
+}
+
+function copyText(text, msg) {
+  navigator.clipboard.writeText(text).then(()=>showToast(msg||'Kopiert!')).catch(()=>{
+    prompt('Link manuell kopieren:', text);
+  });
+}
+
+function copyICSLink(eventId) {
+  copyText(`${location.origin}${ICS}?event=${eventId}`, '📅 ICS-Link kopiert!');
+}
+
+// ══ DASHBOARD ══
+function renderDashboard() {
+  const ev = eventDetail?.event;
+  if (!ev) return;
+  const eventDate = parseISO(ev.event_date);
+  const sizeWeeks = parseInt(ev.size)||12;
+  const msDone = Object.fromEntries((eventDetail.milestones||[]).map(m=>[m.ms_key, m.done_date]));
+
+  let sub = 'Kein Datum eingetragen.';
+  if (eventDate) {
+    const d = daysDiff(eventDate);
+    sub = `${ev.name||'Event'} · ${fmtDE(eventDate)} · ${d>0?'in '+d+' Tagen':d===0?'Heute!':'vor '+Math.abs(d)+' Tagen'}`;
+  }
+  document.getElementById('dash-sub').textContent = sub;
+
+  let cntRed=0,cntAmb=0,cntGrn=0,cntDone=0,total=0;
+  const tbody = document.getElementById('dash-milestones');
+  tbody.innerHTML = '';
+
+  MILESTONES.forEach(ms => {
+    const fd = getMilestoneDate(ms,eventDate,sizeWeeks);
+    const done = parseISO(msDone[ms.key]||'');
+    const st = getStatus(fd,done);
+    const diff = fd ? daysDiff(fd) : null;
+    if (ms.isEvent) {
+      tbody.insertAdjacentHTML('beforeend',`<tr class="row-event">
+        <td colspan="2">🎯 EVENT – ${esc(ev.name||'')}</td>
+        <td colspan="3">${fd?fmtDE(fd):'–'}</td></tr>`);
+      return;
+    }
+    total++;
+    if (st.cls==='red') cntRed++;
+    else if(st.cls==='amb') cntAmb++;
+    else if(st.cls==='grn') cntGrn++;
+    if (done) cntDone++;
+    const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
+    const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
+    tbody.insertAdjacentHTML('beforeend',`<tr class="status-${st.cls}">
+      <td class="td-label">${ms.label}</td>
+      <td class="td-date">${fd?fmtDE(fd):'–'}</td>
+      <td class="td-days" style="color:${dCol}">${dStr}</td>
+      <td>${pillHTML(st)}</td>
+      <td><input type="date" class="erledigt-input${done?' done':''}" value="${msDone[ms.key]||''}"
+        onchange="setMilestoneDone('${ms.key}',this.value,'${ms.label}')"></td>
+    </tr>`);
+  });
+
+  document.getElementById('cnt-red').textContent = cntRed;
+  document.getElementById('cnt-amb').textContent = cntAmb;
+  document.getElementById('cnt-grn').textContent = cntGrn;
+  document.getElementById('cnt-done').textContent = cntDone;
+  const pct = total>0 ? Math.round(cntDone/total*100) : 0;
+  document.getElementById('progress-label').textContent = pct+'% abgeschlossen';
+  document.getElementById('progress-bar').style.width = pct+'%';
+
+  const alertRed = document.getElementById('dash-alert-red');
+  const alertAmb = document.getElementById('dash-alert-amb');
+  alertRed.className = cntRed>0?'alert alert-red show':'alert alert-red';
+  alertRed.textContent = cntRed>0?`⚠️ ${cntRed} Frist${cntRed>1?'en':''} überschritten – sofort handeln!`:'';
+  alertAmb.className = cntAmb>0?'alert alert-amb show':'alert alert-amb';
+  alertAmb.textContent = cntAmb>0?`⚡ ${cntAmb} Meilenstein${cntAmb>1?'e':''} werden knapp.`:'';
+}
+
+// ══ WORKFLOWS ══
+function renderAllWorkflows() {
+  ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
+}
+
+function renderWorkflow(id) {
+  const def = WORKFLOWS[id];
+  const el = document.getElementById('page-'+id);
+  if (!def||!el) return;
+  const ev = eventDetail?.event;
+  const eventDate = parseISO(ev?.event_date);
+  const wfRows = eventDetail?.workflow_rows || [];
+  const getRow = (wid,rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
+
+  let html = `<div class="page-title">${def.title}</div>
+    <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th>
+      <th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th>
+    </tr></thead><tbody>`;
+
+  def.sections.forEach(sec => {
+    html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
+    sec.rows.forEach(row => {
+      const fd = eventDate ? addDays(eventDate, row.offset||0) : null;
+      const stored = getRow(id, row.key);
+      const done = parseISO(stored.done_date||'');
+      const st = getStatus(fd, done);
+      const diff = fd ? daysDiff(fd) : null;
+      const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
+      const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
+      html += `<tr class="status-${st.cls}">
+        <td class="td-label">${row.label}</td>
+        <td><input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
+          placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
+          onchange="setWorkflowInput('${id}','${row.key}',this.value)"></td>
+        <td class="td-date" style="color:var(--blu-fg)">${fd?fmtDE(fd):'–'}</td>
+        <td class="td-days" style="color:${dCol}">${dStr}</td>
+        <td>${pillHTML(st)}</td>
+        <td><input type="date" class="erledigt-input${done?' done':''}" value="${stored.done_date||''}"
+          onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)"></td>
+      </tr>`;
+    });
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function renderProjTodosFromPMData() {
+  const el = document.getElementById('page-proj-todos');
+  if (!el||!pmData) return;
+  const ev = pmData.event;
+  const eventDate = parseISO(ev?.event_date);
+  const wfRows = pmData.workflow_rows || [];
+  const getRow = (wid,rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
+
+  let html = `<div class="page-title">Meine Aufgaben</div>
+    <div class="page-sub">${esc(ev?.name||'')} ${ev?.event_date?'· '+fmtDE(parseISO(ev.event_date)):''}</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th>
+      <th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th>
+    </tr></thead><tbody>`;
+
+  PROJ_SECTIONS.forEach(sec => {
+    html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
+    sec.rows.forEach(row => {
+      const fd = eventDate ? addDays(eventDate, row.offset||0) : null;
+      const stored = getRow('pflicht', row.key);
+      const done = parseISO(stored.done_date||'');
+      const st = getStatus(fd, done);
+      const diff = fd ? daysDiff(fd) : null;
+      const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
+      const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
+      html += `<tr class="status-${st.cls}">
+        <td class="td-label">${row.label}${row.req?'<span style="color:var(--accent);margin-left:3px">*</span>':''}</td>
+        <td><input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
+          placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
+          onchange="setWorkflowInput('pflicht','${row.key}',this.value)"></td>
+        <td class="td-date" style="color:var(--blu-fg)">${fd?fmtDE(fd):'–'}</td>
+        <td class="td-days" style="color:${dCol}">${dStr}</td>
+        <td>${pillHTML(st)}</td>
+        <td><input type="date" class="erledigt-input${done?' done':''}" value="${stored.done_date||''}"
+          onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td>
+      </tr>`;
+    });
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+// ══ ICS ══
+function exportICS() {
+  if (!currentEventId) { showToast('⚠️ Bitte zuerst ein Event öffnen'); return; }
+  copyICSLink(currentEventId);
+}
+
+// ══ TOAST ══
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+// ══ DATE HELPERS ══
+const TODAY = ()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDE(d){ if(!d) return '–'; return new Intl.DateTimeFormat('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d); }
+function parseISO(s){ if(!s) return null; const d=new Date(s+'T12:00:00'); return isNaN(d)?null:d; }
+function daysDiff(t){ return Math.round((t-TODAY())/86400000); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ══ STATUS ══
+function getStatus(fd,done){ 
+  if(done) return{cls:'blu',icon:'✅',label:'Erledigt'};
+  if(!fd) return{cls:'grey',icon:'⬜',label:'Kein Datum'};
+  const d=daysDiff(fd);
+  if(d<0) return{cls:'red',icon:'🔴',label:'Überschritten'};
+  if(d<=7) return{cls:'red',icon:'🔴',label:'Kritisch'};
+  if(d<=14) return{cls:'amb',icon:'🟡',label:'Wird knapp'};
+  if(d<=56) return{cls:'grn',icon:'🟢',label:'On Track'};
+  return{cls:'grey',icon:'⬜',label:'Noch nicht fällig'};
+}
+function pillHTML(s){ return `<span class="pill pill-${s.cls}">${s.icon} ${s.label}</span>`; }
+
+// ══ MILESTONES ══
+const MILESTONES = [
+  {key:'vorlauf',label:'Vorlaufstart',isVorlauf:true},
+  {key:'m10w',label:'−10W: Anfragen & Vorlauf',offset:-70},
+  {key:'m8w',label:'−8W: Pflichtunterlagen',offset:-56},
+  {key:'m7w',label:'−7W: Bestätigungen',offset:-49},
+  {key:'m6w',label:'−6W: Einladungsversand',offset:-42},
+  {key:'m4w',label:'−4W: Reminder',offset:-28},
+  {key:'m3w',label:'−3W: Bestätigung I',offset:-21},
+  {key:'m2w',label:'−2W: Bestätigung II',offset:-14},
+  {key:'m1w',label:'−1W: Catering',offset:-7},
+  {key:'m1d',label:'−1T: Letzter Check',offset:-1},
+  {key:'event',label:'🎯 EVENT',offset:0,isEvent:true},
+];
+function getMilestoneDate(ms,evDate,sizeWeeks){
+  if(!evDate) return null;
+  if(ms.isVorlauf) return addDays(evDate,-(sizeWeeks||12)*7);
+  return addDays(evDate,ms.offset||0);
+}
+
+// ══ WORKFLOWS DATA ══ (same as original, kept for brevity here — full definitions in JS)
+const WORKFLOWS = {
+  pflicht:{title:'Pflichtinhalte',sub:'⚠️ Ohne vollständige Unterlagen: keine Einladung · keine Kommunikation',subCls:'alert-red',
+    sections:[
+      {title:'MASTER-EXCEL & ORGANISATION',color:'#eae8f4',rows:[
+        {key:'me1',label:'Alle Pflichtfelder ausgefüllt',hint:'Alle Felder ausfüllen',offset:-56},
+        {key:'me2',label:'Teams-Chat erstellt',hint:'Alle Beteiligten',offset:-56},
+        {key:'me3',label:'Dateien lokal gesichert',hint:'Chats werden gelöscht!',offset:-56},
+        {key:'me4',label:'Veranstaltungsgröße eingetragen',hint:'Klein / Mittel / Groß',offset:-56},
+      ]},
+      {title:'AGENDA',color:'#e6f4f0',rows:[
+        {key:'ag1',label:'Agenda vollständig (kein tbc!)',hint:'Thema · Person · Institution',offset:-56},
+        {key:'ag2',label:'Agendapunkt 1 – Thema',hint:'',offset:-56},
+        {key:'ag3',label:'Agendapunkt 1 – Person & Position',hint:'Name, Position',offset:-56},
+        {key:'ag4',label:'Agendapunkt 1 – Institution',hint:'',offset:-56},
+        {key:'ag5',label:'Agendapunkt 2 – Thema',hint:'',offset:-56},
+        {key:'ag6',label:'Agendapunkt 2 – Person & Position',hint:'',offset:-56},
+        {key:'ag7',label:'Agendapunkt 2 – Institution',hint:'',offset:-56},
+        {key:'ag8',label:'Agendapunkt 3 – Thema',hint:'',offset:-56},
+        {key:'ag9',label:'Agendapunkt 3 – Person & Position',hint:'',offset:-56},
+        {key:'ag10',label:'Agendapunkt 3 – Institution',hint:'',offset:-56},
+      ]},
+      {title:'EINLADUNG',color:'#fef5e4',rows:[
+        {key:'ei1',label:'Einladungstitel',hint:'Offizieller Titel',offset:-56},
+        {key:'ei2',label:'Einladungstext vollständig',hint:'Kein Platzhalter',offset:-56},
+        {key:'ei3',label:'Datum, Uhrzeit, Ort',hint:'TT.MM.JJJJ · HH:MM',offset:-56},
+        {key:'ei4',label:'Anmeldelink',hint:'b2match / ZUF / eigener Link',offset:-49},
+        {key:'ei5',label:'Finaler Verteiler',hint:'Vollständige Liste',offset:-56},
+        {key:'ei6',label:'Anzahl Empfänger:innen',hint:'Ungefähre Zahl',offset:-56},
+      ]},
+      {title:'SPEAKER & GÄSTE',color:'#f0eeff',rows:[
+        {key:'sp1',label:'Speaker:in 1 – Name',hint:'',offset:-56},
+        {key:'sp2',label:'Speaker:in 1 – Position & Institution',hint:'',offset:-56},
+        {key:'sp3',label:'Speaker:in 1 – Thema / Titel',hint:'',offset:-56},
+        {key:'sp4',label:'Speaker:in 1 – Kontakt / E-Mail',hint:'',offset:-56},
+        {key:'sp5',label:'Speaker:in 2 – Name',hint:'',offset:-56},
+        {key:'sp6',label:'Speaker:in 2 – Position & Institution',hint:'',offset:-56},
+        {key:'sp7',label:'Speaker:in 2 – Thema / Titel',hint:'',offset:-56},
+        {key:'sp8',label:'Besondere Gäste / VIPs',hint:'Namen & Institutionen',offset:-56},
+      ]},
+      {title:'KOMMUNIKATION',color:'#fce8f3',rows:[
+        {key:'ko1',label:'Social-Media-Workflow ausgefüllt',hint:'Tab Social Media',offset:-56},
+        {key:'ko2',label:'Landingpage gewünscht?',hint:'Ja / Nein',offset:-56},
+        {key:'ko3',label:'Fotograf:in angefragt',hint:'Name + Bestätigung',offset:-70},
+        {key:'ko4',label:'Freigaben eingeholt',hint:'Alle Genehmigungen',offset:-56},
+        {key:'ko5',label:'Komm-Maßnahmen beschrieben',hint:'Alle Maßnahmen auflisten',offset:-56},
+      ]},
+      {title:'LOGISTIK',color:'#ededf4',rows:[
+        {key:'lo1',label:'Raum bestätigt',hint:'DBI oder extern (Rasmus)',offset:-49},
+        {key:'lo2',label:'Catering beauftragt',hint:'Brezeln / Brötchen',offset:-49},
+        {key:'lo3',label:'Technik bestätigt',hint:'Beamer, Mikro, Bestuhlung',offset:-49},
+        {key:'lo4',label:'Pixlip angefragt',hint:'Tab Pixlip',offset:-70},
+        {key:'lo5',label:'Candis + Freigabe',hint:'',offset:-56},
+        {key:'lo6',label:'Badges bestellt',hint:'',offset:-28},
+        {key:'lo7',label:'Stelen / Counter gepackt',hint:'',offset:-14},
+        {key:'lo8',label:'Akkreditierungskiste gepackt',hint:'',offset:-7},
+        {key:'lo9',label:'Wegweiser vorbereitet',hint:'',offset:-7},
+      ]},
+    ]
+  },
+  einladung:{title:'Einladungsworkflow',sub:'Frist −8W: Pflichtinhalte · −6W: Versand',subCls:'alert-red',
+    sections:[
+      {title:'PFLICHTINHALTE (−8 WOCHEN)',color:'#fce8f3',rows:[
+        {key:'en1',label:'Einladungstitel',hint:'',offset:-56},
+        {key:'en2',label:'Einladungstext vollständig',hint:'',offset:-56},
+        {key:'en3',label:'Datum, Uhrzeit, Ort',hint:'',offset:-56},
+        {key:'en4',label:'Agenda vollständig',hint:'',offset:-56},
+        {key:'en5',label:'Finaler Verteiler',hint:'',offset:-56},
+        {key:'en6',label:'Ansprechpersonen',hint:'',offset:-56},
+        {key:'en7',label:'Infos Gäste & Speaker:innen',hint:'',offset:-56},
+        {key:'en8',label:'Anmeldelink / Ticketing',hint:'',offset:-49},
+      ]},
+      {title:'KOMMUNIKATIONSABLAUF',color:'#eae8f4',rows:[
+        {key:'kl1',label:'−8W: Unterlagen vollständig',hint:'',offset:-56},
+        {key:'kl2',label:'−7W: b2match / ZUF live',hint:'',offset:-49},
+        {key:'kl3',label:'−6W: Einladung versendet',hint:'',offset:-42},
+        {key:'kl4',label:'−6W: Social-Media live',hint:'',offset:-42},
+        {key:'kl5',label:'−4W: Reminder versendet',hint:'',offset:-28},
+        {key:'kl6',label:'−3W: Bestätigung I versendet',hint:'',offset:-21},
+        {key:'kl7',label:'−2W: Bestätigung II versendet',hint:'',offset:-14},
+      ]},
+      {title:'NACHBEREITUNG',color:'#e6f4f0',rows:[
+        {key:'nb1',label:'Fotos erhalten',hint:'Datum / Picdrop-Link',offset:7},
+        {key:'nb2',label:'Nachbericht / Social-Post',hint:'',offset:7},
+        {key:'nb3',label:'Teilnehmerzahl final',hint:'',offset:7},
+        {key:'nb4',label:'Feedback / Learnings',hint:'',offset:14},
+      ]},
+    ]
+  },
+  social:{title:'Social Media',sub:'Frist: −8W Briefing · −6W Ankündigung · −2W Reminder',subCls:'alert-amb',
+    sections:[
+      {title:'EVENTINFOS (−8 WOCHEN)',color:'#eae8f4',rows:[
+        {key:'sm1',label:'Eventname',hint:'',offset:-56},
+        {key:'sm2',label:'Eventdatum',hint:'',offset:-56},
+        {key:'sm3',label:'Kurzbeschreibung (2–3 Sätze)',hint:'',offset:-56},
+        {key:'sm4',label:'Hashtags',hint:'Kommagetrennt',offset:-56},
+        {key:'sm5',label:'Anmeldelink',hint:'',offset:-56},
+        {key:'sm6',label:'Grafikbriefing übergeben',hint:'',offset:-56},
+        {key:'sm7',label:'Bild / Grafik vorhanden',hint:'',offset:-56},
+      ]},
+      {title:'ANKÜNDIGUNG (−6 WOCHEN)',color:'#e6f4f0',rows:[
+        {key:'sa1',label:'Post-Text LinkedIn',hint:'',offset:-42},
+        {key:'sa2',label:'Post-Text Instagram',hint:'',offset:-42},
+        {key:'sa3',label:'Veröffentlichungsdatum',hint:'',offset:-42},
+        {key:'sa4',label:'Veröffentlicht?',hint:'',offset:-42},
+      ]},
+      {title:'REMINDER (−2 WOCHEN)',color:'#fef5e4',rows:[
+        {key:'sr1',label:'Reminder-Post Text',hint:'',offset:-14},
+        {key:'sr2',label:'Bild / Grafik vorhanden',hint:'',offset:-14},
+        {key:'sr3',label:'Veröffentlicht?',hint:'',offset:-14},
+      ]},
+      {title:'NACHBERICHTERSTATTUNG',color:'#f0eeff',rows:[
+        {key:'sn1',label:'Fotos erhalten',hint:'',offset:7},
+        {key:'sn2',label:'Nachbericht-Post',hint:'',offset:7},
+      ]},
+    ]
+  },
+  pixlip:{title:'Pixlip Ausleihe',sub:'Frist: −10W Anfrage · −4W Druckdaten · nach Event Rückgabe',subCls:'',
+    sections:[
+      {title:'ANFRAGE (−10 WOCHEN)',color:'#eae8f4',rows:[
+        {key:'px1',label:'Pixlip benötigt?',hint:'Ja / Nein',offset:-70},
+        {key:'px2',label:'Aufbaudatum',hint:'',offset:-70},
+        {key:'px3',label:'Rückgabedatum',hint:'',offset:-70},
+        {key:'px4',label:'Verantwortliche Person',hint:'',offset:-70},
+        {key:'px5',label:'Pixlip-Variante / Größe',hint:'',offset:-70},
+        {key:'px6',label:'Anfrage eingereicht',hint:'Ja / Nein',offset:-70},
+        {key:'px7',label:'Bestätigung erhalten',hint:'',offset:-70},
+      ]},
+      {title:'VORBEREITUNG (−4 WOCHEN)',color:'#e6f4f0',rows:[
+        {key:'pv1',label:'Motiv / Grafik vorhanden',hint:'',offset:-28},
+        {key:'pv2',label:'Druckdaten übergeben',hint:'',offset:-28},
+        {key:'pv3',label:'Geliefert / abgeholt',hint:'',offset:-7},
+        {key:'pv4',label:'Aufgebaut',hint:'Ja / Nein',offset:0},
+      ]},
+      {title:'RÜCKGABE',color:'#fef5e4',rows:[
+        {key:'pr1',label:'Abgebaut',hint:'',offset:7},
+        {key:'pr2',label:'Zurückgegeben',hint:'',offset:7},
+        {key:'pr3',label:'Schäden',hint:'Ja / Nein / Beschreibung',offset:7},
+      ]},
+    ]
+  }
+};
+
+const PROJ_SECTIONS = [
+  {title:'INHALT & AGENDA',color:'#e6f4f0',rows:[
+    {key:'ag1',label:'Agenda vollständig',hint:'Thema · Person · Institution',offset:-56,req:true},
+    {key:'ag2',label:'Agendapunkt 1 – Thema',hint:'',offset:-56,req:true},
+    {key:'ag3',label:'Agendapunkt 1 – Person & Position',hint:'Name, Position',offset:-56,req:true},
+    {key:'ag4',label:'Agendapunkt 1 – Institution',hint:'',offset:-56,req:true},
+    {key:'ag5',label:'Agendapunkt 2 – Thema',hint:'',offset:-56,req:false},
+    {key:'ag6',label:'Agendapunkt 2 – Person & Position',hint:'',offset:-56,req:false},
+    {key:'ag7',label:'Agendapunkt 2 – Institution',hint:'',offset:-56,req:false},
+    {key:'ag8',label:'Agendapunkt 3 – Thema',hint:'',offset:-56,req:false},
+    {key:'ag9',label:'Agendapunkt 3 – Person & Position',hint:'',offset:-56,req:false},
+    {key:'ag10',label:'Agendapunkt 3 – Institution',hint:'',offset:-56,req:false},
+    {key:'ag11',label:'Titel & Beschreibung',hint:'Für Kommunikation & Einladung',offset:-56,req:true},
+  ]},
+  {title:'VERTEILER & KOMMUNIKATION',color:'#eae8f4',rows:[
+    {key:'vt1',label:'Finaler Verteiler vollständig',hint:'Als Liste vorhanden',offset:-56,req:true},
+    {key:'vt2',label:'Anzahl Empfänger:innen',hint:'Ungefähre Zahl',offset:-56,req:false},
+    {key:'vt3',label:'Einladungstext geliefert',hint:'Kein Platzhalter, kein tbc',offset:-56,req:true},
+    {key:'vt4',label:'Ansprechperson(en) benannt',hint:'Name + E-Mail',offset:-56,req:true},
+  ]},
+  {title:'SPEAKER & GÄSTE',color:'#f0eeff',rows:[
+    {key:'sp1',label:'Speaker:in 1 – Name',hint:'',offset:-56,req:true},
+    {key:'sp2',label:'Speaker:in 1 – Position & Institution',hint:'',offset:-56,req:true},
+    {key:'sp3',label:'Speaker:in 1 – Thema / Titel',hint:'',offset:-56,req:true},
+    {key:'sp4',label:'Speaker:in 1 – Kontakt / E-Mail',hint:'',offset:-56,req:false},
+    {key:'sp5',label:'Speaker:in 2 – Name',hint:'',offset:-56,req:false},
+    {key:'sp6',label:'Speaker:in 2 – Position & Institution',hint:'',offset:-56,req:false},
+    {key:'sp7',label:'Speaker:in 2 – Thema / Titel',hint:'',offset:-56,req:false},
+    {key:'sp8',label:'Besondere Gäste / VIPs',hint:'Namen & Institutionen',offset:-56,req:false},
+    {key:'sp9',label:'Ticketing erforderlich?',hint:'Ja / Nein + Plattform',offset:-56,req:false},
+  ]},
+  {title:'FREIGABEN & SONSTIGES',color:'#ededf4',rows:[
+    {key:'fr1',label:'Relevante Freigaben eingeholt',hint:'Alle Genehmigungen',offset:-56,req:true},
+    {key:'fr2',label:'Pixlip benötigt?',hint:'Ja / Nein',offset:-70,req:false},
+    {key:'fr3',label:'Besondere Anforderungen',hint:'Anything else',offset:-56,req:false},
+  ]},
+];
+
+// ══ INIT ══
+document.addEventListener('DOMContentLoaded', () => {
+  // Check for PM token in URL — auto-show PM button hint
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (token) {
+    document.getElementById('pm-btn').style.borderColor = '#2d3a8c';
+    document.getElementById('pm-btn').querySelector('.role-btn-sub').textContent =
+      'Token erkannt – klicke hier zum Anmelden';
+  }
+  document.getElementById('topbar-date').textContent = 'Heute: ' + fmtDE(TODAY());
+  setInterval(()=>{ if(currentRole==='hub'&&eventDetail) { renderDashboard(); renderAllWorkflows(); } }, 60000);
+});
+</script>
+</body>
+</html>
