@@ -5,7 +5,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const HUB_PW = process.env.HUB_PASSWORD || 'DBI2024';
+// Password comes ONLY from Netlify environment variable — no fallback
+const HUB_PW = process.env.HUB_PASSWORD;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,9 @@ const CORS = {
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS')
     return { statusCode: 200, headers: CORS, body: '' };
+
+  // Guard: if env variable is missing, refuse all requests
+  if (!HUB_PW) return json(500, { error: 'Server misconfigured: HUB_PASSWORD not set' });
 
   const path   = event.path.replace('/.netlify/functions/api', '');
   const method = event.httpMethod;
@@ -123,7 +127,7 @@ exports.handler = async (event) => {
                   workflow_ids: workflow_ids || ['pflicht'] })
         .select().single();
       if (error) return json(500, { error: error.message });
-      const site = process.env.SITE_URL || 'https://dbinetlifyapp.netlify.app';
+      const site = process.env.SITE_URL || '';
       return json(200, {
         token: data.token,
         link: `${site}/?token=${data.token}`,
@@ -139,7 +143,7 @@ exports.handler = async (event) => {
       const { data } = await supabase.from('pm_tokens')
         .select('id,token,pm_name,pm_email,workflow_ids,created_at')
         .eq('event_id', event_id).order('created_at');
-      const site = process.env.SITE_URL || 'https://dbinetlifyapp.netlify.app';
+      const site = process.env.SITE_URL || '';
       const tokens = (data || []).map(t => ({
         ...t,
         link: `${site}/?token=${t.token}`,
