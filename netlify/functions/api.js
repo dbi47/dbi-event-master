@@ -5,6 +5,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+const HUB_PW = process.env.HUB_PASSWORD || 'DBI2024';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -20,7 +22,7 @@ exports.handler = async (event) => {
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch {}
 
-  function isHub(b) { return b.password === process.env.HUB_PASSWORD; }
+  function isHub(b) { return b.password === HUB_PW; }
 
   async function getPMToken(token) {
     if (!token) return null;
@@ -43,7 +45,7 @@ exports.handler = async (event) => {
         const full = await loadFullEvent(pm.event_id);
         return json(200, { role: 'pm', pm_name: pm.pm_name, ...full });
       }
-      if (event.queryStringParameters?.password !== process.env.HUB_PASSWORD)
+      if (event.queryStringParameters?.password !== HUB_PW)
         return json(401, { error: 'Unauthorized' });
       const { data: events } = await supabase
         .from('events').select('*').eq('archived', false)
@@ -53,7 +55,7 @@ exports.handler = async (event) => {
 
     // GET /event?id=X — full event detail (hub only)
     if (path === '/event' && method === 'GET') {
-      if (event.queryStringParameters?.password !== process.env.HUB_PASSWORD)
+      if (event.queryStringParameters?.password !== HUB_PW)
         return json(401, { error: 'Unauthorized' });
       const id = event.queryStringParameters?.id;
       if (!id) return json(400, { error: 'Missing id' });
@@ -80,7 +82,7 @@ exports.handler = async (event) => {
       if (token) {
         const pm = await getPMToken(token);
         if (!pm || pm.event_id !== event_id) return json(403, { error: 'Forbidden' });
-      } else if (password !== process.env.HUB_PASSWORD) {
+      } else if (password !== HUB_PW) {
         return json(401, { error: 'Unauthorized' });
       }
       const { error } = await supabase.from('milestones')
@@ -98,7 +100,7 @@ exports.handler = async (event) => {
         if (!pm || pm.event_id !== event_id) return json(403, { error: 'Forbidden' });
         if (!pm.workflow_ids.includes(workflow_id))
           return json(403, { error: 'Not your workflow' });
-      } else if (password !== process.env.HUB_PASSWORD) {
+      } else if (password !== HUB_PW) {
         return json(401, { error: 'Unauthorized' });
       }
       const { error } = await supabase.from('workflow_rows')
@@ -121,7 +123,7 @@ exports.handler = async (event) => {
                   workflow_ids: workflow_ids || ['pflicht'] })
         .select().single();
       if (error) return json(500, { error: error.message });
-      const site = process.env.SITE_URL || '';
+      const site = process.env.SITE_URL || 'https://dbinetlifyapp.netlify.app';
       return json(200, {
         token: data.token,
         link: `${site}/?token=${data.token}`,
@@ -131,13 +133,13 @@ exports.handler = async (event) => {
 
     // GET /pm-tokens?event_id=X — list tokens for event (hub only)
     if (path === '/pm-tokens' && method === 'GET') {
-      if (event.queryStringParameters?.password !== process.env.HUB_PASSWORD)
+      if (event.queryStringParameters?.password !== HUB_PW)
         return json(401, { error: 'Unauthorized' });
       const event_id = event.queryStringParameters?.event_id;
       const { data } = await supabase.from('pm_tokens')
         .select('id,token,pm_name,pm_email,workflow_ids,created_at')
         .eq('event_id', event_id).order('created_at');
-      const site = process.env.SITE_URL || '';
+      const site = process.env.SITE_URL || 'https://dbinetlifyapp.netlify.app';
       const tokens = (data || []).map(t => ({
         ...t,
         link: `${site}/?token=${t.token}`,
