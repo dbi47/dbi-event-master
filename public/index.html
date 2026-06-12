@@ -296,47 +296,55 @@ body.role-proj .workflow-item{display:flex}
 
 <div class="app-body">
 
-  <!-- SIDEBAR -->
+  <!-- ══ SIDEBAR ══ -->
   <nav class="sidebar">
-    <div class="sidebar-section">Navigation</div>
-    <div class="nav-item active hub-only" onclick="showPage('hub-events')" id="nav-hub-events">
-      <span class="nav-icon">🗂</span><span class="nav-label">Alle Events</span>
+    <div class="sidebar-section hub-only" style="display:none">Navigation</div>
+
+    <!-- Hub-only nav -->
+    <div class="nav-item hub-only active" onclick="showPage('hub-events')" id="nav-hub-events">
+      <span class="nav-icon">🗂</span><span class="nav-label">All Events</span>
       <span class="nav-badge" id="badge-hub-events"></span>
     </div>
     <div class="nav-item hub-only" onclick="showPage('dashboard')" id="nav-dashboard">
       <span class="nav-icon">🚦</span><span class="nav-label">Dashboard</span>
-      <span class="nav-badge" id="badge-dashboard"></span>
     </div>
     <div class="nav-item hub-only" onclick="showPage('eventdaten')" id="nav-eventdaten">
-      <span class="nav-icon">🎯</span><span class="nav-label">Eventdaten</span>
+      <span class="nav-icon">🎯</span><span class="nav-label">Event Details</span>
     </div>
-    <div class="sidebar-section">Workflows</div>
+
+    <!-- ══════════════════════════════════════════
+         WORKFLOWS — visible to BOTH hub AND PM
+         ══════════════════════════════════════════ -->
+    <div class="sidebar-section workflow-item" style="display:none">Workflows</div>
+
     <div class="nav-item proj-only" onclick="showPage('proj-todos')" id="nav-proj-todos">
-      <span class="nav-icon">✏️</span><span class="nav-label">Meine Aufgaben</span>
+      <span class="nav-icon">✏️</span><span class="nav-label">My Tasks</span>
       <span class="nav-badge" id="badge-proj-todos"></span>
     </div>
-    <div class="nav-item hub-only" onclick="showPage('pflicht')" id="nav-pflicht">
-      <span class="nav-icon">📋</span><span class="nav-label">Pflichtinhalte</span>
+    <div class="nav-item workflow-item" onclick="showPage('pflicht')" id="nav-pflicht">
+      <span class="nav-icon">📋</span><span class="nav-label">Required Content</span>
       <span class="nav-badge" id="badge-pflicht"></span>
     </div>
-    <div class="nav-item hub-only" onclick="showPage('einladung')" id="nav-einladung">
-      <span class="nav-icon">✉️</span><span class="nav-label">Einladung</span>
+    <div class="nav-item workflow-item" onclick="showPage('einladung')" id="nav-einladung">
+      <span class="nav-icon">✉️</span><span class="nav-label">Invitation</span>
       <span class="nav-badge" id="badge-einladung"></span>
     </div>
-    <div class="nav-item hub-only" onclick="showPage('social')" id="nav-social">
+    <div class="nav-item workflow-item" onclick="showPage('social')" id="nav-social">
       <span class="nav-icon">📱</span><span class="nav-label">Social Media</span>
       <span class="nav-badge" id="badge-social"></span>
     </div>
-    <div class="nav-item hub-only" onclick="showPage('pixlip')" id="nav-pixlip">
+    <div class="nav-item workflow-item" onclick="showPage('pixlip')" id="nav-pixlip">
       <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
       <span class="nav-badge" id="badge-pixlip"></span>
     </div>
-    <div class="sidebar-section">System</div>
+
+    <!-- System — hub only -->
+    <div class="sidebar-section hub-only" style="display:none">System</div>
     <div class="nav-item hub-only" onclick="showPage('pm-manager')" id="nav-pm-manager">
-      <span class="nav-icon">👥</span><span class="nav-label">PM-Zugänge</span>
+      <span class="nav-icon">👥</span><span class="nav-label">PM Access</span>
     </div>
     <div class="nav-item hub-only" onclick="exportICS()">
-      <span class="nav-icon">📅</span><span class="nav-label">ICS-Feed kopieren</span>
+      <span class="nav-icon">📅</span><span class="nav-label">Copy ICS Feed</span>
     </div>
   </nav>
 
