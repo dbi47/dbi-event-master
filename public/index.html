@@ -482,7 +482,7 @@ body.role-proj .workflow-item{display:flex}
       </div>
     </div>
 
-    <!-- WORKFLOW PAGES -->
+    <!-- WORKFLOW PAGES — rendered for both Hub and PM -->
     <div class="page" id="page-pflicht"></div>
     <div class="page" id="page-einladung"></div>
     <div class="page" id="page-social"></div>
@@ -587,8 +587,10 @@ function selectRole(role) {
   } else {
     badge.textContent = '🎯 ' + (pmData?.pm_name || 'Projektverantwortlich');
     badge.className = 'role-badge role-badge-proj';
+     // ── FIX: PM sees My Tasks first, then all workflow tabs are populated ──
     showPage('proj-todos');
     renderProjTodosFromPMData();
+    renderAllWorkflows();   // ← populate all workflow pages for PM
   }
   document.getElementById('topbar-date').textContent = 'Heute: ' + fmtDE(TODAY());
 }
@@ -758,9 +760,12 @@ async function setWorkflowDone(workflowId, rowKey, label, dateVal) {
     headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (!r.ok) { showToast('❌ Fehler'); return; }
   updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal||null });
-  if (dateVal) showToast(`✅ "${label}" erledigt`);
-  if (currentRole === 'hub') { renderAllWorkflows(); renderDashboard(); }
-  else renderProjTodosFromPMData();
+ if (dateVal) showToast(`✅ "${label}" completed`);
+
+  // ── FIX: always refresh all workflows + proj-todos for both roles ──
+  renderAllWorkflows();
+  renderProjTodosFromPMData();
+  if (currentRole === 'hub') renderDashboard();
 }
 
 async function setWorkflowInput(workflowId, rowKey, val) {
@@ -893,25 +898,38 @@ function renderDashboard() {
 }
 
 // ══ WORKFLOWS ══
+// ── FIX: renderWorkflow now supports both Hub (eventDetail) and PM (pmData) ──
 function renderAllWorkflows() {
   ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
 }
 
 function renderWorkflow(id) {
   const def = WORKFLOWS[id];
-  const el = document.getElementById('page-'+id);
-  if (!def||!el) return;
-  const ev = eventDetail?.event;
+  const el  = document.getElementById('page-' + id);
+  if (!def || !el) return;
+
+  // ── FIX: use the correct data source based on role ──
+  const ev        = currentRole === 'hub' ? eventDetail?.event    : pmData?.event;
+  const wfRows    = currentRole === 'hub' ? (eventDetail?.workflow_rows||[]) : (pmData?.workflow_rows||[]);
   const eventDate = parseISO(ev?.event_date);
-  const wfRows = eventDetail?.workflow_rows || [];
-  const getRow = (wid,rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
+  const getRow    = (wid, rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
 
   let html = `<div class="page-title">${def.title}</div>
-    <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>
-    <div class="table-wrap"><table><thead><tr>
-      <th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th>
-      <th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th>
-    </tr></thead><tbody>`;
+    <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>`;
+
+  // PM notice banner
+  if (currentRole === 'proj') {
+    html += `<div class="alert alert-blu show" style="margin-bottom:20px">
+      📌 You are viewing as <strong>${pmData?.pm_name||'Project Manager'}</strong>
+      ${ev?.name ? '— Event: <strong>' + esc(ev.name) + '</strong>' : ''}. 
+      Your updates are saved directly.
+    </div>`;
+  }
+
+  html += `<div class="table-wrap"><table><thead><tr>
+    <th>Task</th><th>Input</th><th>Deadline</th>
+    <th style="text-align:center">Days</th><th>Status</th><th>Completed On</th>
+  </tr></thead><tbody>`;
 
   def.sections.forEach(sec => {
     html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
