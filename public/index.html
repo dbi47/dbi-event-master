@@ -225,11 +225,20 @@ select{cursor:pointer}
   font-family:'Instrument Sans',sans-serif;transition:background .15s}
 .pw-confirm-btn:hover{background:#96104a}
 
-/* ── HUB ONLY / PROJ ONLY ── */
+/* ── HUB ONLY / PROJ ONLY ── NEW EDITS*/
+/* ── ROLE VISIBILITY ── */
+/* hub-only: only shown when logged in as admin/hub */
 .hub-only{display:none}
 body.role-hub .hub-only{display:flex}
+
+/* proj-only: only shown when logged in as PM */
 .proj-only{display:none}
 body.role-proj .proj-only{display:flex}
+
+/* workflow-item: shown to BOTH hub and PM  ← KEY FIX */
+.workflow-item{display:none}
+body.role-hub .workflow-item,
+body.role-proj .workflow-item{display:flex}
 
 @media(max-width:600px){
   :root{--main-pad:16px 14px 80px}
