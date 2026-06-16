@@ -69,12 +69,15 @@ exports.handler = async (event) => {
     // POST /event — create or update event (hub only)
     if (path === '/event' && method === 'POST') {
       if (!isHub(body)) return json(401, { error: 'Unauthorized' });
-      const { id, password, ...fields } = body.event || body;
+      const { id, password: _pw, ...fields } = body.event ? { ...body.event } : { ...body };
+const allowed = ['name','event_date','start_date','size','topic','owner','owner_email','phone','hub_contact','room','catering','rasmus','teams','ablage','file_path','archived'];
+const cleanFields = {};
+allowed.forEach(k => { if (fields[k] !== undefined) cleanFields[k] = fields[k]; });
+if (!cleanFields.name) cleanFields.name = 'Neues Event';
       let result;
       if (id) {
-        result = await supabase.from('events').update(fields).eq('id', id).select().single();
-      } else {
-        result = await supabase.from('events').insert(fields).select().single();
+        result = await supabase.from('events').update(cleanFields).eq('id', id).select().single();
+       result = await supabase.from('events').insert(cleanFields).select().single();
       }
       if (result.error) return json(500, { error: result.error.message });
       return json(200, { event: result.data });
