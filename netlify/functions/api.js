@@ -111,13 +111,16 @@ if (!cleanFields.name) cleanFields.name = 'Neues Event';
       } else if (password !== HUB_PW) {
         return json(401, { error: 'Unauthorized' });
       }
+      // Build update payload dynamically
+      const updateData = { event_id, workflow_id, row_key };
+      if (input_value !== undefined) {
+        updateData.input_value = input_value;
+      }
+      if (done_date !== undefined) {
+        updateData.done_date = done_date || null;
+      }
       const { error } = await supabase.from('workflow_rows')
-        .upsert(
-          { event_id, workflow_id, row_key,
-            input_value: input_value ?? null,
-            done_date: done_date || null },
-          { onConflict: 'event_id,workflow_id,row_key' }
-        );
+        .upsert(updateData, { onConflict: 'event_id,workflow_id,row_key' });
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
