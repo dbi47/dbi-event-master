@@ -75,8 +75,9 @@ const cleanFields = {};
 allowed.forEach(k => { if (fields[k] !== undefined) cleanFields[k] = fields[k]; });
 if (!cleanFields.name) cleanFields.name = 'Neues Event';
       let result;
-      if (id) {
-        result = await supabase.from('events').update(cleanFields).eq('id', id).select().single();
+        if (id) {
+            result = await supabase.from('events').update(cleanFields).eq('id', id).select().single();
+        }else{
        result = await supabase.from('events').insert(cleanFields).select().single();
       }
       if (result.error) return json(500, { error: result.error.message });
