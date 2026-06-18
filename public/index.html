@@ -760,7 +760,11 @@ async function setWorkflowDone(workflowId, rowKey, label, dateVal) {
   else body.token = pmToken;
   const r = await fetch(`${API}/workflow`, { method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  if (!r.ok) { showToast('❌ Fehler'); return; }
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    showToast('❌ ' + (d.error || 'Fehler'));
+    return;
+  }
   updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal||null });
  if (dateVal) showToast(`✅ "${label}" completed`);
 
