@@ -780,8 +780,13 @@ async function setWorkflowInput(workflowId, rowKey, val) {
   const body = { event_id: ev.id, workflow_id: workflowId, row_key: rowKey, input_value: val };
   if (currentRole === 'hub') body.password = hubPassword;
   else body.token = pmToken;
-  await fetch(`${API}/workflow`, { method:'POST',
+  const r = await fetch(`${API}/workflow`, { method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    showToast('❌ ' + (d.error || 'Fehler'));
+    return;
+  }
   updateLocalWorkflow(workflowId, rowKey, { input_value: val });
 }
 
