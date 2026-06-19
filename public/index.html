@@ -510,6 +510,7 @@ let pmData  = null;        // { pm_name, event, milestones, workflow_rows }
 let currentEventId = null; // which event the hub is viewing
 let allEvents = [];        // hub: list of all events
 let eventDetail = null;    // { event, milestones, workflow_rows }
+let currentPMTokensCache = []; // PM tokens for the currently open event, used in assign dropdowns
 
 // ══ ROLE MODAL ══
 function showPWField() {
@@ -806,6 +807,7 @@ async function loadPMTokens(eventId) {
   const d = await r.json();
   const list = document.getElementById('pm-tokens-list');
   const tokens = d.tokens || [];
+  currentPMTokensCache = tokens;
   if (!tokens.length) {
     list.innerHTML = '<div style="padding:16px;font-size:.82rem;color:var(--mid)">Noch keine Zugänge erstellt.</div>';
     return;
@@ -964,19 +966,57 @@ function buildInputCell(row, stored, workflowId) {
 function renderAllWorkflows() {
   ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
 }
-
+ 
 function renderWorkflow(id) {
   const def = WORKFLOWS[id];
   const el  = document.getElementById('page-' + id);
   if (!def || !el) return;
+  
+function buildAssignCell(workflowId, rowKey) {
+  const pmTokens = currentPMTokensCache || [];
+  const assignment = (eventDetail?.task_assignments || [])
+    .find(a => a.workflow_id === workflowId && a.row_key === rowKey);
+  const options = pmTokens.map(t =>
+    `<option value="${t.id}" ${assignment?.pm_token_id===t.id?'selected':''}>${esc(t.pm_name)}</option>`
+  ).join('');
+  return `<select class="erledigt-input" style="width:130px;font-size:.75rem"
+    onchange="assignTask('${workflowId}','${rowKey}',this.value)">
+    <option value="">– niemand –</option>
+    ${options}
+  </select>`;
+}
 
+async function assignTask(workflowId, rowKey, pmTokenId) {
+  const ev = eventDetail?.event;
+  if (!ev) return;
+  const r = await fetch(`${API}/assign-task`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      password: hubPassword, event_id: ev.id,
+      workflow_id: workflowId, row_key: rowKey,
+      pm_token_id: pmTokenId || null
+    })
+  });
+  if (r.ok) {
+    showToast('✅ Zuweisung gespeichert');
+    const idx = (eventDetail.task_assignments||[]).findIndex(a=>a.workflow_id===workflowId&&a.row_key===rowKey);
+    if (pmTokenId) {
+      const obj = { workflow_id: workflowId, row_key: rowKey, pm_token_id: pmTokenId };
+      if (idx>=0) eventDetail.task_assignments[idx]=obj; else (eventDetail.task_assignments=eventDetail.task_assignments||[]).push(obj);
+    } else if (idx>=0) {
+      eventDetail.task_assignments.splice(idx,1);
+    }
+  } else {
+    showToast('❌ Fehler bei Zuweisung');
+  }
+}
   // ── FIX: use the correct data source based on role ──
   const ev        = currentRole === 'hub' ? eventDetail?.event    : pmData?.event;
   const wfRows    = currentRole === 'hub' ? (eventDetail?.workflow_rows||[]) : (pmData?.workflow_rows||[]);
   const eventDate = parseISO(ev?.event_date);
   const getRow    = (wid, rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
 
- let html = `<div class="page-title">${def.title}${ev?.name ? ' — ' + esc(ev.name) : ''}</div>
+   let html = `<div class="page-title">${def.title}${ev?.name ? ' — ' + esc(ev.name) : ''}</div>
     <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>`;
 
   // PM notice banner
@@ -988,9 +1028,11 @@ function renderWorkflow(id) {
     </div>`;
   }
 
+ const showAssignCol = currentRole === 'hub';
   html += `<div class="table-wrap"><table><thead><tr>
     <th>Task</th><th>Input</th><th>Deadline</th>
     <th style="text-align:center">Days</th><th>Status</th><th>Completed On</th>
+    ${showAssignCol ? '<th>Assigned PM</th>' : ''}
   </tr></thead><tbody>`;
 
   def.sections.forEach(sec => {
@@ -1003,7 +1045,7 @@ function renderWorkflow(id) {
       const diff = fd ? daysDiff(fd) : null;
       const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
       const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
-    const inputCell = buildInputCell(row, stored, pflicht);
+    const inputCell = buildInputCell(row, stored, 'pflicht');
 
       html += `<tr class="status-${st.cls}">
         <td class="td-label">${row.label}</td>
@@ -1015,8 +1057,9 @@ function renderWorkflow(id) {
         <td class="td-date" style="color:var(--blu-fg)">${fd?fmtDE(fd):'–'}</td>
         <td class="td-days" style="color:${dCol}">${dStr}</td>
         <td>${pillHTML(st)}</td>
-        <td><input type="date" class="erledigt-input${done?' done':''}" value="${stored.done_date||''}"
+      <td><input type="date" class="erledigt-input${done?' done':''}" value="${stored.done_date||''}"
           onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)"></td>
+        ${showAssignCol ? `<td>${buildAssignCell(id, row.key)}</td>` : ''}
       </tr>`;
     });
   });
