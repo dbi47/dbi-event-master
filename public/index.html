@@ -630,7 +630,8 @@ function renderEventGrid() {
       <div class="event-card-actions">
         <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
         <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
-      </div>`;
+        <button class="btn" style="padding:8px 12px;font-size:.78rem;background:#b0175a" onclick="deleteEvent('${ev.id}','${esc(ev.name)}')">🗑 Löschen</button>
+      </div>
     grid.appendChild(card);
   });
 
@@ -657,7 +658,24 @@ async function selectEvent(id) {
   renderAllWorkflows();
   loadPMTokens(id);
 }
-
+// ── NEW: Delete event (hub only) ──
+async function deleteEvent(id, name) {
+  if (!confirm(`Event "${name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+  try {
+    const r = await fetch(`${API}/event`, {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: hubPassword, event_id: id })
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast('❌ ' + d.error); return; }
+    allEvents = allEvents.filter(e => e.id !== id);
+    if (currentEventId === id) { currentEventId = null; eventDetail = null; }
+    renderEventGrid();
+    showToast(`✅ Event "${name}" gelöscht`);
+  } catch { showToast('❌ Verbindungsfehler'); }
+}
+// ── END NEW ──
 async function createNewEvent() {
   const r = await fetch(`${API}/event`, {
     method:'POST', headers:{'Content-Type':'application/json'},
