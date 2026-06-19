@@ -11,7 +11,7 @@ const HUB_PW = process.env.HUB_PASSWORD;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS'
 };
 
 exports.handler = async (event) => {
@@ -70,19 +70,38 @@ exports.handler = async (event) => {
     if (path === '/event' && method === 'POST') {
       if (!isHub(body)) return json(401, { error: 'Unauthorized' });
       const { id, password: _pw, ...fields } = body.event ? { ...body.event } : { ...body };
-const allowed = ['name','event_date','start_date','size','topic','owner','owner_email','phone','hub_contact','room','catering','rasmus','teams','ablage','file_path','archived'];
-const cleanFields = {};
-allowed.forEach(k => { if (fields[k] !== undefined) cleanFields[k] = fields[k]; });
-if (!cleanFields.name) cleanFields.name = 'Neues Event';
+      const allowed = ['name','event_date','start_date','size','topic','owner','owner_email','phone','hub_contact','room','catering','rasmus','teams','ablage','file_path','archived'];
+      const cleanFields = {};
+      allowed.forEach(k => { if (fields[k] !== undefined) cleanFields[k] = fields[k]; });
+      if (!cleanFields.name) cleanFields.name = 'Neues Event';
       let result;
-        if (id) {
-            result = await supabase.from('events').update(cleanFields).eq('id', id).select().single();
-        }else{
-       result = await supabase.from('events').insert(cleanFields).select().single();
+      if (id) {
+        result = await supabase.from('events').update(cleanFields).eq('id', id).select().single();
+      } else {
+        result = await supabase.from('events').insert(cleanFields).select().single();
       }
       if (result.error) return json(500, { error: result.error.message });
       return json(200, { event: result.data });
     }
+
+    // ── NEW: DELETE /event — permanently delete an event and all related data ──
+    // Body: { password, event_id }
+    // Cascades automatically via the foreign key "on delete cascade" set in
+    // milestones, workflow_rows, pm_tokens, reminder_log — no extra cleanup needed.
+    if (path === '/event' && method === 'DELETE') {
+      if (!isHub(body)) return json(401, { error: 'Unauthorized' });
+      const { event_id } = body;
+      if (!event_id) return json(400, { error: 'Missing event_id' });
+
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event_id);
+
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+    // ── END NEW ──────────────────────────────────────────────────────────────
 
     // POST /milestone — set done date
     if (path === '/milestone' && method === 'POST') {
@@ -111,14 +130,9 @@ if (!cleanFields.name) cleanFields.name = 'Neues Event';
       } else if (password !== HUB_PW) {
         return json(401, { error: 'Unauthorized' });
       }
-      // Build update payload dynamically
       const updateData = { event_id, workflow_id, row_key };
-      if (input_value !== undefined) {
-        updateData.input_value = input_value;
-      }
-      if (done_date !== undefined) {
-        updateData.done_date = done_date || null;
-      }
+      if (input_value !== undefined) updateData.input_value = input_value;
+      if (done_date !== undefined) updateData.done_date = done_date || null;
       const { error } = await supabase.from('workflow_rows')
         .upsert(updateData, { onConflict: 'event_id,workflow_id,row_key' });
       if (error) return json(500, { error: error.message });
