@@ -939,29 +939,124 @@ function renderDashboard() {
   
   // ── Detects hints with 2–4 short "/"-separated options and renders a dropdown.
 // Falls back to free text for anything else (names, dates, numbers, free descriptions).
+// ── Detects hints with 2–4 short "/"-separated options and renders a dropdown.
+// Falls back to free text for anything else (names, dates, numbers, free descriptions).
 function buildInputCell(row, stored, workflowId) {
   const hint = (row.hint || '').trim();
   const parts = hint.split('/').map(s => s.trim()).filter(Boolean);
 
-  // Only treat as a dropdown if: 2-4 options, each option is short (no long sentences)
   const looksLikeOptions = parts.length >= 2 && parts.length <= 4 &&
     parts.every(p => p.length <= 20 && !/[.:]/.test(p));
 
   if (!looksLikeOptions) {
-    return `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-      placeholder="${esc(hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
-      onchange="setWorkflowInput('${workflowId}','${row.key}',this.value)">`;
+    return ``;
   }
 
   const options = parts.map(p =>
-    `<option value="${esc(p)}" ${stored.input_value===p?'selected':''}>${esc(p)}</option>`
+    `${esc(p)}`
   ).join('');
 
-  return `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-    onchange="setWorkflowInput('${workflowId}','${row.key}',this.value)">
-    <option value="" ${!stored.input_value?'selected':''}>– bitte wählen –</option>
+  return `
+    – bitte wählen –
     ${options}
-  </select>`;
+  `;
+}
+
+function buildAssignCell(workflowId, rowKey) {
+  const pmTokens = currentPMTokensCache || [];
+  const assignment = (eventDetail?.task_assignments || [])
+    .find(a => a.workflow_id === workflowId && a.row_key === rowKey);
+  const options = pmTokens.map(t =>
+    `${esc(t.pm_name)}`
+  ).join('');
+  return `
+    – niemand –
+    ${options}
+  `;
+}
+
+async function assignTask(workflowId, rowKey, pmTokenId) {
+  const ev = eventDetail?.event;
+  if (!ev) return;
+  const r = await fetch(`${API}/assign-task`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      password: hubPassword, event_id: ev.id,
+      workflow_id: workflowId, row_key: rowKey,
+      pm_token_id: pmTokenId || null
+    })
+  });
+  if (r.ok) {
+    showToast('✅ Zuweisung gespeichert');
+    const idx = (eventDetail.task_assignments||[]).findIndex(a=>a.workflow_id===workflowId&&a.row_key===rowKey);
+    if (pmTokenId) {
+      const obj = { workflow_id: workflowId, row_key: rowKey, pm_token_id: pmTokenId };
+      if (idx>=0) eventDetail.task_assignments[idx]=obj; else (eventDetail.task_assignments=eventDetail.task_assignments||[]).push(obj);
+    } else if (idx>=0) {
+      eventDetail.task_assignments.splice(idx,1);
+    }
+  } else {
+    showToast('❌ Fehler bei Zuweisung');
+  }
+}
+
+function renderAllWorkflows() {
+  ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
+}
+
+function renderWorkflow(id) {
+  const def = WORKFLOWS[id];
+  const el  = document.getElementById('page-' + id);
+  if (!def || !el) return;
+
+  const ev        = currentRole === 'hub' ? eventDetail?.event    : pmData?.event;
+  const wfRows    = currentRole === 'hub' ? (eventDetail?.workflow_rows||[]) : (pmData?.workflow_rows||[]);
+  const eventDate = parseISO(ev?.event_date);
+  const getRow    = (wid, rkey) => wfRows.find(r=>r.workflow_id===wid&&r.row_key===rkey)||{};
+
+  let html = `${def.title}${ev?.name ? ' — ' + esc(ev.name) : ''}
+    ${def.sub}`;
+
+  if (currentRole === 'proj') {
+    html += `
+      📌 You are viewing as ${pmData?.pm_name||'Project Manager'}
+      ${ev?.name ? '— Event: ' + esc(ev.name) + '' : ''}.
+      Your updates are saved directly.
+    `;
+  }
+
+  const showAssignCol = currentRole === 'hub';
+  html += `
+    ${showAssignCol ? '' : ''}
+  `;
+
+  def.sections.forEach(sec => {
+    html += ``;
+    sec.rows.forEach(row => {
+      const fd = eventDate ? addDays(eventDate, row.offset||0) : null;
+      const stored = getRow(id, row.key);
+      const done = parseISO(stored.done_date||'');
+      const st = getStatus(fd, done);
+      const diff = fd ? daysDiff(fd) : null;
+      const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
+      const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
+      const inputCell = buildInputCell(row, stored, id);
+
+      html += `
+        ${showAssignCol ? `` : ''}
+      `;
+    });
+  });
+  html += '
+    TaskInputDeadline
+    DaysStatusCompleted OnAssigned PM${sec.title}
+        ${row.label}
+        ${inputCell}
+        ${fd?fmtDE(fd):'–'}
+        ${dStr}
+        ${pillHTML(st)}
+        ${buildAssignCell(id, row.key)}';
+  el.innerHTML = html;
 }
 function renderAllWorkflows() {
   ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
