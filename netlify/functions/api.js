@@ -86,7 +86,8 @@ exports.handler = async (event) => {
 
     // ── NEW: DELETE /event — permanently delete an event and all its data ──
     if (path === '/event' && method === 'DELETE') {
-      if (!isHub(body)) return json(401, { error: 'Unauthorized' });
+      const password = body.password || event.queryStringParameters?.password;
+      if (password !== HUB_PW) return json(401, { error: 'Unauthorized' });
       const { event_id } = body;
       if (!event_id) return json(400, { error: 'Missing event_id' });
       const { error } = await supabase
@@ -96,7 +97,7 @@ exports.handler = async (event) => {
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
-    // ── END NEW ──────────────────────────────────────────────────────────────
+    // ── END NEW ──────────────────────────────────────────────────────────
 
     // POST /milestone — set done date
     if (path === '/milestone' && method === 'POST') {
