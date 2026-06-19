@@ -934,6 +934,33 @@ function renderDashboard() {
 
 // ══ WORKFLOWS ══
 // ── FIX: renderWorkflow now supports both Hub (eventDetail) and PM (pmData) ──
+  
+  // ── Detects hints with 2–4 short "/"-separated options and renders a dropdown.
+// Falls back to free text for anything else (names, dates, numbers, free descriptions).
+function buildInputCell(row, stored, workflowId) {
+  const hint = (row.hint || '').trim();
+  const parts = hint.split('/').map(s => s.trim()).filter(Boolean);
+
+  // Only treat as a dropdown if: 2-4 options, each option is short (no long sentences)
+  const looksLikeOptions = parts.length >= 2 && parts.length <= 4 &&
+    parts.every(p => p.length <= 20 && !/[.:]/.test(p));
+
+  if (!looksLikeOptions) {
+    return `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
+      placeholder="${esc(hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
+      onchange="setWorkflowInput('${workflowId}','${row.key}',this.value)">`;
+  }
+
+  const options = parts.map(p =>
+    `<option value="${esc(p)}" ${stored.input_value===p?'selected':''}>${esc(p)}</option>`
+  ).join('');
+
+  return `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
+    onchange="setWorkflowInput('${workflowId}','${row.key}',this.value)">
+    <option value="" ${!stored.input_value?'selected':''}>– bitte wählen –</option>
+    ${options}
+  </select>`;
+}
 function renderAllWorkflows() {
   ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
 }
@@ -976,17 +1003,11 @@ function renderWorkflow(id) {
       const diff = fd ? daysDiff(fd) : null;
       const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
       const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
-    const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint||'').trim());
-      const inputCell = isYesNo
-        ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-            onchange="setWorkflowInput('${id}','${row.key}',this.value)">
-            <option value="" ${!stored.input_value?'selected':''}>– bitte wählen –</option>
-            <option value="Ja" ${stored.input_value==='Ja'?'selected':''}>Ja</option>
-            <option value="Nein" ${stored.input_value==='Nein'?'selected':''}>Nein</option>
-          </select>`
-        : `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-            placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
-            onchange="setWorkflowInput('${id}','${row.key}',this.value)">`;
+    const inputCell = buildInputCell(row, stored, pflicht);
+
+      html += `<tr class="status-${st.cls}">
+        <td class="td-label">${row.label}</td>
+        <td>${inputCell}</td>
 
       html += `<tr class="status-${st.cls}">
         <td class="td-label">${row.label}</td>
