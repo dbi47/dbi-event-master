@@ -630,6 +630,7 @@ function renderEventGrid() {
       <div class="event-card-actions">
         <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
         <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
+        <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem;color:var(--red-fg);border-color:var(--red-fg)" onclick="event.stopPropagation();deleteEvent('${ev.id}','${esc(ev.name)}')">🗑</button>
       </div>`;
     grid.appendChild(card);
   });
@@ -844,7 +845,30 @@ function copyText(text, msg) {
 function copyICSLink(eventId) {
   copyText(`${location.origin}${ICS}?event=${eventId}`, '📅 ICS-Link kopiert!');
 }
+async function deleteEvent(eventId, eventName) {
+  const confirmed = confirm(`"${eventName}" wirklich endgültig löschen?\n\nAlle Meilensteine, Workflows und PM-Links für dieses Event werden ebenfalls gelöscht. Das kann nicht rückgängig gemacht werden.`);
+  if (!confirmed) return;
 
+  try {
+    const r = await fetch(`${API}/event`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: hubPassword, event_id: eventId })
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast('❌ ' + (d.error || 'Fehler beim Löschen')); return; }
+
+    allEvents = allEvents.filter(e => e.id !== eventId);
+    if (currentEventId === eventId) {
+      currentEventId = null;
+      eventDetail = null;
+    }
+    renderEventGrid();
+    showToast(`🗑 "${eventName}" gelöscht`);
+  } catch {
+    showToast('❌ Verbindungsfehler beim Löschen');
+  }
+}
 // ══ DASHBOARD ══
 function renderDashboard() {
   const ev = eventDetail?.event;
