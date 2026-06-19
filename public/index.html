@@ -933,6 +933,63 @@ function renderDashboard() {
 }
 
 // ══ WORKFLOWS ══
+ // ══ WORKFLOWS ══
+function getFallbackValue(workflowId, rowKey, ev) {
+  if (!ev) return '';
+  // Event Name / Title
+  if ((workflowId === 'social' && rowKey === 'sm1') ||
+      (workflowId === 'einladung' && rowKey === 'en1') ||
+      (workflowId === 'pflicht' && rowKey === 'ei1')) {
+    return ev.name || '';
+  }
+  // Event Date
+  if (workflowId === 'social' && rowKey === 'sm2') {
+    return ev.event_date || '';
+  }
+  // Event Date + Room (for invitation/pflicht details)
+  if ((workflowId === 'einladung' && rowKey === 'en3') ||
+      (workflowId === 'pflicht' && rowKey === 'ei3')) {
+    let val = ev.event_date || '';
+    if (ev.room) {
+      const roomLabels = { 'dbi': 'Eventraum DBI', 'extern': 'Externer Raum' };
+      const roomStr = roomLabels[ev.room] || ev.room;
+      val += val ? ` · ${roomStr}` : roomStr;
+    }
+    return val;
+  }
+  // Event Size
+  if (workflowId === 'pflicht' && rowKey === 'me4') {
+    const sizeLabels = { '12': 'Klein (12W)', '18': 'Mittel (18W)', '24': 'Groß (24W)' };
+    return sizeLabels[ev.size] || ev.size || '';
+  }
+  // Teams Chat
+  if (workflowId === 'pflicht' && rowKey === 'me2') {
+    const teamsLabels = { 'ja': 'Ja – alle hinzugefügt', 'nein': 'Nein' };
+    return teamsLabels[ev.teams] || ev.teams || '';
+  }
+  // Files Saved (Ablage)
+  if (workflowId === 'pflicht' && rowKey === 'me3') {
+    const ablageLabels = { 'ja': 'Ja', 'nein': 'Nein' };
+    return ablageLabels[ev.ablage] || ev.ablage || '';
+  }
+  // Room Confirmed
+  if (workflowId === 'pflicht' && rowKey === 'lo1') {
+    const roomLabels = { 'dbi': 'Eventraum DBI (Standard)', 'extern': 'Externer Raum' };
+    return roomLabels[ev.room] || ev.room || '';
+  }
+  // Catering Ordered
+  if (workflowId === 'pflicht' && rowKey === 'lo2') {
+    const cateringLabels = { 'brezel': 'Brezeln', 'broetchen': 'Belegte Brötchen', 'extended': 'Erweitertes Catering' };
+    return cateringLabels[ev.catering] || ev.catering || '';
+  }
+  // Ansprechperson
+  if (workflowId === 'pflicht' && rowKey === 'vt4') {
+    let val = ev.owner || '';
+    if (ev.owner_email) val += val ? ` (${ev.owner_email})` : ev.owner_email;
+    return val;
+  }
+  return '';
+} 
 // ── FIX: renderWorkflow now supports both Hub (eventDetail) and PM (pmData) ──
 function renderAllWorkflows() {
   ['pflicht','einladung','social','pixlip'].forEach(renderWorkflow);
@@ -985,7 +1042,7 @@ function renderWorkflow(id) {
             <option value="Nein" ${stored.input_value==='Nein'?'selected':''}>Nein</option>
           </select>`
         : `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-            placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
+             placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value || getFallbackValue(id, row.key, ev))}"
             onchange="setWorkflowInput('${id}','${row.key}',this.value)">`;
 
       html += `<tr class="status-${st.cls}">
@@ -1037,7 +1094,7 @@ function renderProjTodosFromPMData() {
             <option value="Nein" ${stored.input_value==='Nein'?'selected':''}>Nein</option>
           </select>`
         : `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-            placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value)}"
+           placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value || getFallbackValue('pflicht', row.key, ev))}"
             onchange="setWorkflowInput('pflicht','${row.key}',this.value)">`;
 
       html += `<tr class="status-${st.cls}">
