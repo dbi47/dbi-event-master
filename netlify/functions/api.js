@@ -127,6 +127,11 @@ exports.handler = async (event) => {
         if (!pm || pm.event_id !== event_id) return json(403, { error: 'Forbidden' });
         if (!pm.workflow_ids.includes(workflow_id))
           return json(403, { error: 'Not your workflow' });
+        // If this row has a specific assignee, only they may edit it
+        const { data: assignment } = await supabase.from('task_assignments')
+          .select('pm_token_id').match({ event_id, workflow_id, row_key }).maybeSingle();
+        if (assignment && assignment.pm_token_id !== pm.id)
+          return json(403, { error: 'This task is assigned to someone else' });
       } else if (password !== HUB_PW) {
         return json(401, { error: 'Unauthorized' });
       }
@@ -155,7 +160,38 @@ exports.handler = async (event) => {
         ics_link: `${site}/.netlify/functions/ics?token=${data.token}`
       });
     }
+// POST /assign-task — assign one specific task row to a PM (hub only)
+    if (path === '/assign-task' && method === 'POST') {
+      if (!isHub(body)) return json(401, { error: 'Unauthorized' });
+      const { event_id, workflow_id, row_key, pm_token_id } = body;
+      if (!event_id || !workflow_id || !row_key)
+        return json(400, { error: 'Missing fields' });
 
+      if (!pm_token_id) {
+        // Unassign — remove any existing assignment for this row
+        await supabase.from('task_assignments')
+          .delete().match({ event_id, workflow_id, row_key });
+        return json(200, { ok: true });
+      }
+
+      const { error } = await supabase.from('task_assignments')
+        .upsert({ event_id, workflow_id, row_key, pm_token_id },
+                 { onConflict: 'event_id,workflow_id,row_key' });
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+
+    // GET /task-assignments?event_id=X — list all task assignments for an event (hub only)
+    if (path === '/task-assignments' && method === 'GET') {
+      if (event.queryStringParameters?.password !== HUB_PW)
+        return json(401, { error: 'Unauthorized' });
+      const event_id = event.queryStringParameters?.event_id;
+      const { data } = await supabase
+        .from('task_assignments')
+        .select('workflow_id, row_key, pm_token_id, pm_tokens(pm_name)')
+        .eq('event_id', event_id);
+      return json(200, { assignments: data || [] });
+    }
     // GET /pm-tokens?event_id=X — list tokens for event (hub only)
     if (path === '/pm-tokens' && method === 'GET') {
       if (event.queryStringParameters?.password !== HUB_PW)
@@ -188,12 +224,13 @@ exports.handler = async (event) => {
 };
 
 async function loadFullEvent(event_id) {
-  const [{ data: ev }, { data: ms }, { data: wf }] = await Promise.all([
+  const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }] = await Promise.all([
     supabase.from('events').select('*').eq('id', event_id).single(),
     supabase.from('milestones').select('*').eq('event_id', event_id),
-    supabase.from('workflow_rows').select('*').eq('event_id', event_id)
+    supabase.from('workflow_rows').select('*').eq('event_id', event_id),
+    supabase.from('task_assignments').select('workflow_id, row_key, pm_token_id').eq('event_id', event_id)
   ]);
-  return { event: ev, milestones: ms || [], workflow_rows: wf || [] };
+  return { event: ev, milestones: ms || [], workflow_rows: wf || [], task_assignments: ta || [] };
 }
 
 function json(status, body) {
