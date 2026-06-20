@@ -947,12 +947,12 @@ function getFallbackValue(workflowId, rowKey, ev) {
   }
   // Event Date
   if (workflowId === 'social' && rowKey === 'sm2') {
-    return ev.event_date || '';
+    return ev.event_date ? fmtDE(parseISO(ev.event_date)) : '';
   }
   // Event Date + Room (for invitation/pflicht details)
   if ((workflowId === 'einladung' && rowKey === 'en3') ||
       (workflowId === 'pflicht' && rowKey === 'ei3')) {
-    let val = ev.event_date || '';
+    let val = ev.event_date ? fmtDE(parseISO(ev.event_date)) : '';
     if (ev.room) {
       const roomLabels = { 'dbi': 'Eventraum DBI', 'extern': 'Externer Raum' };
       const roomStr = roomLabels[ev.room] || ev.room;
@@ -1136,7 +1136,7 @@ function showToast(msg) {
 // ══ DATE HELPERS ══
 const TODAY = ()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
-function fmtDE(d){ if(!d) return '–'; return new Intl.DateTimeFormat('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d); }
+function fmtDE(d){ if(!d) return '–'; return new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric'}).format(d); }
 function parseISO(s){ if(!s) return null; const d=new Date(s+'T12:00:00'); return isNaN(d)?null:d; }
 function daysDiff(t){ return Math.round((t-TODAY())/86400000); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
