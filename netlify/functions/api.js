@@ -70,7 +70,7 @@ exports.handler = async (event) => {
     if (path === '/event' && method === 'POST') {
       if (!isHub(body)) return json(401, { error: 'Unauthorized' });
       const { id, password: _pw, ...fields } = body.event ? { ...body.event } : { ...body };
-      const allowed = ['name','event_date','start_date','size','topic','owner','owner_email','phone','hub_contact','room','catering','rasmus','teams','ablage','file_path','archived'];
+      const allowed = ['name','event_date','start_date','size','topic','owner','owner_email','phone','hub_contact','room','catering','catering_contact','rasmus','teams','ablage','file_path','archived'];
       const cleanFields = {};
       allowed.forEach(k => { if (fields[k] !== undefined) cleanFields[k] = fields[k]; });
       if (!cleanFields.name) cleanFields.name = 'Neues Event';
