@@ -425,6 +425,8 @@ body.role-proj .workflow-item{display:flex}
               <option value="broetchen">Belegte Brötchen</option>
               <option value="extended">Erweitertes Catering</option>
             </select></div>
+          <div class="form-group"><label class="form-label">Catering Ansprechpartner / Details</label>
+            <input type="text" id="ev-catering-contact" placeholder="Name, Telefon, E-Mail" oninput="schedSave()"></div>
           <div class="form-group full"><label class="form-label">Externer Raum – Rasmus abgestimmt?</label>
             <input type="text" id="ev-rasmus" placeholder="Ja / Nein + Details" oninput="schedSave()"></div>
         </div>
@@ -716,6 +718,7 @@ function readEventForm() {
     hub_contact:document.getElementById('ev-hub').value.trim(),
     room:       document.getElementById('ev-room').value,
     catering:   document.getElementById('ev-catering').value,
+    catering_contact: document.getElementById('ev-catering-contact').value.trim(),
     rasmus:     document.getElementById('ev-rasmus').value.trim(),
     teams:      document.getElementById('ev-teams').value,
     ablage:     document.getElementById('ev-ablage').value,
@@ -729,7 +732,7 @@ function populateEventForm(ev) {
     'ev-name':ev.name,'ev-date':ev.event_date||'','ev-size':ev.size||'',
     'ev-topic':ev.topic||'','ev-owner':ev.owner||'','ev-email':ev.owner_email||'',
     'ev-phone':ev.phone||'','ev-hub':ev.hub_contact||'','ev-room':ev.room||'dbi',
-    'ev-catering':ev.catering||'brezel','ev-rasmus':ev.rasmus||'',
+    'ev-catering':ev.catering||'brezel','ev-catering-contact':ev.catering_contact||'','ev-rasmus':ev.rasmus||'',
     'ev-teams':ev.teams||'','ev-ablage':ev.ablage||'','ev-path':ev.file_path||''
   };
   Object.entries(map).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
@@ -1033,16 +1036,18 @@ function renderWorkflow(id) {
       const diff = fd ? daysDiff(fd) : null;
       const dStr = diff!==null?(diff>0?'+'+diff:String(diff)):'–';
       const dCol = diff===null?'var(--mid)':diff<0?'var(--red-fg)':diff<=14?'var(--amb-fg)':'var(--mid)';
-    const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint||'').trim());
+      
+      const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint||'').trim());
+      const valToShow = stored.input_value || getFallbackValue(id, row.key, ev);
       const inputCell = isYesNo
         ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
             onchange="setWorkflowInput('${id}','${row.key}',this.value)">
-            <option value="" ${!stored.input_value?'selected':''}>– bitte wählen –</option>
-            <option value="Ja" ${stored.input_value==='Ja'?'selected':''}>Ja</option>
-            <option value="Nein" ${stored.input_value==='Nein'?'selected':''}>Nein</option>
+            <option value="" ${!valToShow?'selected':''}>– bitte wählen –</option>
+            <option value="Ja" ${valToShow==='Ja'?'selected':''}>Ja</option>
+            <option value="Nein" ${valToShow==='Nein'?'selected':''}>Nein</option>
           </select>`
         : `<input type="text" class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem"
-             placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(stored.input_value || getFallbackValue(id, row.key, ev))}"
+            placeholder="${esc(row.hint)||'Eingabe…'}" value="${esc(valToShow)}"
             onchange="setWorkflowInput('${id}','${row.key}',this.value)">`;
 
       html += `<tr class="status-${st.cls}">
