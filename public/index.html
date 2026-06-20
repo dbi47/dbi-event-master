@@ -1137,7 +1137,21 @@ function showToast(msg) {
 const TODAY = ()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; };
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function fmtDE(d){ if(!d) return '–'; return new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric'}).format(d); }
-function parseISO(s){ if(!s) return null; const d=new Date(s+'T12:00:00'); return isNaN(d)?null:d; }
+function parseISO(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(str)) {
+    const [day, month, year] = str.split('.');
+    const d = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`);
+    return isNaN(d) ? null : d;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const d = new Date(str + 'T12:00:00');
+    return isNaN(d) ? null : d;
+  }
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
 function daysDiff(t){ return Math.round((t-TODAY())/86400000); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
