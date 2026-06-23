@@ -1723,6 +1723,7 @@
         return {
           name: document.getElementById("ev-name").value.trim(),
           event_date: document.getElementById("ev-date").value || null,
+          start_date: document.getElementById("ev-start-date").value || null,
           size: document.getElementById("ev-size").value,
           topic: document.getElementById("ev-topic").value.trim(),
           owner: document.getElementById("ev-owner").value.trim(),
@@ -1762,6 +1763,7 @@
         const map = {
           "ev-name": ev.name,
           "ev-date": ev.event_date || "",
+          "ev-start-date": ev.start_date || "",
           "ev-size": ev.size || "",
           "ev-topic": ev.topic || "",
           "ev-owner": ev.owner || "",
