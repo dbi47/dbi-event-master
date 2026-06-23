@@ -224,6 +224,33 @@
         margin-bottom: 24px;
         line-height: 1.5;
       }
+      .field-note {
+        font-size: 0.78rem;
+        color: var(--mid);
+        margin-bottom: 18px;
+        padding: 12px 14px;
+        background: #f7f7fb;
+        border: 1px solid #d8d7ea;
+        border-radius: 10px;
+      }
+      input[disabled],
+      select[disabled] {
+        background: #f6f7fc;
+        cursor: not-allowed;
+        color: var(--mid);
+        border-color: #c8c9d8;
+        opacity: 0.95;
+      }
+      .form-group label[disabled],
+      .form-group input[disabled] + .form-label,
+      .form-group select[disabled] + .form-label {
+        color: var(--mid);
+      }
+      .form-group input[disabled],
+      .form-group select[disabled] {
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+      }
+      }
 
       /* ── CARDS / TABLES ── */
       .dash-grid {
@@ -1053,7 +1080,7 @@
           ><span class="nav-label">Dashboard</span>
         </div>
         <div
-          class="nav-item hub-only"
+          class="nav-item"
           onclick="showPage('eventdaten')"
           id="nav-eventdaten"
         >
@@ -1202,6 +1229,7 @@
           <div class="page-sub">
             Nur dieses Tab ausfüllen – alle Fristen berechnen sich automatisch.
           </div>
+          <div id="event-details-note" class="field-note"></div>
           <div id="ev-saving" class="alert alert-blu" style="display: none">
             Wird gespeichert…
           </div>
@@ -1523,6 +1551,8 @@
           badge.className = "role-badge role-badge-proj";
           document.getElementById("topbar-title").textContent =
             pmData?.event?.name || "Event";
+          populateEventForm(pmData?.event);
+          setEventDetailsAccess();
           showPage("dashboard");
           renderDashboard();
           renderAllWorkflows(); // ← populate all workflow pages for PM
@@ -1641,32 +1671,45 @@
       }
 
       async function saveEventNow() {
-        if (!currentEventId && currentRole === "hub") {
+        const isHub = currentRole === "hub";
+        const eventId = isHub ? currentEventId : pmData?.event?.id;
+        if (!eventId && isHub) {
           // Create new if none selected
           await createNewEvent();
+          return;
+        }
+        if (!eventId) {
+          showToast("⚠️ Kein Event zum Speichern ausgewählt");
           return;
         }
         const fields = readEventForm();
         const indicator = document.getElementById("ev-saving");
         indicator.style.display = "block";
         try {
+          const body = { event: { id: eventId, ...fields } };
+          if (isHub) body.password = hubPassword;
+          else body.token = pmToken;
           const r = await fetch(`${API}/event`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              password: hubPassword,
-              event: { id: currentEventId, ...fields },
-            }),
+            body: JSON.stringify(body),
           });
           const d = await r.json();
           if (r.ok) {
-            eventDetail = { ...eventDetail, event: d.event };
-            // Update allEvents list
-            const idx = allEvents.findIndex((e) => e.id === currentEventId);
-            if (idx >= 0) allEvents[idx] = d.event;
+            if (isHub) {
+              eventDetail = { ...eventDetail, event: d.event };
+              const idx = allEvents.findIndex((e) => e.id === eventId);
+              if (idx >= 0) allEvents[idx] = d.event;
+            } else {
+              pmData.event = d.event;
+            }
             document.getElementById("topbar-title").textContent =
               d.event.name || "Event";
+            populateEventForm(d.event);
+            setEventDetailsAccess();
             renderDashboard();
+            renderAllWorkflows();
+            renderProjTodosFromPMData();
             showToast("💾 Gespeichert");
           } else {
             showToast("❌ " + d.error);
@@ -1699,6 +1742,22 @@
         };
       }
 
+      function setEventDetailsAccess() {
+        const locked = ["ev-name", "ev-date", "ev-size"];
+        const note = document.getElementById("event-details-note");
+        locked.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.disabled = currentRole === "proj";
+        });
+        if (currentRole === "proj") {
+          note.textContent =
+            "Eventname, Eventdatum und Größe sind schreibgeschützt, damit die berechneten Fristen für alle PM-Workflows stabil bleiben.";
+        } else {
+          note.textContent = "";
+        }
+      }
+
       function populateEventForm(ev) {
         if (!ev) return;
         const map = {
@@ -1723,6 +1782,7 @@
           if (el) el.value = val;
         });
       }
+      setEventDetailsAccess();
 
       // ══ MILESTONE / WORKFLOW SAVE ══
       async function setMilestoneDone(key, dateVal, label) {
