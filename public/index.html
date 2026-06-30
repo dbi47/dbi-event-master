@@ -1535,7 +1535,7 @@
         allEvents = [],
         eventDetail = null;
 
-      // Per-milestone todo check state (stored locally in memory)
+      // Per-milestone todo check state (kept in sync with the backend)
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
 
       function getActiveEvent() {
@@ -2200,28 +2200,74 @@
         btn.classList.toggle("open", !isOpen);
       }
 
-      function toggleTodo(msKey, idx) {
+      function hydrateTodoCheckedState(source) {
+        const rows = Array.isArray(source?.milestone_todos)
+          ? source.milestone_todos
+          : [];
+        Object.keys(todoChecked).forEach((key) => delete todoChecked[key]);
+        rows.forEach((row) => {
+          if (row?.ms_key === undefined || row?.todo_index === undefined)
+            return;
+          const key = `${row.ms_key}-${row.todo_index}`;
+          todoChecked[key] = Boolean(row.checked);
+        });
+      }
+
+      function upsertTodoStateInSource(source, msKey, todoIndex, checked) {
+        const rows = source?.milestone_todos || [];
+        let existing = rows.find(
+          (row) => row.ms_key === msKey && row.todo_index === todoIndex,
+        );
+        if (!existing) {
+          existing = { ms_key: msKey, todo_index: todoIndex, checked };
+          rows.push(existing);
+        } else {
+          existing.checked = checked;
+          existing.checked_by = existing.checked_by || null;
+        }
+        source.milestone_todos = rows;
+      }
+
+      async function toggleTodo(msKey, idx) {
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        const ev = source?.event;
+        if (!ev) return;
         const ck = `${msKey}-${idx}`;
-        todoChecked[ck] = !todoChecked[ck];
+        const nextChecked = !Boolean(todoChecked[ck]);
+        todoChecked[ck] = nextChecked;
         const cb = document.getElementById(`todo-cb-${msKey}-${idx}`);
         const item = document.getElementById(`todo-item-${msKey}-${idx}`);
-        const progressEl = document.getElementById(`todo-progress-${msKey}`);
-        if (cb) cb.checked = todoChecked[ck];
-        if (item) item.classList.toggle("checked", todoChecked[ck]);
-        if (progressEl) {
-          const todos = MILESTONE_TODOS[msKey] || [];
-          const doneCount = Object.values(todoChecked).filter((v, i) =>
-            Object.keys(todoChecked)
-              .filter((k) => k.startsWith(`${msKey}-`))
-              .includes(Object.keys(todoChecked)[i])
-              ? v
-              : false,
-          ).length;
-          const total = todos.length;
-          const pct = total ? Math.round((doneCount / total) * 100) : 0;
-          progressEl.innerHTML = `<div class="todo-progress-bar"><span style="width:${pct}%"></span></div><span>${pct}%</span>`;
+        if (cb) cb.checked = nextChecked;
+        if (item) item.classList.toggle("checked", nextChecked);
+        try {
+          const body = {
+            event_id: ev.id,
+            ms_key: msKey,
+            todo_index: idx,
+            checked: nextChecked,
+          };
+          if (currentRole === "hub") body.password = hubPassword;
+          else body.token = pmToken;
+          const r = await fetch(`${API}/milestone-todo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) {
+            todoChecked[ck] = !nextChecked;
+            if (cb) cb.checked = todoChecked[ck];
+            if (item) item.classList.toggle("checked", todoChecked[ck]);
+            showToast("❌ Fehler beim Speichern");
+            return;
+          }
+          upsertTodoStateInSource(source, msKey, idx, nextChecked);
+          renderDashboard();
+        } catch {
+          todoChecked[ck] = !nextChecked;
+          if (cb) cb.checked = todoChecked[ck];
+          if (item) item.classList.toggle("checked", todoChecked[ck]);
+          showToast("❌ Verbindungsfehler");
         }
-        renderDashboard();
       }
 
       function buildTodoDrawer(msKey, colSpan) {
@@ -2256,6 +2302,7 @@
 
       function renderDashboard() {
         const source = currentRole === "hub" ? eventDetail : pmData;
+        hydrateTodoCheckedState(source);
         const ev = source?.event;
         if (!ev) return;
         const eventDate = parseISO(ev.event_date);
