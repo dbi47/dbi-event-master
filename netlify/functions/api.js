@@ -147,10 +147,9 @@ exports.handler = async (event) => {
       return json(200, { event: result.data });
     }
 
-    // ── NEW: DELETE /event — permanently delete an event and all related data ──
-    // Body: { password, event_id }
+    // ── DELETE /event — permanently delete an event and all related data ──
     // Cascades automatically via the foreign key "on delete cascade" set in
-    // milestones, workflow_rows, pm_tokens, reminder_log — no extra cleanup needed.
+    // milestones, workflow_rows, pm_tokens, reminder_log, milestone_todos.
     if (path === "/event" && method === "DELETE") {
       if (!isHub(body)) return json(401, { error: "Unauthorized" });
       const { event_id } = body;
@@ -164,7 +163,7 @@ exports.handler = async (event) => {
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
-    // ── END NEW ──────────────────────────────────────────────────────────────
+    // ── END DELETE ──────────────────────────────────────────────────────
 
     // POST /milestone — set done date
     if (path === "/milestone" && method === "POST") {
@@ -185,6 +184,41 @@ exports.handler = async (event) => {
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
+
+    // ── NEW: POST /milestone-todo — toggle a milestone checklist item ──
+    // Body: { event_id, ms_key, todo_index, checked, token?, password? }
+    // Both hub and PM can write here — checked state is shared/visible
+    // to both sides after a refresh.
+    if (path === "/milestone-todo" && method === "POST") {
+      const { event_id, ms_key, todo_index, checked, token, password } = body;
+      let checkedBy = "hub";
+      if (token) {
+        const pm = await getPMToken(token);
+        if (!pm || pm.event_id !== event_id)
+          return json(403, { error: "Forbidden" });
+        checkedBy = pm.pm_name || "pm";
+      } else if (password !== HUB_PW) {
+        return json(401, { error: "Unauthorized" });
+      }
+      if (!event_id || !ms_key || todo_index === undefined || todo_index === null)
+        return json(400, { error: "Missing fields" });
+
+      const { error } = await supabase
+        .from("milestone_todos")
+        .upsert(
+          {
+            event_id,
+            ms_key,
+            todo_index,
+            checked: Boolean(checked),
+            checked_by: checked ? checkedBy : null,
+          },
+          { onConflict: "event_id,ms_key,todo_index" },
+        );
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+    // ── END NEW ──────────────────────────────────────────────────────────
 
     // POST /workflow — set input or done date on a workflow row
     if (path === "/workflow" && method === "POST") {
@@ -319,7 +353,7 @@ exports.handler = async (event) => {
 };
 
 async function loadFullEvent(event_id) {
-  const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }] =
+  const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
     await Promise.all([
       supabase.from("events").select("*").eq("id", event_id).single(),
       supabase.from("milestones").select("*").eq("event_id", event_id),
@@ -328,12 +362,17 @@ async function loadFullEvent(event_id) {
         .from("task_assignments")
         .select("workflow_id, row_key, pm_token_id")
         .eq("event_id", event_id),
+      supabase
+        .from("milestone_todos")
+        .select("ms_key, todo_index, checked, checked_by")
+        .eq("event_id", event_id),
     ]);
   return {
     event: ev,
     milestones: ms || [],
     workflow_rows: wf || [],
     task_assignments: ta || [],
+    milestone_todos: mt || [],
   };
 }
 
