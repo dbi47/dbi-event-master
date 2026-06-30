@@ -93,6 +93,7 @@ exports.handler = async (event) => {
             "topic",
             "owner",
             "owner_email",
+            "contact_email",
             "phone",
             "hub_contact",
             "room",
@@ -112,6 +113,7 @@ exports.handler = async (event) => {
             "topic",
             "owner",
             "owner_email",
+            "contact_email",
             "phone",
             "hub_contact",
             "room",
@@ -200,21 +202,24 @@ exports.handler = async (event) => {
       } else if (password !== HUB_PW) {
         return json(401, { error: "Unauthorized" });
       }
-      if (!event_id || !ms_key || todo_index === undefined || todo_index === null)
+      if (
+        !event_id ||
+        !ms_key ||
+        todo_index === undefined ||
+        todo_index === null
+      )
         return json(400, { error: "Missing fields" });
 
-      const { error } = await supabase
-        .from("milestone_todos")
-        .upsert(
-          {
-            event_id,
-            ms_key,
-            todo_index,
-            checked: Boolean(checked),
-            checked_by: checked ? checkedBy : null,
-          },
-          { onConflict: "event_id,ms_key,todo_index" },
-        );
+      const { error } = await supabase.from("milestone_todos").upsert(
+        {
+          event_id,
+          ms_key,
+          todo_index,
+          checked: Boolean(checked),
+          checked_by: checked ? checkedBy : null,
+        },
+        { onConflict: "event_id,ms_key,todo_index" },
+      );
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
