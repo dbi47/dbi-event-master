@@ -840,6 +840,18 @@
         border-radius: 50%;
         animation: spin 0.7s linear infinite;
       }
+      .field-spinner {
+        display: block;
+        border: 2px solid rgba(0, 0, 0, 0.12);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        width: 14px;
+        height: 14px;
+        background: transparent;
+        box-sizing: border-box;
+        pointer-events: none;
+      }
       @keyframes spin {
         to {
           transform: rotate(360deg);
@@ -1317,13 +1329,13 @@
                 ><textarea
                   id="ev-name"
                   placeholder="z. B. Business beim Brötchen"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 ></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label"
                   >Eventdatum <span class="req">*</span></label
-                ><input type="date" id="ev-date" onblur="saveEventNow()" />
+                ><input type="date" id="ev-date" onblur="saveEventNow(this)" />
               </div>
               <div class="form-group">
                 <label class="form-label">Event Location / Room</label>
@@ -1339,7 +1351,7 @@
                 ><input
                   type="date"
                   id="ev-start-date"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 />
               </div>
               <div class="form-group">
@@ -1355,28 +1367,32 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Thema</label
-                ><textarea id="ev-topic" onblur="saveEventNow()"></textarea>
+                ><textarea id="ev-topic" onblur="saveEventNow(this)"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label"
                   >Verantwortliche:r <span class="req">*</span></label
-                ><textarea id="ev-owner" onblur="saveEventNow()"></textarea>
+                ><textarea id="ev-owner" onblur="saveEventNow(this)"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label">Responsible Email</label
-                ><input type="email" id="ev-email" onblur="saveEventNow()" />
+                ><input
+                  type="email"
+                  id="ev-email"
+                  onblur="saveEventNow(this)"
+                />
               </div>
               <div class="form-group">
                 <label class="form-label">Contact Person's Email</label
                 ><input
                   type="email"
                   id="ev-contact-email"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 />
               </div>
               <div class="form-group">
                 <label class="form-label">Komm-Hub Ansprechperson</label
-                ><textarea id="ev-hub" onblur="saveEventNow()"></textarea>
+                ><textarea id="ev-hub" onblur="saveEventNow(this)"></textarea>
               </div>
             </div>
           </div>
@@ -1397,7 +1413,7 @@
                 ><textarea
                   id="ev-catering-contact"
                   placeholder="Name, Telefon, E-Mail"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 ></textarea>
               </div>
               <div class="form-group full">
@@ -1406,7 +1422,7 @@
                 ><textarea
                   id="ev-rasmus"
                   placeholder="Ja / Nein + Details"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 ></textarea>
               </div>
             </div>
@@ -1436,7 +1452,7 @@
                   type="text"
                   id="ev-path"
                   placeholder="Link oder Pfad"
-                  onblur="saveEventNow()"
+                  onblur="saveEventNow(this)"
                 />
               </div>
             </div>
@@ -1869,19 +1885,45 @@
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveEventNow, 1200);
       }
-      async function saveEventNow() {
+
+      function showFieldSpinner(el) {
+        try {
+          hideFieldSpinner();
+          const rect = el.getBoundingClientRect();
+          const spinner = document.createElement("span");
+          spinner.className = "field-spinner";
+          spinner.style.position = "fixed";
+          spinner.style.left = rect.right - 18 + "px";
+          spinner.style.top = rect.top + rect.height / 2 + "px";
+          spinner.style.transform = "translateY(-50%)";
+          spinner.style.zIndex = 9999;
+          document.body.appendChild(spinner);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      function hideFieldSpinner() {
+        document.querySelectorAll(".field-spinner").forEach((s) => s.remove());
+      }
+
+      async function saveEventNow(triggerEl) {
+        const spinnerTarget =
+          triggerEl instanceof HTMLElement ? triggerEl : null;
+        if (spinnerTarget) showFieldSpinner(spinnerTarget);
         const isHub = currentRole === "hub";
         const eventId = isHub ? currentEventId : pmData?.event?.id;
+        const indicator = document.getElementById("ev-saving");
         if (!eventId && isHub) {
+          if (spinnerTarget) hideFieldSpinner();
           await createNewEvent();
           return;
         }
         if (!eventId) {
+          if (spinnerTarget) hideFieldSpinner();
           showToast("⚠️ Kein Event zum Speichern");
           return;
         }
         const fields = readEventForm();
-        const indicator = document.getElementById("ev-saving");
         indicator.style.display = "block";
         try {
           const body = { event: { id: eventId, ...fields } };
@@ -1910,8 +1952,10 @@
           } else showToast("❌ " + d.error);
         } catch {
           showToast("❌ Verbindungsfehler");
+        } finally {
+          indicator.style.display = "none";
+          if (spinnerTarget) hideFieldSpinner();
         }
-        indicator.style.display = "none";
       }
       function readEventForm() {
         return {
