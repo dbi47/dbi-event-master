@@ -1317,13 +1317,13 @@
                 ><textarea
                   id="ev-name"
                   placeholder="z. B. Business beim Brötchen"
-                  oninput="schedSave()"
+                  onblur="saveEventNow()"
                 ></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label"
                   >Eventdatum <span class="req">*</span></label
-                ><input type="date" id="ev-date" oninput="schedSave()" />
+                ><input type="date" id="ev-date" onblur="saveEventNow()" />
               </div>
               <div class="form-group">
                 <label class="form-label">Event Location / Room</label>
@@ -1336,7 +1336,11 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Startdatum</label
-                ><input type="date" id="ev-start-date" oninput="schedSave()" />
+                ><input
+                  type="date"
+                  id="ev-start-date"
+                  onblur="saveEventNow()"
+                />
               </div>
               <div class="form-group">
                 <label class="form-label"
@@ -1351,28 +1355,28 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Thema</label
-                ><textarea id="ev-topic" oninput="schedSave()"></textarea>
+                ><textarea id="ev-topic" onblur="saveEventNow()"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label"
                   >Verantwortliche:r <span class="req">*</span></label
-                ><textarea id="ev-owner" oninput="schedSave()"></textarea>
+                ><textarea id="ev-owner" onblur="saveEventNow()"></textarea>
               </div>
               <div class="form-group">
                 <label class="form-label">Responsible Email</label
-                ><input type="email" id="ev-email" oninput="schedSave()" />
+                ><input type="email" id="ev-email" onblur="saveEventNow()" />
               </div>
               <div class="form-group">
                 <label class="form-label">Contact Person's Email</label
                 ><input
                   type="email"
                   id="ev-contact-email"
-                  oninput="schedSave()"
+                  onblur="saveEventNow()"
                 />
               </div>
               <div class="form-group">
                 <label class="form-label">Komm-Hub Ansprechperson</label
-                ><textarea id="ev-hub" oninput="schedSave()"></textarea>
+                ><textarea id="ev-hub" onblur="saveEventNow()"></textarea>
               </div>
             </div>
           </div>
@@ -1393,7 +1397,7 @@
                 ><textarea
                   id="ev-catering-contact"
                   placeholder="Name, Telefon, E-Mail"
-                  oninput="schedSave()"
+                  onblur="saveEventNow()"
                 ></textarea>
               </div>
               <div class="form-group full">
@@ -1402,7 +1406,7 @@
                 ><textarea
                   id="ev-rasmus"
                   placeholder="Ja / Nein + Details"
-                  oninput="schedSave()"
+                  onblur="saveEventNow()"
                 ></textarea>
               </div>
             </div>
@@ -1432,7 +1436,7 @@
                   type="text"
                   id="ev-path"
                   placeholder="Link oder Pfad"
-                  oninput="schedSave()"
+                  onblur="saveEventNow()"
                 />
               </div>
             </div>
@@ -1982,10 +1986,10 @@
         };
         Object.entries(map).forEach(([id, val]) => {
           const el = document.getElementById(id);
-          if (el) el.value = val;
+          if (el && document.activeElement !== el) el.value = val;
         });
         const startEl = document.getElementById("ev-start-date");
-        if (startEl && !startEl.value) {
+        if (startEl && !startEl.value && document.activeElement !== startEl) {
           const fallback = toDateInputValue(
             ev.start_date || ev.created_at || ev.event_date,
           );
