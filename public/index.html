@@ -115,6 +115,76 @@
         background: rgba(45, 58, 140, 0.25);
         color: #c0c8f0;
       }
+      .speaker-section {
+        display: grid;
+        gap: 12px;
+        padding: 8px 0 2px;
+      }
+      .speaker-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.72);
+        display: grid;
+        gap: 10px;
+      }
+      .speaker-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .speaker-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .speaker-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.78rem;
+      }
+      .speaker-field label {
+        font-weight: 600;
+        color: var(--mid);
+      }
+      .speaker-field input,
+      .speaker-field textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 8px 10px;
+        font: inherit;
+        background: white;
+      }
+      .speaker-field textarea {
+        min-height: 76px;
+        resize: vertical;
+      }
+      .speaker-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .speaker-add-btn,
+      .speaker-remove-btn {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .speaker-remove-btn {
+        color: var(--accent);
+      }
+      .speaker-remove-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
 
       /* LAYOUT */
       .app-body {
@@ -2513,6 +2583,143 @@
         }
         return "";
       }
+      function getDefaultSpeakerData() {
+        return {
+          speakers: [{ name: "", position: "", topic: "", contact: "" }],
+          guests: "",
+        };
+      }
+      function normalizeSpeakerData(value) {
+        if (!value) return getDefaultSpeakerData();
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === "object") {
+            const speakers = Array.isArray(parsed.speakers)
+              ? parsed.speakers
+              : [];
+            return {
+              speakers: speakers.length
+                ? speakers.map((speaker) => ({
+                    name: speaker?.name || "",
+                    position: speaker?.position || "",
+                    topic: speaker?.topic || "",
+                    contact: speaker?.contact || "",
+                  }))
+                : getDefaultSpeakerData().speakers,
+              guests: parsed.guests || "",
+            };
+          }
+        } catch {}
+        return getDefaultSpeakerData();
+      }
+      function getSpeakerSectionData(workflowId, wfRows) {
+        const stored =
+          (wfRows || []).find(
+            (row) =>
+              row.workflow_id === workflowId && row.row_key === "sp-data",
+          ) || {};
+        return normalizeSpeakerData(stored.input_value);
+      }
+      async function saveSpeakerSectionData(workflowId, data) {
+        const ev = eventDetail?.event || pmData?.event;
+        if (!ev) return;
+        const body = {
+          event_id: ev.id,
+          workflow_id: workflowId,
+          row_key: "sp-data",
+          input_value: JSON.stringify(data),
+        };
+        if (currentRole === "hub") body.password = hubPassword;
+        else body.token = pmToken;
+        const r = await fetch(`${API}/workflow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          showToast("❌ " + (d.error || "Fehler"));
+          return;
+        }
+        updateLocalWorkflow(workflowId, "sp-data", {
+          input_value: JSON.stringify(data),
+        });
+      }
+      async function addSpeakerRow(workflowId) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getSpeakerSectionData(workflowId, wfRows);
+        data.speakers.push({ name: "", position: "", topic: "", contact: "" });
+        await saveSpeakerSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function removeSpeakerRow(workflowId, index) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getSpeakerSectionData(workflowId, wfRows);
+        if (data.speakers.length <= 1) return;
+        data.speakers.splice(index, 1);
+        await saveSpeakerSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function setSpeakerField(workflowId, index, field, value) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getSpeakerSectionData(workflowId, wfRows);
+        if (!data.speakers[index]) {
+          data.speakers[index] = {
+            name: "",
+            position: "",
+            topic: "",
+            contact: "",
+          };
+        }
+        data.speakers[index][field] = value;
+        await saveSpeakerSectionData(workflowId, data);
+      }
+      async function setSpeakerGuests(workflowId, value) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getSpeakerSectionData(workflowId, wfRows);
+        data.guests = value;
+        await saveSpeakerSectionData(workflowId, data);
+      }
+      function renderSpeakerSection(sec, workflowId, wfRows) {
+        const data = getSpeakerSectionData(workflowId, wfRows);
+        const speakers = data.speakers.length
+          ? data.speakers
+          : getDefaultSpeakerData().speakers;
+        let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
+        html += `<tr><td colspan="6"><div class="speaker-section">`;
+        speakers.forEach((speaker, index) => {
+          html += `<div class="speaker-card">
+  <div class="speaker-card-header">
+    <span>Speaker:in ${index + 1}</span>
+    <button class="speaker-remove-btn" type="button" onclick="removeSpeakerRow('${workflowId}', ${index})" ${speakers.length <= 1 ? "disabled" : ""}>− Entfernen</button>
+  </div>
+  <div class="speaker-grid">
+    <div class="speaker-field"><label>Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name" /></div>
+    <div class="speaker-field"><label>Position & Institution</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Position & Institution" /></div>
+    <div class="speaker-field"><label>Thema / Titel</label><input type="text" value="${esc(speaker.topic)}" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="Thema / Titel" /></div>
+    <div class="speaker-field"><label>Kontakt / E-Mail</label><input type="text" value="${esc(speaker.contact)}" onchange="setSpeakerField('${workflowId}', ${index}, 'contact', this.value)" placeholder="E-Mail" /></div>
+  </div>
+</div>`;
+        });
+        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Speaker:in hinzufügen</button></div>`;
+        html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
+        html += `</div></td></tr>`;
+        return html;
+      }
       function renderAllWorkflows() {
         ["pflicht", "einladung", "social", "pixlip"].forEach(renderWorkflow);
       }
@@ -2534,6 +2741,10 @@
           html += `<div class="alert alert-blu show" style="margin-bottom:20px">📌 You are viewing as <strong>${pmData?.pm_name || "Project Manager"}</strong>${ev?.name ? " — Event: <strong>" + esc(ev.name) + "</strong>" : ""}.Your updates are saved directly.</div>`;
         html += `<div class="table-wrap"><table><thead><tr><th>Task</th><th>Input</th><th>Deadline</th><th style="text-align:center">Days</th><th>Status</th><th>Completed On</th></tr></thead><tbody>`;
         def.sections.forEach((sec) => {
+          if (sec.type === "speakers") {
+            html += renderSpeakerSection(sec, id, wfRows);
+            return;
+          }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
           sec.rows.forEach((row) => {
             const fd = eventDate ? addDays(eventDate, row.offset || 0) : null;
@@ -2575,6 +2786,10 @@
 <div class="page-sub">${esc(ev?.name || "")} ${ev?.event_date ? "· " + fmtDE(parseISO(ev.event_date)) : ""}</div>
 <div class="table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
         PROJ_SECTIONS.forEach((sec) => {
+          if (sec.type === "speakers") {
+            html += renderSpeakerSection(sec, "pflicht", wfRows);
+            return;
+          }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
           sec.rows.forEach((row) => {
             const fd = eventDate ? addDays(eventDate, row.offset || 0) : null;
@@ -2852,56 +3067,7 @@
             {
               title: "SPEAKER & GÄSTE",
               color: "#f0eeff",
-              rows: [
-                {
-                  key: "sp1",
-                  label: "Speaker:in 1 – Name",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp2",
-                  label: "Speaker:in 1 – Position & Institution",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp3",
-                  label: "Speaker:in 1 – Thema / Titel",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp4",
-                  label: "Speaker:in 1 – Kontakt / E-Mail",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp5",
-                  label: "Speaker:in 2 – Name",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp6",
-                  label: "Speaker:in 2 – Position & Institution",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp7",
-                  label: "Speaker:in 2 – Thema / Titel",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "sp8",
-                  label: "Besondere Gäste / VIPs",
-                  hint: "Namen & Institutionen",
-                  offset: -56,
-                },
-              ],
+              type: "speakers",
             },
             {
               title: "KOMMUNIKATION",
@@ -3434,71 +3600,7 @@
         {
           title: "SPEAKER & GÄSTE",
           color: "#f0eeff",
-          rows: [
-            {
-              key: "sp1",
-              label: "Speaker:in 1 – Name",
-              hint: "",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "sp2",
-              label: "Speaker:in 1 – Position & Institution",
-              hint: "",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "sp3",
-              label: "Speaker:in 1 – Thema / Titel",
-              hint: "",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "sp4",
-              label: "Speaker:in 1 – Kontakt / E-Mail",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "sp5",
-              label: "Speaker:in 2 – Name",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "sp6",
-              label: "Speaker:in 2 – Position & Institution",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "sp7",
-              label: "Speaker:in 2 – Thema / Titel",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "sp8",
-              label: "Besondere Gäste / VIPs",
-              hint: "Namen & Institutionen",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "sp9",
-              label: "Ticketing erforderlich?",
-              hint: "Ja / Nein + Plattform",
-              offset: -56,
-              req: false,
-            },
-          ],
+          type: "speakers",
         },
         {
           title: "FREIGABEN & SONSTIGES",
