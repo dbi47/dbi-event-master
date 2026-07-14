@@ -2787,8 +2787,10 @@
             ? { 12: "Klein", 18: "Mittel", 24: "Groß" }[ev.size] || ev.size
             : "–";
           const roomLabel = ev.room
-            ? { dbi: "Eventraum DBI", extern: "Externer Raum" }[ev.room] ||
-              ev.room
+            ? {
+                dbi: "Eventraum DBI (Standard)",
+                extern: "Externer Raum → Rasmus abstimmen",
+              }[ev.room] || ev.room
             : "–";
           const cateringLabel = ev.catering
             ? {
@@ -2832,6 +2834,7 @@
                 <div class="summary-card-title"><span class="summary-card-icon">ℹ️</span>Eventdetails</div>
                 <div class="summary-list-item"><strong>Datum</strong><div>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"}</div></div>
                 <div class="summary-list-item"><strong>Start</strong><div>${ev.start_date ? fmtDE(parseISO(ev.start_date)) : ev.created_at ? fmtDE(parseISO(ev.created_at)) : "–"}</div></div>
+                <div class="summary-list-item"><strong>Location</strong><div>${esc(roomLabel)}</div></div>
                 <div class="summary-list-item"><strong>Responsible</strong><div>${esc(ev.owner || "–")}</div></div>
                 <div class="summary-list-item"><strong>Kontakt</strong><div>${esc(ev.owner_email || ev.contact_email || "–")}</div></div>
               </div>
