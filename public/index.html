@@ -2303,6 +2303,17 @@
         };
       }
 
+      function handleMilestoneDateInteraction(msKey, event) {
+        const todoState = getMilestoneTodoState(msKey);
+        if (!todoState.canSetDoneDate) {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          showToast("⚠️ Alle To-dos müssen abgeschlossen sein");
+          return false;
+        }
+        return true;
+      }
+
       async function setMilestoneDone(key, dateVal, label) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
@@ -2743,12 +2754,10 @@
             MILESTONE_TODOS[ms.key] && MILESTONE_TODOS[ms.key].length
           );
           const todoState = getMilestoneTodoState(ms.key);
-          const doneInputDisabled =
-            hasTodos && !todoState.canSetDoneDate ? " disabled" : "";
-          const doneInputTitle =
-            hasTodos && !todoState.canSetDoneDate
-              ? ' title="Alle To-dos müssen abgeschlossen sein"'
-              : "";
+          const blockedMilestoneDate = hasTodos && !todoState.canSetDoneDate;
+          const doneInputTitle = blockedMilestoneDate
+            ? ' title="Alle To-dos müssen abgeschlossen sein"'
+            : "";
 
           if (ms.isEvent) {
             tbody.insertAdjacentHTML(
@@ -2787,8 +2796,10 @@
   <td class="td-date">${fd ? fmtDE(fd) : "–"}</td>
   <td class="td-days" style="color:${dCol}">${dStr}</td>
   <td>${pillHTML(st)}</td>
-  <td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"${doneInputDisabled}${doneInputTitle}
-    onchange="setMilestoneDone('${ms.key}',this.value,'${ms.label}')"></td>
+  <td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"${doneInputTitle}
+    onmousedown="if (!handleMilestoneDateInteraction('${ms.key}', event)) return false;"
+    onfocus="if (!handleMilestoneDateInteraction('${ms.key}', event)) this.blur();"
+    onchange="if (!handleMilestoneDateInteraction('${ms.key}', event)) { this.value='${msDone[ms.key] || ""}'; return; } setMilestoneDone('${ms.key}',this.value,'${ms.label}')"></td>
 </tr>${hasTodos ? buildTodoDrawer(ms.key, 6) : ""}`,
           );
         });
