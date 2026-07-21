@@ -2281,9 +2281,36 @@
       setEventDetailsAccess();
 
       // ══ MILESTONE / WORKFLOW SAVE ══
+      function getMilestoneTodoState(msKey) {
+        const todos = MILESTONE_TODOS[msKey] || [];
+        if (!todos.length) {
+          return {
+            total: 0,
+            completed: 0,
+            allComplete: true,
+            canSetDoneDate: true,
+          };
+        }
+        const completed = Object.keys(todoChecked).filter(
+          (k) => k.startsWith(`${msKey}-`) && todoChecked[k],
+        ).length;
+        const allComplete = completed === todos.length;
+        return {
+          total: todos.length,
+          completed,
+          allComplete,
+          canSetDoneDate: allComplete,
+        };
+      }
+
       async function setMilestoneDone(key, dateVal, label) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
+        const todoState = getMilestoneTodoState(key);
+        if (dateVal && !todoState.canSetDoneDate) {
+          showToast("⚠️ Alle To-dos müssen abgeschlossen sein");
+          return;
+        }
         const body = {
           event_id: ev.id,
           ms_key: key,
@@ -2715,6 +2742,13 @@
           const hasTodos = !!(
             MILESTONE_TODOS[ms.key] && MILESTONE_TODOS[ms.key].length
           );
+          const todoState = getMilestoneTodoState(ms.key);
+          const doneInputDisabled =
+            hasTodos && !todoState.canSetDoneDate ? " disabled" : "";
+          const doneInputTitle =
+            hasTodos && !todoState.canSetDoneDate
+              ? ' title="Alle To-dos müssen abgeschlossen sein"'
+              : "";
 
           if (ms.isEvent) {
             tbody.insertAdjacentHTML(
@@ -2753,7 +2787,7 @@
   <td class="td-date">${fd ? fmtDE(fd) : "–"}</td>
   <td class="td-days" style="color:${dCol}">${dStr}</td>
   <td>${pillHTML(st)}</td>
-  <td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"
+  <td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"${doneInputDisabled}${doneInputTitle}
     onchange="setMilestoneDone('${ms.key}',this.value,'${ms.label}')"></td>
 </tr>${hasTodos ? buildTodoDrawer(ms.key, 6) : ""}`,
           );
