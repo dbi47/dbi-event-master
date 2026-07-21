@@ -1577,12 +1577,47 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Event Location / Room</label>
-                <select id="ev-room" onchange="schedSave()">
-                  <option value="dbi">Eventraum DBI (Standard)</option>
-                  <option value="extern">
-                    Externer Raum → Rasmus abstimmen
-                  </option>
+                <select
+                  id="ev-room-type"
+                  onchange="
+                    handleRoomTypeChange();
+                    schedSave();
+                  "
+                >
+                  <option value="internal">Internes DBI</option>
+                  <option value="external">Externer Raum</option>
                 </select>
+                <select
+                  id="ev-room"
+                  style="margin-top: 8px"
+                  onchange="
+                    updateRoomValue();
+                    schedSave();
+                  "
+                >
+                  <option value="Raum Wedau">Raum Wedau</option>
+                  <option value="Raum Duissern">Raum Duissern</option>
+                  <option value="Raum Neudorf">Raum Neudorf</option>
+                  <option value="Raum Rumeln">Raum Rumeln</option>
+                  <option value="Raum Marxloh">Raum Marxloh</option>
+                  <option value="Raum Homberg">Raum Homberg</option>
+                  <option value="Raum Meiderich">Raum Meiderich</option>
+                </select>
+                <input
+                  type="text"
+                  id="ev-room-manual"
+                  style="margin-top: 8px; display: none"
+                  placeholder="Bitte Location eingeben"
+                  oninput="
+                    updateRoomValue();
+                    schedSave();
+                  "
+                  onblur="
+                    updateRoomValue();
+                    saveEventNow(this);
+                  "
+                />
+                <input type="hidden" id="ev-room-value" />
               </div>
               <div class="form-group">
                 <label class="form-label">Startdatum</label
@@ -2208,7 +2243,7 @@
             .getElementById("ev-contact-email")
             .value.trim(),
           hub_contact: document.getElementById("ev-hub").value.trim(),
-          room: document.getElementById("ev-room").value,
+          room: document.getElementById("ev-room-value").value.trim(),
           catering: document.getElementById("ev-catering").value,
           catering_contact: document
             .getElementById("ev-catering-contact")
@@ -2246,6 +2281,106 @@
         }
         return "";
       }
+      const INTERNAL_ROOM_OPTIONS = [
+        "Raum Wedau",
+        "Raum Duissern",
+        "Raum Neudorf",
+        "Raum Rumeln",
+        "Raum Marxloh",
+        "Raum Homberg",
+        "Raum Meiderich",
+      ];
+
+      function getRoomLabel(roomValue) {
+        const value = (roomValue || "").trim();
+        if (!value) return "–";
+        const normalized = value.toLowerCase();
+        if (
+          [
+            "dbi",
+            "eventraum dbi",
+            "eventraum dbi (standard)",
+            "eventraum dbi (standard)",
+          ].includes(normalized)
+        ) {
+          return "Eventraum DBI (Standard)";
+        }
+        if (
+          [
+            "extern",
+            "external",
+            "externer raum",
+            "externer raum → rasmus abstimmen",
+          ].includes(normalized)
+        ) {
+          return "Externer Raum → Rasmus abstimmen";
+        }
+        return value;
+      }
+
+      function updateRoomValue() {
+        const typeEl = document.getElementById("ev-room-type");
+        const roomEl = document.getElementById("ev-room");
+        const manualEl = document.getElementById("ev-room-manual");
+        const hiddenEl = document.getElementById("ev-room-value");
+        if (!typeEl || !roomEl || !manualEl || !hiddenEl) return;
+        hiddenEl.value =
+          typeEl.value === "external"
+            ? (manualEl.value || "").trim()
+            : (roomEl.value || "").trim();
+      }
+
+      function handleRoomTypeChange() {
+        const typeEl = document.getElementById("ev-room-type");
+        const roomEl = document.getElementById("ev-room");
+        const manualEl = document.getElementById("ev-room-manual");
+        if (!typeEl || !roomEl || !manualEl) return;
+        if (typeEl.value === "external") {
+          roomEl.style.display = "none";
+          manualEl.style.display = "block";
+          manualEl.focus();
+        } else {
+          roomEl.style.display = "block";
+          manualEl.style.display = "none";
+          roomEl.focus();
+        }
+        updateRoomValue();
+      }
+
+      function setRoomControlsFromValue(roomValue) {
+        const typeEl = document.getElementById("ev-room-type");
+        const roomEl = document.getElementById("ev-room");
+        const manualEl = document.getElementById("ev-room-manual");
+        const hiddenEl = document.getElementById("ev-room-value");
+        if (!typeEl || !roomEl || !manualEl || !hiddenEl) return;
+        const value = (roomValue || "").trim();
+        const normalized = value.toLowerCase();
+        const isInternal =
+          [
+            "dbi",
+            "eventraum dbi",
+            "eventraum dbi (standard)",
+            "internal",
+          ].includes(normalized) ||
+          INTERNAL_ROOM_OPTIONS.some((opt) => opt.toLowerCase() === normalized);
+        const isExternal = !isInternal && Boolean(value);
+        typeEl.value = isExternal ? "external" : "internal";
+        if (isInternal) {
+          const matched =
+            INTERNAL_ROOM_OPTIONS.find(
+              (opt) => opt.toLowerCase() === normalized,
+            ) || INTERNAL_ROOM_OPTIONS[0];
+          roomEl.value = matched;
+          roomEl.style.display = "block";
+          manualEl.style.display = "none";
+        } else {
+          roomEl.style.display = "none";
+          manualEl.style.display = "block";
+          manualEl.value = value;
+        }
+        hiddenEl.value = value;
+      }
+
       function populateEventForm(ev) {
         if (!ev) return;
         const map = {
@@ -2258,7 +2393,7 @@
           "ev-email": ev.owner_email || "",
           "ev-contact-email": ev.contact_email || "",
           "ev-hub": ev.hub_contact || "",
-          "ev-room": ev.room || "dbi",
+          "ev-room-value": ev.room || "",
           "ev-catering": ev.catering || "brezel",
           "ev-catering-contact": ev.catering_contact || "",
           "ev-rasmus": ev.rasmus || "",
@@ -2270,6 +2405,7 @@
           const el = document.getElementById(id);
           if (el && document.activeElement !== el) el.value = val;
         });
+        setRoomControlsFromValue(ev.room || "");
         const startEl = document.getElementById("ev-start-date");
         if (startEl && !startEl.value && document.activeElement !== startEl) {
           const fallback = toDateInputValue(
@@ -2831,12 +2967,7 @@
           const sizeLabel = ev.size
             ? { 12: "Klein", 18: "Mittel", 24: "Groß" }[ev.size] || ev.size
             : "–";
-          const roomLabel = ev.room
-            ? {
-                dbi: "Eventraum DBI (Standard)",
-                extern: "Externer Raum → Rasmus abstimmen",
-              }[ev.room] || ev.room
-            : "–";
+          const roomLabel = getRoomLabel(ev.room);
           const cateringLabel = ev.catering
             ? {
                 brezel: "Brezeln",
@@ -2926,11 +3057,7 @@
           return al[ev.ablage] || ev.ablage || "";
         }
         if (workflowId === "pflicht" && rowKey === "lo1") {
-          const rl = {
-            dbi: "Eventraum DBI (Standard)",
-            extern: "Externer Raum",
-          };
-          return rl[ev.room] || ev.room || "";
+          return getRoomLabel(ev.room) || "";
         }
         if (workflowId === "pflicht" && rowKey === "lo2") {
           const cl = {
