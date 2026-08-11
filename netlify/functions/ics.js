@@ -242,7 +242,7 @@ exports.handler = async (event) => {
     statusCode: 200,
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `inline; filename="DBI-${(ev.name || "Event").replace(/\s+/g, "-")}.ics"`,
+      "Content-Disposition": 'inline; filename="calendar.ics"',
       "Cache-Control": "public, max-age=300, must-revalidate",
       "Access-Control-Allow-Origin": "*",
       "Last-Modified": new Date().toUTCString(),
