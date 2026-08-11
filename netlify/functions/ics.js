@@ -46,6 +46,17 @@ const WORKFLOW_TASKS = [
 ];
 
 exports.handler = async (event) => {
+  if (event.httpMethod && event.httpMethod !== "GET") {
+    return {
+      statusCode: 405,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        Allow: "GET",
+      },
+      body: "Method Not Allowed",
+    };
+  }
+
   // Log env check — visible in Netlify function logs
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return errRes(
@@ -230,9 +241,11 @@ exports.handler = async (event) => {
   return {
     statusCode: 200,
     headers: {
-      "Content-Type": "text/calendar;charset=utf-8",
-      "Content-Disposition": `attachment;filename="DBI-${(ev.name || "Event").replace(/\s+/g, "-")}.ics"`,
-      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `inline; filename="DBI-${(ev.name || "Event").replace(/\s+/g, "-")}.ics"`,
+      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Access-Control-Allow-Origin": "*",
+      "Last-Modified": new Date().toUTCString(),
       Pragma: "no-cache",
     },
     body: lines.join("\r\n") + "\r\n",
