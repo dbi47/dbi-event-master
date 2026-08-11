@@ -174,6 +174,14 @@ exports.handler = async (event) => {
     addLine("ACTION:DISPLAY");
     addLine(`DESCRIPTION:In 3 Tagen faellig: ${safe(title)}`);
     addLine("END:VALARM");
+    addLine("BEGIN:VALARM");
+    addLine("TRIGGER:-P3D");
+    addLine("ACTION:EMAIL");
+    addLine(`SUMMARY:Erinnerung: ${safe(title)}`);
+    addLine(
+      `DESCRIPTION:Frist in 3 Tagen: ${safe(title)} — ${safe(ev.name || "DBI Event")}`,
+    );
+    addLine("END:VALARM");
     addLine("TRANSP:TRANSPARENT");
     addLine("END:VEVENT");
   }
