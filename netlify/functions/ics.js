@@ -117,7 +117,7 @@ exports.handler = async (event) => {
 
   const lines = [];
 
-  // ── RFC 5545: fold lines longer than 75 chars (Outlook enforces this) ──
+  // ── RFC 5545: fold lines longer than 75 chars (Outlook enforces this strictly with CRLF) ──
   function foldLine(line) {
     if (line.length <= 75) return line;
     let result = "";
@@ -143,7 +143,7 @@ exports.handler = async (event) => {
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[–—−]/g, "-")
-      .replace(/[“”]/g, '"')
+      .replace(/[\%)”]/g, '"')
       .replace(/[’]/g, "'")
       .replace(/[^\x00-\x7F]/g, "")
       .trim();
@@ -238,17 +238,25 @@ exports.handler = async (event) => {
 
   addLine("END:VCALENDAR");
 
+  // Force clean array serialization into explicit RFC CRLF line breaks
+  const rawIcsBody = lines.map(line => line.trim()).join("\r\n") + "\r\n";
+
   return {
     statusCode: 200,
     headers: {
+      // Correct modern iCalendar mime mapping
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'inline; filename="calendar.ics"',
-      "Cache-Control": "public, max-age=300, must-revalidate",
+      "Content-Disposition": `inline; filename="DBI-${(ev.name || "Event").replace(/\s+/g, "-")}.ics"`,
+      
+      // Fixed: Uniform non-conflicting caching instructions for Outlook's collector proxy
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      
       "Access-Control-Allow-Origin": "*",
-      "Last-Modified": new Date().toUTCString(),
-      Pragma: "no-cache",
+      "Last-Modified": new Date().toUTCString()
     },
-    body: lines.join("\r\n") + "\r\n",
+    body: rawIcsBody
   };
 };
 
