@@ -43,6 +43,43 @@ exports.handler = async (event) => {
     return data;
   }
 
+  async function notifyPMs(eventId, message) {
+    const { data: recipients, error } = await supabase
+      .from("pm_tokens")
+      .select("id")
+      .eq("event_id", eventId);
+    if (error || !recipients?.length) return;
+    const { error: notificationError } = await supabase
+      .from("notifications")
+      .insert(
+        recipients.map((recipient) => ({
+          event_id: eventId,
+          recipient_role: "pm",
+          recipient_pm_token_id: recipient.id,
+          actor_role: "hub",
+          actor_name: "Event-HUB",
+          message,
+        })),
+      );
+    if (notificationError)
+      console.error("Could not notify PMs:", notificationError.message);
+  }
+
+  async function notifyHub(eventId, pm, message) {
+    const { error } = await supabase.from("notifications").insert({
+      event_id: eventId,
+      recipient_role: "hub",
+      actor_role: "pm",
+      actor_name: pm.pm_name || "Projektverantwortliche:r",
+      message,
+    });
+    if (error) console.error("Could not notify hub:", error.message);
+  }
+
+  function actorLabel(pm) {
+    return pm?.pm_name || "Projektverantwortliche:r";
+  }
+
   try {
     // GET /events — hub gets all events; PM gets their event via token
     if (path === "/events" && method === "GET") {
@@ -130,6 +167,19 @@ exports.handler = async (event) => {
         if (fields[k] !== undefined) cleanFields[k] = fields[k];
       });
       if (!isToken && !cleanFields.name) cleanFields.name = "Neues Event";
+      let eventChanged = true;
+      if (id) {
+        const { data: currentEvent } = await supabase
+          .from("events")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (currentEvent) {
+          eventChanged = Object.keys(cleanFields).some(
+            (key) => currentEvent[key] !== cleanFields[key],
+          );
+        }
+      }
       let result;
       if (id) {
         result = await supabase
@@ -146,6 +196,16 @@ exports.handler = async (event) => {
           .single();
       }
       if (result.error) return json(500, { error: result.error.message });
+      if (id && eventChanged) {
+        if (isToken)
+          await notifyHub(
+            id,
+            pm,
+            actorLabel(pm) + " hat die Eventdetails aktualisiert.",
+          );
+        else
+          await notifyPMs(id, "Event-HUB hat die Eventdetails aktualisiert.");
+      }
       return json(200, { event: result.data });
     }
 
@@ -163,6 +223,17 @@ exports.handler = async (event) => {
         .eq("id", event_id);
 
       if (error) return json(500, { error: error.message });
+      if (token)
+        await notifyHub(
+          event_id,
+          await getPMToken(token),
+          "hat den Meilenstein „" + ms_key + "“ aktualisiert.",
+        );
+      else
+        await notifyPMs(
+          event_id,
+          "Event-HUB hat den Meilenstein „" + ms_key + "“ aktualisiert.",
+        );
       return json(200, { ok: true });
     }
     // ── END DELETE ──────────────────────────────────────────────────────
@@ -184,6 +255,21 @@ exports.handler = async (event) => {
           { onConflict: "event_id,ms_key" },
         );
       if (error) return json(500, { error: error.message });
+      if (token)
+        await notifyHub(
+          event_id,
+          await getPMToken(token),
+          "hat ein To-do in „" +
+            ms_key +
+            "“ " +
+            (checked ? "abgeschlossen" : "wieder geöffnet") +
+            ".",
+        );
+      else
+        await notifyPMs(
+          event_id,
+          "Event-HUB hat ein To-do in „" + ms_key + "“ aktualisiert.",
+        );
       return json(200, { ok: true });
     }
 
@@ -221,6 +307,24 @@ exports.handler = async (event) => {
         { onConflict: "event_id,ms_key,todo_index" },
       );
       if (error) return json(500, { error: error.message });
+      const change = input_value !== undefined ? "Eingabe" : "Status";
+      if (token)
+        await notifyHub(
+          event_id,
+          await getPMToken(token),
+          "hat " + change + " für „" + workflow_id + "/" + row_key + "“ aktualisiert.",
+        );
+      else
+        await notifyPMs(
+          event_id,
+          "Event-HUB hat " +
+            change +
+            " für „" +
+            workflow_id +
+            "/" +
+            row_key +
+            "“ aktualisiert.",
+        );
       return json(200, { ok: true });
     }
     // ── END NEW ──────────────────────────────────────────────────────────
@@ -259,6 +363,81 @@ exports.handler = async (event) => {
       const { error } = await supabase
         .from("workflow_rows")
         .upsert(updateData, { onConflict: "event_id,workflow_id,row_key" });
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+
+    // GET /notifications — inbox for the authenticated hub or PM
+    if (path === "/notifications" && method === "GET") {
+      const token = event.queryStringParameters?.token;
+      const archived = event.queryStringParameters?.archived === "true";
+      let query = supabase
+        .from("notifications")
+        .select("id,event_id,actor_role,actor_name,message,is_read,archived,created_at,events(name)")
+        .eq("archived", archived)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (token) {
+        const pm = await getPMToken(token);
+        if (!pm) return json(401, { error: "Unauthorized" });
+        query = query.eq("recipient_pm_token_id", pm.id);
+      } else if (event.queryStringParameters?.password === HUB_PW) {
+        query = query.eq("recipient_role", "hub");
+      } else {
+        return json(401, { error: "Unauthorized" });
+      }
+      const { data, error } = await query;
+      if (error) return json(500, { error: error.message });
+      return json(200, { notifications: data || [] });
+    }
+
+    // POST /notifications/read and /notifications/archive — update an inbox item
+    if (
+      (path === "/notifications/read" || path === "/notifications/archive") &&
+      method === "POST"
+    ) {
+      const { notification_id, token, password, archived } = body;
+      if (!notification_id) return json(400, { error: "Missing notification_id" });
+      let query = supabase
+        .from("notifications")
+        .update(
+          path === "/notifications/read"
+            ? { is_read: true }
+            : { archived: archived !== false },
+        )
+        .eq("id", notification_id);
+      if (token) {
+        const pm = await getPMToken(token);
+        if (!pm) return json(401, { error: "Unauthorized" });
+        query = query.eq("recipient_pm_token_id", pm.id);
+      } else if (password === HUB_PW) {
+        query = query.eq("recipient_role", "hub");
+      } else {
+        return json(401, { error: "Unauthorized" });
+      }
+      const { error } = await query;
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+
+    // DELETE /notifications — permanently remove an inbox item
+    if (path === "/notifications" && method === "DELETE") {
+      const { notification_id, token, password } = body;
+      if (!notification_id) return json(400, { error: "Missing notification_id" });
+      let query = supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notification_id);
+      if (token) {
+        const pm = await getPMToken(token);
+        if (!pm) return json(401, { error: "Unauthorized" });
+        query = query.eq("recipient_pm_token_id", pm.id);
+      } else if (password === HUB_PW) {
+        query = query.eq("recipient_role", "hub");
+      } else {
+        return json(401, { error: "Unauthorized" });
+      }
+      const { error } = await query;
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
