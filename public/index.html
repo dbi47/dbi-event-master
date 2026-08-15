@@ -1021,6 +1021,82 @@
         color: var(--mid);
       }
 
+      /* INACTIVITY WARNING */
+      .inactivity-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9998;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .inactivity-overlay.show {
+        display: flex;
+      }
+      .inactivity-modal {
+        background: white;
+        border-radius: 14px;
+        padding: 40px;
+        max-width: 420px;
+        width: 100%;
+        box-shadow: 0 32px 100px rgba(0, 0, 0, 0.5);
+        text-align: center;
+      }
+      .inactivity-modal-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+      }
+      .inactivity-modal-title {
+        font-family: "Fraunces", serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1a1433;
+        margin-bottom: 8px;
+      }
+      .inactivity-modal-text {
+        font-size: 0.9rem;
+        color: var(--mid);
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+      .inactivity-countdown {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 20px;
+        font-family: "DM Mono", monospace;
+      }
+      .inactivity-btn-row {
+        display: flex;
+        gap: 12px;
+      }
+      .inactivity-btn {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .inactivity-btn-continue {
+        background: var(--accent);
+        color: white;
+      }
+      .inactivity-btn-continue:hover {
+        background: #96104a;
+      }
+      .inactivity-btn-logout {
+        background: var(--line);
+        color: var(--ink);
+      }
+      .inactivity-btn-logout:hover {
+        background: #c8c9d8;
+      }
+
       /* PM TOKENS */
       .token-copy {
         background: var(--blu-bg);
@@ -1292,6 +1368,32 @@
     </style>
   </head>
   <body>
+    <!-- INACTIVITY WARNING -->
+    <div class="inactivity-overlay" id="inactivity-overlay">
+      <div class="inactivity-modal">
+        <div class="inactivity-modal-icon">⏱️</div>
+        <div class="inactivity-modal-title">Session Timeout</div>
+        <div class="inactivity-modal-text">
+          Du wirst aufgrund von Inaktivität in Kürze abgemeldet.
+        </div>
+        <div class="inactivity-countdown" id="inactivity-countdown">60</div>
+        <div class="inactivity-btn-row">
+          <button
+            class="inactivity-btn inactivity-btn-continue"
+            onclick="continueSession()"
+          >
+            ✓ Weitermachen
+          </button>
+          <button
+            class="inactivity-btn inactivity-btn-logout"
+            onclick="logoutDueToInactivity()"
+          >
+            ← Abmelden
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ROLE MODAL -->
     <div class="role-overlay" id="role-overlay">
       <div class="role-modal">
@@ -1398,6 +1500,14 @@
           <span class="nav-icon">🚦</span
           ><span class="nav-label">Dashboard</span>
         </div>
+        <div
+          class="nav-item workflow-item"
+          onclick="showPage('pixlip')"
+          id="nav-pixlip"
+        >
+          <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
+          <span class="nav-badge" id="badge-pixlip"></span>
+        </div>
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
           <span class="nav-icon">🧾</span><span class="nav-label">Summary</span>
         </div>
@@ -1447,14 +1557,6 @@
           <span class="nav-icon">📱</span
           ><span class="nav-label">Social Media</span>
           <span class="nav-badge" id="badge-social"></span>
-        </div>
-        <div
-          class="nav-item workflow-item"
-          onclick="showPage('pixlip')"
-          id="nav-pixlip"
-        >
-          <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
-          <span class="nav-badge" id="badge-pixlip"></span>
         </div>
         <div class="sidebar-section hub-only" style="display: none">System</div>
         <div
@@ -1539,15 +1641,6 @@
           </div>
         </div>
 
-        <!-- SUMMARY -->
-        <div class="page" id="page-summary">
-          <div class="page-title">Summary</div>
-          <div class="page-sub">
-            Schneller Überblick über das Event und den aktuellen Fortschritt.
-          </div>
-          <div id="summary-box" class="card-box"></div>
-        </div>
-
         <!-- EVENTDATEN -->
         <div class="page" id="page-eventdaten">
           <div class="page-title">Eventdaten</div>
@@ -1586,6 +1679,7 @@
                 >
                   <option value="internal">Internes DBI</option>
                   <option value="external">Externer Raum</option>
+                  <option value="online">Online</option>
                 </select>
                 <select
                   id="ev-room"
@@ -1608,6 +1702,20 @@
                   id="ev-room-manual"
                   style="margin-top: 8px; display: none"
                   placeholder="Bitte Location eingeben"
+                  oninput="
+                    updateRoomValue();
+                    schedSave();
+                  "
+                  onblur="
+                    updateRoomValue();
+                    saveEventNow(this);
+                  "
+                />
+                <input
+                  type="url"
+                  id="ev-room-online-url"
+                  style="margin-top: 8px; display: none"
+                  placeholder="z. B. https://zoom.us/j/... oder https://teams.microsoft.com/..."
                   oninput="
                     updateRoomValue();
                     schedSave();
@@ -1808,6 +1916,16 @@
         <div class="page" id="page-einladung"></div>
         <div class="page" id="page-social"></div>
         <div class="page" id="page-pixlip"></div>
+
+        <!-- SUMMARY -->
+        <div class="page" id="page-summary">
+          <div class="page-title">Summary</div>
+          <div class="page-sub">
+            Schneller Überblick über das Event und den aktuellen Fortschritt.
+          </div>
+          <div id="summary-box" class="card-box"></div>
+        </div>
+
         <div class="page" id="page-proj-todos"></div>
       </main>
     </div>
@@ -1830,6 +1948,100 @@
 
       // Per-milestone todo check state (kept in sync with the backend)
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
+
+      // ══ SESSION MANAGEMENT & INACTIVITY ══
+      let inactivityTimeout = null;
+      let inactivityWarningTimeout = null;
+      const INACTIVITY_WARNING_TIME = 4 * 60 * 1000; // 4 minutes
+      const INACTIVITY_LOGOUT_TIME = 5 * 60 * 1000; // 5 minutes
+      let countdownInterval = null;
+
+      function restoreSessionFromStorage() {
+        const storedPassword = sessionStorage.getItem("hubPassword");
+        const storedToken = sessionStorage.getItem("pmToken");
+
+        if (storedPassword) {
+          hubPassword = storedPassword;
+          return true;
+        }
+        if (storedToken) {
+          pmToken = storedToken;
+          return true;
+        }
+        return false;
+      }
+
+      function saveSessionToStorage() {
+        if (hubPassword) {
+          sessionStorage.setItem("hubPassword", hubPassword);
+        }
+        if (pmToken) {
+          sessionStorage.setItem("pmToken", pmToken);
+        }
+      }
+
+      function clearSessionStorage() {
+        sessionStorage.removeItem("hubPassword");
+        sessionStorage.removeItem("pmToken");
+      }
+
+      function resetInactivityTimer() {
+        // Clear existing timers
+        if (inactivityTimeout) clearTimeout(inactivityTimeout);
+        if (inactivityWarningTimeout) clearTimeout(inactivityWarningTimeout);
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        // Hide warning if it was showing
+        const overlay = document.getElementById("inactivity-overlay");
+        if (overlay) overlay.classList.remove("show");
+
+        // Set warning timer (4 minutes)
+        inactivityWarningTimeout = setTimeout(() => {
+          showInactivityWarning();
+        }, INACTIVITY_WARNING_TIME);
+
+        // Set logout timer (5 minutes)
+        inactivityTimeout = setTimeout(() => {
+          logoutDueToInactivity();
+        }, INACTIVITY_LOGOUT_TIME);
+      }
+
+      function showInactivityWarning() {
+        const overlay = document.getElementById("inactivity-overlay");
+        if (!overlay) return;
+
+        overlay.classList.add("show");
+
+        let secondsLeft = 60;
+        const countdownEl = document.getElementById("inactivity-countdown");
+
+        if (countdownEl) {
+          countdownEl.textContent = secondsLeft;
+        }
+
+        countdownInterval = setInterval(() => {
+          secondsLeft--;
+          if (countdownEl) {
+            countdownEl.textContent = secondsLeft;
+          }
+          if (secondsLeft <= 0) {
+            clearInterval(countdownInterval);
+          }
+        }, 1000);
+      }
+
+      function continueSession() {
+        const overlay = document.getElementById("inactivity-overlay");
+        if (overlay) overlay.classList.remove("show");
+        if (countdownInterval) clearInterval(countdownInterval);
+        resetInactivityTimer();
+      }
+
+      function logoutDueToInactivity() {
+        clearSessionStorage();
+        currentRole = null;
+        showRoleModal();
+      }
 
       function getActiveEvent() {
         return eventDetail?.event || pmData?.event || null;
@@ -1984,6 +2196,7 @@
           if (r.ok && d.role === "hub") {
             allEvents = d.events || [];
             document.getElementById("pw-error").classList.remove("show");
+            saveSessionToStorage();
             selectRole("hub");
           } else {
             document.getElementById("pw-error").classList.add("show");
@@ -2009,6 +2222,7 @@
           const d = await r.json();
           if (r.ok && d.role === "pm") {
             pmData = d;
+            saveSessionToStorage();
             selectRole("proj");
           } else {
             document.getElementById("pm-no-token").style.display = "block";
@@ -2028,6 +2242,7 @@
         document.body.style.overflow = "hidden";
         currentRole = null;
         document.body.classList.remove("role-hub", "role-proj");
+        clearSessionStorage();
       }
       function selectRole(role) {
         currentRole = role;
@@ -2057,6 +2272,8 @@
         }
         document.getElementById("topbar-date").textContent =
           "Heute: " + fmtDE(TODAY());
+        // Start inactivity timer
+        resetInactivityTimer();
       }
 
       // ══ NAVIGATION ══
