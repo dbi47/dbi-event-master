@@ -223,17 +223,6 @@ exports.handler = async (event) => {
         .eq("id", event_id);
 
       if (error) return json(500, { error: error.message });
-      if (token)
-        await notifyHub(
-          event_id,
-          await getPMToken(token),
-          "hat den Meilenstein „" + ms_key + "“ aktualisiert.",
-        );
-      else
-        await notifyPMs(
-          event_id,
-          "Event-HUB hat den Meilenstein „" + ms_key + "“ aktualisiert.",
-        );
       return json(200, { ok: true });
     }
     // ── END DELETE ──────────────────────────────────────────────────────
@@ -255,20 +244,25 @@ exports.handler = async (event) => {
           { onConflict: "event_id,ms_key" },
         );
       if (error) return json(500, { error: error.message });
+      const isDone = Boolean(done_date);
       if (token)
         await notifyHub(
           event_id,
           await getPMToken(token),
-          "hat ein To-do in „" +
+          "hat den Meilenstein „" +
             ms_key +
             "“ " +
-            (checked ? "abgeschlossen" : "wieder geöffnet") +
+            (isDone ? "abgeschlossen" : "wieder geöffnet") +
             ".",
         );
       else
         await notifyPMs(
           event_id,
-          "Event-HUB hat ein To-do in „" + ms_key + "“ aktualisiert.",
+          "Event-HUB hat den Meilenstein „" +
+            ms_key +
+            "“ " +
+            (isDone ? "abgeschlossen" : "wieder geöffnet") +
+            ".",
         );
       return json(200, { ok: true });
     }
@@ -307,23 +301,24 @@ exports.handler = async (event) => {
         { onConflict: "event_id,ms_key,todo_index" },
       );
       if (error) return json(500, { error: error.message });
-      const change = input_value !== undefined ? "Eingabe" : "Status";
       if (token)
         await notifyHub(
           event_id,
           await getPMToken(token),
-          "hat " + change + " für „" + workflow_id + "/" + row_key + "“ aktualisiert.",
+          "hat ein To-do in „" +
+            ms_key +
+            "“ " +
+            (checked ? "abgeschlossen" : "wieder geöffnet") +
+            ".",
         );
       else
         await notifyPMs(
           event_id,
-          "Event-HUB hat " +
-            change +
-            " für „" +
-            workflow_id +
-            "/" +
-            row_key +
-            "“ aktualisiert.",
+          "Event-HUB hat ein To-do in „" +
+            ms_key +
+            "“ " +
+            (checked ? "abgeschlossen" : "wieder geöffnet") +
+            ".",
         );
       return json(200, { ok: true });
     }
@@ -364,6 +359,31 @@ exports.handler = async (event) => {
         .from("workflow_rows")
         .upsert(updateData, { onConflict: "event_id,workflow_id,row_key" });
       if (error) return json(500, { error: error.message });
+      const change = input_value !== undefined ? "Eingabe" : "Status";
+      if (token)
+        await notifyHub(
+          event_id,
+          await getPMToken(token),
+          "hat " +
+            change +
+            " für „" +
+            workflow_id +
+            "/" +
+            row_key +
+            "“ aktualisiert.",
+        );
+      else
+        await notifyPMs(
+          event_id,
+          "Event-HUB hat " +
+            change +
+            " für „" +
+            workflow_id +
+            "/" +
+            row_key +
+            "“ aktualisiert.",
+        );
+      return json(200, { ok: true });
       return json(200, { ok: true });
     }
 
