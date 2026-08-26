@@ -3038,6 +3038,7 @@
             .value.trim(),
           hub_contact: document.getElementById("ev-hub").value.trim(),
           room: document.getElementById("ev-room-value").value.trim(),
+          room_type: document.getElementById("ev-room-type").value,
           catering: document.getElementById("ev-catering").value,
           catering_contact: document
             .getElementById("ev-catering-contact")
@@ -3186,7 +3187,31 @@
         return Boolean(getOnlineRoomUrl(value));
       }
 
-      function setRoomControlsFromValue(roomValue) {
+      const ROOM_TYPE_LABELS = {
+        internal: "Internes DBI",
+        external: "Externer Raum",
+        online: "Online",
+      };
+
+      // Legacy inference — ONLY used as a fallback for events saved before the
+      // explicit room_type column existed. New/updated events always carry an
+      // explicit type and never go through this guesswork.
+      function inferLegacyRoomType(value) {
+        const normalized = (value || "").trim().toLowerCase();
+        const isInternal =
+          [
+            "dbi",
+            "eventraum dbi",
+            "eventraum dbi (standard)",
+            "internal",
+          ].includes(normalized) ||
+          INTERNAL_ROOM_OPTIONS.some((opt) => opt.toLowerCase() === normalized);
+        if (isInternal) return "internal";
+        if (isOnlineRoom(value)) return "online";
+        return value ? "external" : "internal";
+      }
+
+      function setRoomControlsFromValue(roomValue, roomType) {
         const typeEl = document.getElementById("ev-room-type");
         const roomEl = document.getElementById("ev-room");
         const manualEl = document.getElementById("ev-room-manual");
@@ -3196,37 +3221,36 @@
           return;
         const value = (roomValue || "").trim();
         const normalized = value.toLowerCase();
-        const isInternal =
-          [
-            "dbi",
-            "eventraum dbi",
-            "eventraum dbi (standard)",
-            "internal",
-          ].includes(normalized) ||
-          INTERNAL_ROOM_OPTIONS.some((opt) => opt.toLowerCase() === normalized);
-        const isOnline = isOnlineRoom(value);
-        const isExternal = !isInternal && !isOnline && Boolean(value);
-        typeEl.value = isOnline
-          ? "online"
-          : isExternal
-            ? "external"
-            : "internal";
+        // Prefer the explicitly stored type. Only fall back to the old
+        // string-shape guess for records saved before room_type existed
+        // (roomType is undefined/null/empty in that case).
+        const type =
+          roomType === "internal" ||
+          roomType === "external" ||
+          roomType === "online"
+            ? roomType
+            : inferLegacyRoomType(value);
+        const isInternal = type === "internal";
+        const isOnline = type === "online";
+        cselSetValue("ev-room-type", type, ROOM_TYPE_LABELS[type]);
+        const roomWrap = document.getElementById("csel-wrap-ev-room");
         if (isInternal) {
           const matched =
             INTERNAL_ROOM_OPTIONS.find(
               (opt) => opt.toLowerCase() === normalized,
             ) || INTERNAL_ROOM_OPTIONS[0];
           roomEl.value = matched;
-          roomEl.style.display = "block";
+          cselSetValue("ev-room", matched, matched);
+          if (roomWrap) roomWrap.style.display = "block";
           manualEl.style.display = "none";
           onlineUrlEl.style.display = "none";
         } else if (isOnline) {
-          roomEl.style.display = "none";
+          if (roomWrap) roomWrap.style.display = "none";
           manualEl.style.display = "none";
           onlineUrlEl.style.display = "block";
           onlineUrlEl.value = value;
         } else {
-          roomEl.style.display = "none";
+          if (roomWrap) roomWrap.style.display = "none";
           manualEl.style.display = "block";
           onlineUrlEl.style.display = "none";
           manualEl.value = value;
@@ -3264,7 +3288,7 @@
         cselSetValue("ev-catering",ev.catering || "brezel", CA[ev.catering || "brezel"] || "Brezeln (Standard)");
         cselSetValue("ev-teams",   ev.teams || "",          TM[ev.teams || ""] || "– offen –");
         cselSetValue("ev-ablage",  ev.ablage || "",         AB[ev.ablage || ""] || "– offen –");
-        setRoomControlsFromValue(ev.room || "");
+        setRoomControlsFromValue(ev.room || "", ev.room_type || "");
         const startEl = document.getElementById("ev-start-date");
         if (startEl && !startEl.value && document.activeElement !== startEl) {
           const fallback = toDateInputValue(
