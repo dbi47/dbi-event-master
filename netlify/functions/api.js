@@ -343,6 +343,14 @@ exports.handler = async (event) => {
           return json(403, { error: "Forbidden" });
         if (!pm.workflow_ids.includes(workflow_id))
           return json(403, { error: "Not your workflow" });
+        // me1–me3 ("Alle Pflichtfelder ausgefüllt" / "Teams-Chat erstellt" /
+        // "Dateien lokal gesichert") are Hub-only final-check rows — PMs may
+        // not write to them even if they otherwise have the pflicht workflow.
+        if (
+          workflow_id === "pflicht" &&
+          ["me1", "me2", "me3"].includes(row_key)
+        )
+          return json(403, { error: "Nur Event-HUB darf dieses Feld bearbeiten" });
         // If this row has a specific assignee, only they may edit it
         const { data: assignment } = await supabase
           .from("task_assignments")
