@@ -3426,6 +3426,52 @@
         }
         updateLocalWorkflow(workflowId, rowKey, { input_value: val });
       }
+
+      // ══ YES/NO + REASON FIELD TYPE ══
+      // Rows with `type: "yesno_reason"` store BOTH the Ja/Nein answer and an
+      // optional "Warum nicht?" reason together in the existing input_value
+      // column, as a small JSON payload: {"value":"Nein","reason":"..."}.
+      // No new DB column needed — input_value is already free-form text.
+      function parseYesNoReason(raw) {
+        if (!raw) return { value: "", reason: "" };
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return {
+              value: parsed.value || "",
+              reason: parsed.reason || "",
+            };
+          }
+        } catch {
+          // Not JSON — this is a legacy plain-string value saved before the
+          // yesno_reason type existed (e.g. a bare "Ja"/"Nein" from the old
+          // plain Yes/No dropdown). Treat the whole string as the answer.
+        }
+        return { value: String(raw), reason: "" };
+      }
+      async function setWorkflowYesNoReason(workflowId, rowKey, patch) {
+        const ev = eventDetail?.event || pmData?.event;
+        if (!ev) return;
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const stored =
+          wfRows.find(
+            (r) => r.workflow_id === workflowId && r.row_key === rowKey,
+          ) || {};
+        const current = parseYesNoReason(stored.input_value);
+        const merged = { ...current, ...patch };
+        if (merged.value !== "Nein") merged.reason = ""; // clear stale reason once answer isn't "Nein" anymore
+        await setWorkflowInput(workflowId, rowKey, JSON.stringify(merged));
+        // Re-render so the "Warum nicht?" field appears/disappears immediately.
+        // Deferred for the same reason as setWorkflowDone: let the browser
+        // finish the change event before the table DOM is rebuilt.
+        requestAnimationFrame(() => {
+          renderAllWorkflows();
+          renderProjTodosFromPMData();
+        });
+      }
       function updateLocalWorkflow(wid, rkey, patch) {
         const rows =
           currentRole === "hub"
@@ -4159,9 +4205,13 @@
                     ? "var(--amb-fg)"
                     : "var(--mid)";
             const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint || "").trim());
+            const isYesNoReason = row.type === "yesno_reason";
             const valToShow =
               stored.input_value || getFallbackValue(id, row.key, ev);
-            const inputCell = isYesNo
+            const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
+            const inputCell = isYesNoReason
+              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+              : isYesNo
               ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
               : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
             html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)"></td></tr>`;
@@ -4204,7 +4254,13 @@
                     ? "var(--amb-fg)"
                     : "var(--mid)";
             const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint || "").trim());
-            const inputCell = isYesNo
+            const isYesNoReason = row.type === "yesno_reason";
+            const rawVal =
+              stored.input_value || getFallbackValue("pflicht", row.key, ev);
+            const ynr = isYesNoReason ? parseYesNoReason(rawVal) : null;
+            const inputCell = isYesNoReason
+              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+              : isYesNo
               ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
               : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
             html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
@@ -4553,6 +4609,7 @@
                   label: "Wegweiser vorbereitet",
                   hint: "",
                   offset: -7,
+                  type: "yesno_reason", // TEMP: Prompt 2 verification row for the new yesno_reason field type
                 },
               ],
             },
