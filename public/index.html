@@ -4191,7 +4191,15 @@
           sec.rows.forEach((row) => {
             const fd = eventDate ? addDays(eventDate, row.offset || 0) : null;
             const stored = getRow(id, row.key);
-            const done = parseISO(stored.done_date || "");
+            const isAutoStatus = !!row.autoStatusField;
+            const autoSatisfied =
+              isAutoStatus && Boolean(ev && ev[row.autoStatusField]);
+            const isHubOnlyLocked = !!row.hubOnly && currentRole !== "hub";
+            const done = isAutoStatus
+              ? autoSatisfied
+                ? TODAY()
+                : null
+              : parseISO(stored.done_date || "");
             const st = getStatus(fd, done);
             const diff = fd ? daysDiff(fd) : null;
             const dStr =
@@ -4209,12 +4217,21 @@
             const valToShow =
               stored.input_value || getFallbackValue(id, row.key, ev);
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
-            const inputCell = isYesNoReason
+            const inputCell = isAutoStatus
+              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+              : isHubOnlyLocked
+              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+              : isYesNoReason
               ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
               ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
               : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
-            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)"></td></tr>`;
+            const doneCell = isAutoStatus
+              ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
+              : isHubOnlyLocked
+              ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
+              : `<input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
+            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
           });
         });
         html += "</tbody></table></div>";
@@ -4383,28 +4400,14 @@
               color: "#eae8f4",
               rows: [
                 {
-                  key: "me1",
-                  label: "Alle Pflichtfelder ausgefüllt",
-                  hint: "Alle Felder ausfüllen",
-                  offset: -56,
-                },
-                {
-                  key: "me2",
-                  label: "Teams-Chat erstellt",
-                  hint: "Alle Beteiligten",
-                  offset: -56,
-                },
-                {
-                  key: "me3",
-                  label: "Dateien lokal gesichert",
-                  hint: "Chats werden gelöscht!",
-                  offset: -56,
-                },
-                {
                   key: "me4",
                   label: "Veranstaltungsgröße eingetragen",
                   hint: "Klein / Mittel / Groß",
                   offset: -56,
+                  // Status is derived automatically from ev.size — see
+                  // renderWorkflow()'s autoStatusField handling. No manual
+                  // toggle for this row.
+                  autoStatusField: "size",
                 },
               ],
             },
@@ -4610,6 +4613,33 @@
                   hint: "",
                   offset: -7,
                   type: "yesno_reason", // TEMP: Prompt 2 verification row for the new yesno_reason field type
+                },
+              ],
+            },
+            {
+              title: "ABSCHLUSSKONTROLLE",
+              color: "#eae8f4",
+              rows: [
+                {
+                  key: "me1",
+                  label: "Alle Pflichtfelder ausgefüllt",
+                  hint: "Alle Felder ausfüllen",
+                  offset: -56,
+                  hubOnly: true,
+                },
+                {
+                  key: "me2",
+                  label: "Teams-Chat erstellt",
+                  hint: "Alle Beteiligten",
+                  offset: -56,
+                  hubOnly: true,
+                },
+                {
+                  key: "me3",
+                  label: "Dateien lokal gesichert",
+                  hint: "Chats werden gelöscht!",
+                  offset: -56,
+                  hubOnly: true,
                 },
               ],
             },
