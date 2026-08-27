@@ -1803,15 +1803,6 @@
         </div>
         <div
           class="nav-item workflow-item"
-          onclick="showPage('einladung')"
-          id="nav-einladung"
-        >
-          <span class="nav-icon">✉️</span
-          ><span class="nav-label">Invitation</span>
-          <span class="nav-badge" id="badge-einladung"></span>
-        </div>
-        <div
-          class="nav-item workflow-item"
           onclick="showPage('social')"
           id="nav-social"
         >
@@ -2214,7 +2205,6 @@
 
         <!-- WORKFLOW PAGES -->
         <div class="page" id="page-pflicht"></div>
-        <div class="page" id="page-einladung"></div>
         <div class="page" id="page-social"></div>
         <div class="page" id="page-pixlip"></div>
 
@@ -3772,7 +3762,6 @@
       function buildSummaryRegistrationHtml(source) {
         const linkValue = [
           getWorkflowRowValue(source, "pflicht", "ei4"),
-          getWorkflowRowValue(source, "einladung", "en8"),
           getWorkflowRowValue(source, "social", "sm5"),
         ]
           .map((value) => (value || "").trim())
@@ -3973,16 +3962,12 @@
         if (!ev) return "";
         if (
           (workflowId === "social" && rowKey === "sm1") ||
-          (workflowId === "einladung" && rowKey === "en1") ||
           (workflowId === "pflicht" && rowKey === "ei1")
         )
           return ev.name || "";
         if (workflowId === "social" && rowKey === "sm2")
           return ev.event_date ? fmtDE(parseISO(ev.event_date)) : "";
-        if (
-          (workflowId === "einladung" && rowKey === "en3") ||
-          (workflowId === "pflicht" && rowKey === "ei3")
-        ) {
+        if (workflowId === "pflicht" && rowKey === "ei3") {
           let val = ev.event_date ? fmtDE(parseISO(ev.event_date)) : "";
           if (ev.room) {
             const rl = { dbi: "Eventraum DBI", extern: "Externer Raum" };
@@ -4163,7 +4148,7 @@
         return html;
       }
       function renderAllWorkflows() {
-        ["pflicht", "einladung", "social", "pixlip"].forEach(renderWorkflow);
+        ["pflicht", "social", "pixlip"].forEach(renderWorkflow);
       }
       function renderWorkflow(id) {
         const def = WORKFLOWS[id];
@@ -4623,140 +4608,6 @@
                   hint: "Chats werden gelöscht!",
                   offset: -56,
                   hubOnly: true,
-                },
-              ],
-            },
-          ],
-        },
-        einladung: {
-          title: "Einladungsworkflow",
-          sub: "Frist −8W: Pflichtinhalte · −6W: Versand",
-          subCls: "alert-red",
-          sections: [
-            {
-              title: "PFLICHTINHALTE (−8 WOCHEN)",
-              color: "#fce8f3",
-              rows: [
-                { key: "en1", label: "Einladungstitel", hint: "", offset: -56 },
-                {
-                  key: "en2",
-                  label: "Einladungstext vollständig",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en3",
-                  label: "Datum, Uhrzeit, Ort",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en4",
-                  label: "Agenda vollständig",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en5",
-                  label: "Finaler Verteiler",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en6",
-                  label: "Ansprechpersonen",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en7",
-                  label: "Infos Gäste & Speaker:innen",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "en8",
-                  label: "Anmeldelink / Ticketing",
-                  hint: "",
-                  offset: -49,
-                },
-              ],
-            },
-            {
-              title: "KOMMUNIKATIONSABLAUF",
-              color: "#eae8f4",
-              rows: [
-                {
-                  key: "kl1",
-                  label: "−8W: Unterlagen vollständig",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "kl2",
-                  label: "−7W: b2match / ZUF live",
-                  hint: "",
-                  offset: -49,
-                },
-                {
-                  key: "kl3",
-                  label: "−6W: Einladung versendet",
-                  hint: "",
-                  offset: -42,
-                },
-                {
-                  key: "kl4",
-                  label: "−6W: Social-Media live",
-                  hint: "",
-                  offset: -42,
-                },
-                {
-                  key: "kl5",
-                  label: "−4W: Reminder versendet",
-                  hint: "",
-                  offset: -28,
-                },
-                {
-                  key: "kl6",
-                  label: "−3W: Bestätigung I versendet",
-                  hint: "",
-                  offset: -21,
-                },
-                {
-                  key: "kl7",
-                  label: "−2W: Bestätigung II versendet",
-                  hint: "",
-                  offset: -14,
-                },
-              ],
-            },
-            {
-              title: "NACHBEREITUNG",
-              color: "#e6f4f0",
-              rows: [
-                {
-                  key: "nb1",
-                  label: "Fotos erhalten",
-                  hint: "Datum / Picdrop-Link",
-                  offset: 7,
-                },
-                {
-                  key: "nb2",
-                  label: "Nachbericht / Social-Post",
-                  hint: "",
-                  offset: 7,
-                },
-                {
-                  key: "nb3",
-                  label: "Teilnehmerzahl final",
-                  hint: "",
-                  offset: 7,
-                },
-                {
-                  key: "nb4",
-                  label: "Feedback / Learnings",
-                  hint: "",
-                  offset: 14,
                 },
               ],
             },
