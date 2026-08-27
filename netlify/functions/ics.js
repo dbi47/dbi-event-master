@@ -24,7 +24,6 @@ const WORKFLOW_TASKS = [
   { id: "pflicht", key: "ko3", label: "Fotograf:in angefragt", offset: -70 },
   { id: "pflicht", key: "lo1", label: "Raum bestätigt", offset: -49 },
   { id: "pflicht", key: "lo2", label: "Catering beauftragt", offset: -49 },
-  { id: "pflicht", key: "lo6", label: "Badges bestellt", offset: -28 },
   { id: "einladung", key: "kl3", label: "Einladung versendet", offset: -42 },
   { id: "einladung", key: "kl5", label: "Reminder versendet", offset: -28 },
   {
