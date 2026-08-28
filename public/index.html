@@ -4814,6 +4814,7 @@
                   label: "Anfrage eingereicht",
                   hint: "Ja / Nein",
                   offset: -70,
+                  type: "yesno_reason",
                 },
                 {
                   key: "px7",
@@ -4850,6 +4851,7 @@
                   label: "Aufgebaut",
                   hint: "Ja / Nein",
                   offset: 0,
+                  type: "yesno_reason",
                 },
               ],
             },
@@ -4857,13 +4859,26 @@
               title: "RÜCKGABE",
               color: "#fef5e4",
               rows: [
-                { key: "pr1", label: "Abgebaut", hint: "", offset: 7 },
-                { key: "pr2", label: "Zurückgegeben", hint: "", offset: 7 },
+                {
+                  key: "pr1",
+                  label: "Abgebaut",
+                  hint: "Ja / Nein",
+                  offset: 7,
+                  type: "yesno_reason",
+                },
+                {
+                  key: "pr2",
+                  label: "Zurückgegeben",
+                  hint: "Ja / Nein",
+                  offset: 7,
+                  type: "yesno_reason",
+                },
                 {
                   key: "pr3",
                   label: "Schäden",
                   hint: "Ja / Nein / Beschreibung",
                   offset: 7,
+                  type: "yesno_reason",
                 },
               ],
             },
@@ -5011,6 +5026,7 @@
               hint: "Ja / Nein",
               offset: -70,
               req: false,
+              type: "yesno_reason",
             },
             {
               key: "fr3",
