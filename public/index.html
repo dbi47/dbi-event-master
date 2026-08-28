@@ -2272,6 +2272,11 @@
 
       // Per-milestone todo check state (kept in sync with the backend)
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
+      // Staged (unsaved) todo checkbox changes. Populated by toggleTodo()
+      // while a milestone drawer is open; flushed to the backend only when
+      // the user explicitly closes that drawer (see toggleMsTodos /
+      // flushPendingTodoSaves) — NOT on every individual click.
+      const pendingTodoChanges = {}; // key: `${msKey}-${todoIdx}` → boolean
 
       // ══ CUSTOM SELECT COMPONENT ══
       function cselClose(id) {
@@ -3593,8 +3598,69 @@
         const drawer = document.getElementById("ms-drawer-" + msKey);
         if (!btn || !drawer) return;
         const isOpen = drawer.classList.contains("open");
-        drawer.classList.toggle("open", !isOpen);
-        btn.classList.toggle("open", !isOpen);
+        if (isOpen) {
+          closeMsTodos(msKey, btn, drawer);
+          return;
+        }
+        // Opening has nothing to save — just reveal it.
+        drawer.classList.add("open");
+        btn.classList.add("open");
+      }
+
+      // Closing is the ONLY point where staged todo checkbox changes are
+      // actually sent to the backend. This is deliberately separate (and
+      // async) so toggleMsTodos can stay a simple, non-blocking onclick
+      // handler while this does the real work.
+      async function closeMsTodos(msKey, btn, drawer) {
+        const ok = await flushPendingTodoSaves(msKey);
+        if (!ok) {
+          // Save failed — keep the drawer open so the user's unsaved
+          // changes aren't silently lost; they can retry by closing again.
+          return;
+        }
+        // renderDashboard() rebuilds the whole milestone table (including a
+        // fresh, closed drawer), so there's nothing further to toggle here —
+        // the collapse happens as a side effect of the data being confirmed
+        // saved, which is exactly the "save/collapse only on explicit close"
+        // behavior we want.
+        renderDashboard();
+      }
+
+      async function flushPendingTodoSaves(msKey) {
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        const ev = source?.event;
+        const keysToFlush = Object.keys(pendingTodoChanges).filter((k) =>
+          k.startsWith(`${msKey}-`),
+        );
+        if (!ev || !keysToFlush.length) return true; // nothing staged
+        try {
+          await Promise.all(
+            keysToFlush.map(async (ck) => {
+              const idx = Number(ck.slice(msKey.length + 1));
+              const checked = pendingTodoChanges[ck];
+              const body = {
+                event_id: ev.id,
+                ms_key: msKey,
+                todo_index: idx,
+                checked,
+              };
+              if (currentRole === "hub") body.password = hubPassword;
+              else body.token = pmToken;
+              const r = await fetch(`${API}/milestone-todo`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              });
+              if (!r.ok) throw new Error("save failed");
+              upsertTodoStateInSource(source, msKey, idx, checked);
+            }),
+          );
+          keysToFlush.forEach((ck) => delete pendingTodoChanges[ck]);
+          return true;
+        } catch {
+          showToast("❌ Fehler beim Speichern – Häkchen bleiben offen");
+          return false;
+        }
       }
 
       function hydrateTodoCheckedState(source) {
@@ -3625,46 +3691,32 @@
         source.milestone_todos = rows;
       }
 
-      async function toggleTodo(msKey, idx) {
-        const source = currentRole === "hub" ? eventDetail : pmData;
-        const ev = source?.event;
-        if (!ev) return;
+      function toggleTodo(msKey, idx) {
         const ck = `${msKey}-${idx}`;
         const nextChecked = !Boolean(todoChecked[ck]);
         todoChecked[ck] = nextChecked;
+        pendingTodoChanges[ck] = nextChecked; // stage — saved on drawer close
         const cb = document.getElementById(`todo-cb-${msKey}-${idx}`);
         const item = document.getElementById(`todo-item-${msKey}-${idx}`);
         if (cb) cb.checked = nextChecked;
         if (item) item.classList.toggle("checked", nextChecked);
-        try {
-          const body = {
-            event_id: ev.id,
-            ms_key: msKey,
-            todo_index: idx,
-            checked: nextChecked,
-          };
-          if (currentRole === "hub") body.password = hubPassword;
-          else body.token = pmToken;
-          const r = await fetch(`${API}/milestone-todo`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          if (!r.ok) {
-            todoChecked[ck] = !nextChecked;
-            if (cb) cb.checked = todoChecked[ck];
-            if (item) item.classList.toggle("checked", todoChecked[ck]);
-            showToast("❌ Fehler beim Speichern");
-            return;
-          }
-          upsertTodoStateInSource(source, msKey, idx, nextChecked);
-          renderDashboard();
-        } catch {
-          todoChecked[ck] = !nextChecked;
-          if (cb) cb.checked = todoChecked[ck];
-          if (item) item.classList.toggle("checked", todoChecked[ck]);
-          showToast("❌ Verbindungsfehler");
-        }
+        updateTodoDrawerProgress(msKey); // live progress bar, no full re-render/collapse
+      }
+
+      // Patches the drawer's own progress bar in place (no full re-render),
+      // so the "N/M erledigt" indicator stays live while the user is still
+      // checking things off, without touching the rest of the dashboard.
+      function updateTodoDrawerProgress(msKey) {
+        const todos = MILESTONE_TODOS[msKey];
+        if (!todos || !todos.length) return;
+        const checkedCount = Object.keys(todoChecked).filter(
+          (k) => k.startsWith(`${msKey}-`) && todoChecked[k],
+        ).length;
+        const pct = Math.round((checkedCount / todos.length) * 100);
+        const bar = document.getElementById(`todo-progress-bar-${msKey}`);
+        const pctLabel = document.getElementById(`todo-progress-pct-${msKey}`);
+        if (bar) bar.style.width = pct + "%";
+        if (pctLabel) pctLabel.textContent = pct + "%";
       }
 
       function buildTodoDrawer(msKey, colSpan) {
@@ -3693,7 +3745,7 @@
           })
           .join("");
         return `<tr class="todo-drawer" id="ms-drawer-${msKey}">
-  <td colspan="${colSpan}"><div class="todo-drawer-inner">${items}<div class="todo-progress" id="todo-progress-${msKey}"><div class="todo-progress-bar"><span style="width:${pct}%"></span></div><span>${pct}%</span></div></div></td>
+  <td colspan="${colSpan}"><div class="todo-drawer-inner">${items}<div class="todo-progress" id="todo-progress-${msKey}"><div class="todo-progress-bar"><span id="todo-progress-bar-${msKey}" style="width:${pct}%"></span></div><span id="todo-progress-pct-${msKey}">${pct}%</span></div></div></td>
 </tr>`;
       }
 
