@@ -385,6 +385,20 @@
         color: var(--mid);
         font-size: 0.84rem;
       }
+      .summary-contact-group {
+        margin-bottom: 14px;
+      }
+      .summary-contact-group:last-child {
+        margin-bottom: 0;
+      }
+      .summary-contact-group-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--accent);
+        margin-bottom: 4px;
+      }
       .summary-link {
         color: var(--accent);
         text-decoration: none;
@@ -3704,31 +3718,47 @@
             speaker.contact,
         );
         if (!hasData) {
-          return '<div class="summary-empty">Noch keine Speaker:innen hinterlegt.</div>';
+          return '<div class="summary-empty">Noch keine Ansprechpersonen hinterlegt.</div>';
         }
-        return speakers
-          .map((speaker) => {
-            const name = speaker.name
-              ? `<strong>${esc(speaker.name)}</strong>`
-              : "";
-            const position = speaker.position
-              ? `<div>${esc(speaker.position)}</div>`
-              : "";
-            const topic = speaker.topic
-              ? `<div>${esc(speaker.topic)}</div>`
-              : "";
-            const contact = speaker.contact
-              ? `<div><a class="summary-link" href="${esc(
-                  /^mailto:/i.test(speaker.contact)
-                    ? speaker.contact
-                    : speaker.contact.includes("@")
-                      ? `mailto:${speaker.contact}`
-                      : speaker.contact,
-                )}" target="_blank" rel="noopener">${esc(speaker.contact)}</a></div>`
-              : "";
-            return `<div class="summary-list-item">${name}${position}${topic}${contact}</div>`;
-          })
-          .join("");
+        const renderEntry = (speaker) => {
+          const name = speaker.name
+            ? `<strong>${esc(speaker.name)}</strong>`
+            : "";
+          const position = speaker.position
+            ? `<div>${esc(speaker.position)}</div>`
+            : "";
+          const topic = speaker.topic
+            ? `<div>${esc(speaker.topic)}</div>`
+            : "";
+          const contact = speaker.contact
+            ? `<div><a class="summary-link" href="${esc(
+                /^mailto:/i.test(speaker.contact)
+                  ? speaker.contact
+                  : speaker.contact.includes("@")
+                    ? `mailto:${speaker.contact}`
+                    : speaker.contact,
+              )}" target="_blank" rel="noopener">${esc(speaker.contact)}</a></div>`
+            : "";
+          return `<div class="summary-list-item">${name}${position}${topic}${contact}</div>`;
+        };
+        // Group by category, in the fixed CONTACT_CATEGORIES order (Location,
+        // Catering, Technik, Speaker/Moderation), skipping empty groups —
+        // rather than one flat list.
+        return CONTACT_CATEGORIES.map((cat) => {
+          const entries = speakers.filter(
+            (speaker) =>
+              speaker.category === cat.value &&
+              (speaker.name ||
+                speaker.position ||
+                speaker.topic ||
+                speaker.contact),
+          );
+          if (!entries.length) return "";
+          return `<div class="summary-contact-group">
+  <div class="summary-contact-group-title">${esc(cat.label)}</div>
+  ${entries.map(renderEntry).join("")}
+</div>`;
+        }).join("");
       }
       function buildSummaryAgendaHtml(source) {
         const agendaRows = [
@@ -3934,11 +3964,11 @@
             </div>
             <div class="summary-grid">
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🎤</span>Speaker:innen</div>
+                <div class="summary-card-title"><span class="summary-card-icon">👥</span>Ansprechpersonen</div>
                 ${buildSummarySpeakerHtml(source)}
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🗓</span>Hauptagenda</div>
+                <div class="summary-card-title"><span class="summary-card-icon">🗓</span>Agenda</div>
                 ${buildSummaryAgendaHtml(source)}
               </div>
               <div class="summary-card">
@@ -4050,9 +4080,27 @@
         }
         return "";
       }
+      // ══ CONTACT PERSONS (formerly "Speaker") DATA MODEL ══
+      // Order here is also the display order used when grouping the Summary
+      // tab's contact-persons card.
+      const CONTACT_CATEGORIES = [
+        { value: "location", label: "Location" },
+        { value: "catering", label: "Catering" },
+        { value: "technik", label: "Technik" },
+        { value: "speaker", label: "Speaker/Moderation" },
+      ];
+      const DEFAULT_CONTACT_CATEGORY = "speaker";
       function getDefaultSpeakerData() {
         return {
-          speakers: [{ name: "", position: "", topic: "", contact: "" }],
+          speakers: [
+            {
+              name: "",
+              position: "",
+              topic: "",
+              contact: "",
+              category: DEFAULT_CONTACT_CATEGORY,
+            },
+          ],
           guests: "",
         };
       }
@@ -4071,6 +4119,15 @@
                     position: speaker?.position || "",
                     topic: speaker?.topic || "",
                     contact: speaker?.contact || "",
+                    // Entries saved before categories existed don't have this
+                    // field — default them to Speaker/Moderation (what this
+                    // list used to be exclusively for) so old data keeps
+                    // showing up in the Summary instead of disappearing.
+                    category: CONTACT_CATEGORIES.some(
+                      (c) => c.value === speaker?.category,
+                    )
+                      ? speaker.category
+                      : DEFAULT_CONTACT_CATEGORY,
                   }))
                 : getDefaultSpeakerData().speakers,
               guests: parsed.guests || "",
@@ -4118,7 +4175,13 @@
             ? eventDetail?.workflow_rows || []
             : pmData?.workflow_rows || [];
         const data = getSpeakerSectionData(workflowId, wfRows);
-        data.speakers.push({ name: "", position: "", topic: "", contact: "" });
+        data.speakers.push({
+          name: "",
+          position: "",
+          topic: "",
+          contact: "",
+          category: DEFAULT_CONTACT_CATEGORY,
+        });
         await saveSpeakerSectionData(workflowId, data);
         renderAllWorkflows();
         renderProjTodosFromPMData();
@@ -4147,6 +4210,7 @@
             position: "",
             topic: "",
             contact: "",
+            category: DEFAULT_CONTACT_CATEGORY,
           };
         }
         data.speakers[index][field] = value;
@@ -4169,12 +4233,17 @@
         let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
         html += `<tr><td colspan="6"><div class="speaker-section">`;
         speakers.forEach((speaker, index) => {
+          const categoryOptions = CONTACT_CATEGORIES.map(
+            (c) =>
+              `<option value="${c.value}" ${speaker.category === c.value ? "selected" : ""}>${esc(c.label)}</option>`,
+          ).join("");
           html += `<div class="speaker-card">
   <div class="speaker-card-header">
-    <span>Speaker:in ${index + 1}</span>
+    <span>Kontaktperson ${index + 1}</span>
     <button class="speaker-remove-btn" type="button" onclick="removeSpeakerRow('${workflowId}', ${index})" ${speakers.length <= 1 ? "disabled" : ""}>− Entfernen</button>
   </div>
   <div class="speaker-grid">
+    <div class="speaker-field"><label>Kategorie</label><select onchange="setSpeakerField('${workflowId}', ${index}, 'category', this.value)">${categoryOptions}</select></div>
     <div class="speaker-field"><label>Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name" /></div>
     <div class="speaker-field"><label>Position & Institution</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Position & Institution" /></div>
     <div class="speaker-field"><label>Thema / Titel</label><input type="text" value="${esc(speaker.topic)}" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="Thema / Titel" /></div>
@@ -4182,7 +4251,7 @@
   </div>
 </div>`;
         });
-        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Speaker:in hinzufügen</button></div>`;
+        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Kontaktperson hinzufügen</button></div>`;
         html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
         html += `</div></td></tr>`;
         return html;
