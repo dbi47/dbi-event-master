@@ -4010,6 +4010,46 @@
         }
         return "";
       }
+
+      // ══ SOURCE-FIELD (AUTO-POPULATE) RESOLUTION ══
+      // Rows with `sourceField` set don't store their own independent value —
+      // they display data that's already captured elsewhere (a plain event
+      // field, or another workflow's row) so PMs aren't re-typing the same
+      // information into multiple tabs. sourceField can be either:
+      //   - a string like "event.name" / "event.event_date" (reads ev.*)
+      //   - an object { workflow: "pflicht", key: "lo4" } (reads another
+      //     workflow's stored row, falling back the same way any other row
+      //     would via getFallbackValue)
+      function resolveSourceFieldValue(row, ev, wfRows) {
+        const sf = row.sourceField;
+        if (!sf || !ev) return "";
+        if (typeof sf === "string") {
+          const [scope, field] = sf.split(".");
+          if (scope !== "event" || !field) return "";
+          const raw = ev[field];
+          if (!raw) return "";
+          return field === "event_date" ? fmtDE(parseISO(raw)) : String(raw);
+        }
+        if (sf.workflow && sf.key) {
+          const stored =
+            (wfRows || []).find(
+              (r) => r.workflow_id === sf.workflow && r.row_key === sf.key,
+            ) || {};
+          const raw =
+            stored.input_value || getFallbackValue(sf.workflow, sf.key, ev);
+          if (!raw) return "";
+          // If the source row is itself a yesno_reason field, show the
+          // answer (+ reason, if any) instead of the raw JSON payload.
+          const parsed = parseYesNoReason(raw);
+          if (parsed.value === "Ja" || parsed.value === "Nein") {
+            return parsed.reason
+              ? `${parsed.value} (${parsed.reason})`
+              : parsed.value;
+          }
+          return raw;
+        }
+        return "";
+      }
       function getDefaultSpeakerData() {
         return {
           speakers: [{ name: "", position: "", topic: "", contact: "" }],
@@ -4199,10 +4239,14 @@
                     : "var(--mid)";
             const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint || "").trim());
             const isYesNoReason = row.type === "yesno_reason";
-            const valToShow =
-              stored.input_value || getFallbackValue(id, row.key, ev);
+            const isSourceField = !!row.sourceField;
+            const valToShow = isSourceField
+              ? resolveSourceFieldValue(row, ev, wfRows)
+              : stored.input_value || getFallbackValue(id, row.key, ev);
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
             const inputCell = isAutoStatus
+              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+              : isSourceField
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
               : isHubOnlyLocked
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
@@ -4622,8 +4666,20 @@
               title: "EVENTINFOS (−8 WOCHEN)",
               color: "#eae8f4",
               rows: [
-                { key: "sm1", label: "Eventname", hint: "", offset: -56 },
-                { key: "sm2", label: "Eventdatum", hint: "", offset: -56 },
+                {
+                  key: "sm1",
+                  label: "Eventname",
+                  hint: "",
+                  offset: -56,
+                  sourceField: "event.name",
+                },
+                {
+                  key: "sm2",
+                  label: "Eventdatum",
+                  hint: "",
+                  offset: -56,
+                  sourceField: "event.event_date",
+                },
                 {
                   key: "sm3",
                   label: "Kurzbeschreibung (2–3 Sätze)",
@@ -4636,7 +4692,13 @@
                   hint: "Kommagetrennt",
                   offset: -56,
                 },
-                { key: "sm5", label: "Anmeldelink", hint: "", offset: -56 },
+                {
+                  key: "sm5",
+                  label: "Anmeldelink",
+                  hint: "",
+                  offset: -56,
+                  sourceField: { workflow: "pflicht", key: "ei4" },
+                },
                 {
                   key: "sm6",
                   label: "Grafikbriefing übergeben",
@@ -4673,7 +4735,13 @@
                   hint: "",
                   offset: -42,
                 },
-                { key: "sa4", label: "Veröffentlicht?", hint: "", offset: -42 },
+                {
+                  key: "sa4",
+                  label: "Veröffentlicht?",
+                  hint: "",
+                  offset: -42,
+                  type: "yesno_reason",
+                },
               ],
             },
             {
@@ -4692,7 +4760,13 @@
                   hint: "",
                   offset: -14,
                 },
-                { key: "sr3", label: "Veröffentlicht?", hint: "", offset: -14 },
+                {
+                  key: "sr3",
+                  label: "Veröffentlicht?",
+                  hint: "",
+                  offset: -14,
+                  type: "yesno_reason",
+                },
               ],
             },
             {
@@ -4719,6 +4793,7 @@
                   label: "Pixlip benötigt?",
                   hint: "Ja / Nein",
                   offset: -70,
+                  sourceField: { workflow: "pflicht", key: "lo4" },
                 },
                 { key: "px2", label: "Aufbaudatum", hint: "", offset: -70 },
                 { key: "px3", label: "Rückgabedatum", hint: "", offset: -70 },
