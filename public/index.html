@@ -1222,6 +1222,52 @@
         font-style: italic;
       }
 
+      /* ══ MODERN NATIVE DATE INPUT ══ */
+      .date-field {
+        position: relative;
+      }
+      .date-field input[type="date"] {
+        padding-left: 40px;
+        cursor: pointer;
+      }
+      .date-field::before {
+        content: "📅";
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.92rem;
+        opacity: 0.65;
+        pointer-events: none;
+      }
+      .date-field input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        opacity: 0.55;
+        transition: opacity 0.15s;
+      }
+      .date-field input[type="date"]:hover::-webkit-calendar-picker-indicator,
+      .date-field input[type="date"]:focus::-webkit-calendar-picker-indicator {
+        opacity: 0.95;
+      }
+      .date-pair-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .date-pair-item {
+        flex: 1;
+        min-width: 150px;
+      }
+      .date-pair-item-label {
+        display: block;
+        font-size: 0.63rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--mid);
+        margin-bottom: 4px;
+      }
+
       /* EVENT GRID */
       .event-grid {
         display: grid;
@@ -1641,6 +1687,290 @@
           grid-template-columns: 1fr;
         }
       }
+
+      /* ══════════════════════════════════════════════════════════
+         EVENT DETAILS — REDESIGNED LAYOUT
+         Split view: a live event-card preview + required-field
+         checklist on the left, grouped editable sections on the
+         right. Scoped entirely under #page-eventdaten so none of
+         the shared .card-box/.form-group/.csel-* styling used by
+         other pages (e.g. PM-Zugänge) is affected.
+         ══════════════════════════════════════════════════════════ */
+      #page-eventdaten {
+        max-width: 1180px;
+      }
+      .evd-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        background: var(--paper);
+        padding-top: 2px;
+        padding-bottom: 18px;
+        margin-bottom: 26px;
+        border-bottom: 1px solid var(--line);
+      }
+      .evd-topbar-actions {
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+        padding-bottom: 2px;
+      }
+      .evd-layout {
+        display: grid;
+        grid-template-columns: 296px 1fr;
+        gap: 28px;
+        align-items: start;
+      }
+      .evd-rail {
+        position: sticky;
+        top: 92px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* Live event-card preview — the signature element */
+      .evd-preview-card {
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+      .evd-preview-head {
+        background: linear-gradient(135deg, #1a1433 0%, #2d3a8c 100%);
+        padding: 20px 20px 18px;
+        position: relative;
+      }
+      .evd-preview-eyebrow {
+        font-family: "DM Mono", monospace;
+        font-size: 0.66rem;
+        color: #8f88b8;
+        margin-bottom: 8px;
+      }
+      .evd-preview-name {
+        font-family: "Fraunces", serif;
+        font-size: 1.22rem;
+        font-weight: 600;
+        line-height: 1.28;
+        color: #f4f3f8;
+        word-break: break-word;
+      }
+      .evd-preview-body {
+        padding: 16px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .evd-preview-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .evd-preview-row-icon {
+        width: 17px;
+        flex-shrink: 0;
+        text-align: center;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        opacity: 0.8;
+      }
+      .evd-preview-row-text {
+        min-width: 0;
+      }
+      .evd-preview-row-label {
+        color: var(--mid);
+        font-size: 0.66rem;
+        letter-spacing: 0.02em;
+      }
+      .evd-preview-row-value {
+        color: var(--ink);
+        font-weight: 600;
+        font-family: "DM Mono", monospace;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+
+      /* Required-field checklist */
+      .evd-checklist-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px 18px 14px;
+      }
+      .evd-checklist-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .evd-checklist-title {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .evd-checklist-count {
+        font-family: "DM Mono", monospace;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--accent);
+        background: var(--red-bg);
+        padding: 2px 9px;
+        border-radius: 20px;
+        transition:
+          color 0.2s,
+          background 0.2s;
+      }
+      .evd-checklist-count.complete {
+        color: var(--grn-fg);
+        background: var(--grn-bg);
+      }
+      .evd-check-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 0.79rem;
+        color: var(--mid);
+        padding: 5px 0;
+      }
+      .evd-check-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 1.5px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        flex-shrink: 0;
+        color: transparent;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .evd-check-item.done {
+        color: var(--ink);
+      }
+      .evd-check-item.done .evd-check-dot {
+        background: var(--grn-fg);
+        border-color: var(--grn-fg);
+        color: #fff;
+      }
+
+      /* Right column — grouped editable sections */
+      .evd-main {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        min-width: 0;
+      }
+      .evd-section {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 22px 24px 24px;
+      }
+      .evd-section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .evd-section-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+        transform: translateY(-1px);
+      }
+      .evd-section-title {
+        font-family: "Fraunces", serif;
+        font-size: 1.04rem;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .evd-section-note {
+        font-size: 0.75rem;
+        color: var(--mid);
+        margin-left: auto;
+      }
+
+      /* Field styling — scoped so other pages keep the original look */
+      #page-eventdaten .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 20px;
+        margin-bottom: 0;
+      }
+      #page-eventdaten .form-label {
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+        color: var(--mid);
+      }
+      #page-eventdaten .form-group textarea,
+      #page-eventdaten .form-group input[type="text"],
+      #page-eventdaten .form-group input[type="email"],
+      #page-eventdaten .form-group input[type="date"],
+      #page-eventdaten .form-group input[type="url"] {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 12px;
+        background: var(--paper);
+        min-height: 40px;
+      }
+      #page-eventdaten .form-group textarea:focus,
+      #page-eventdaten .form-group input:focus {
+        border-color: var(--accent);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(194, 24, 91, 0.12);
+      }
+      #page-eventdaten .csel-trigger {
+        border-radius: 8px;
+        background: var(--paper);
+        min-height: 40px;
+        padding: 9px 12px;
+      }
+      #page-eventdaten .csel-trigger:focus,
+      #page-eventdaten .csel-trigger.open {
+        box-shadow: 0 0 0 3px rgba(194, 24, 91, 0.12);
+      }
+      #page-eventdaten .field-note {
+        margin-bottom: 20px;
+      }
+
+      @media (max-width: 900px) {
+        .evd-layout {
+          grid-template-columns: 1fr;
+        }
+        .evd-rail {
+          position: static;
+        }
+      }
+      @media (max-width: 640px) {
+        #page-eventdaten .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .evd-topbar {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+        .evd-topbar-actions {
+          width: 100%;
+        }
+        .evd-topbar-actions .btn,
+        .evd-topbar-actions .btn-secondary {
+          flex: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1920,235 +2250,340 @@
 
         <!-- EVENTDATEN -->
         <div class="page" id="page-eventdaten">
-          <div class="page-title">Eventdaten</div>
-          <div class="page-sub">
-            Nur dieses Tab ausfüllen – alle Fristen berechnen sich automatisch.
+          <div class="evd-topbar">
+            <div>
+              <div class="page-title" style="margin-bottom: 2px">
+                Eventdaten
+              </div>
+              <div class="page-sub" style="margin-bottom: 0">
+                Nur dieses Tab ausfüllen – alle Fristen berechnen sich
+                automatisch.
+              </div>
+            </div>
+            <div class="evd-topbar-actions">
+              <button
+                class="btn-secondary"
+                style="
+                  padding: 10px 18px;
+                  border-radius: 4px;
+                  font-family: inherit;
+                  font-size: 0.85rem;
+                  font-weight: 600;
+                  cursor: pointer;
+                "
+                onclick="showPage('dashboard')"
+              >
+                → Dashboard
+              </button>
+              <button class="btn" onclick="saveEventNow()">
+                💾 Speichern
+              </button>
+            </div>
           </div>
           <div id="event-details-note" class="field-note"></div>
           <div id="ev-saving" class="alert alert-blu" style="display: none">
             Wird gespeichert…
           </div>
-          <div class="card-box">
-            <div class="card-box-title">Grunddaten</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label"
-                  >Eventname <span class="req">*</span></label
-                ><textarea
-                  id="ev-name"
-                  placeholder="z. B. Business beim Brötchen"
-                  onblur="saveEventNow(this)"
-                ></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label"
-                  >Eventdatum <span class="req">*</span></label
-                ><input type="date" id="ev-date" onblur="saveEventNow(this)" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Event Location / Room</label>
-                <div class="csel-wrap" id="csel-wrap-ev-room-type">
-                  <div class="csel-trigger" id="csel-trigger-ev-room-type" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room-type')" onkeydown="cselKeydown(event,'ev-room-type')">
-                    <span class="csel-label" id="csel-label-ev-room-type">Internes DBI</span>
-                    <span class="csel-arrow">&#9660;</span>
+
+          <div class="evd-layout">
+            <!-- LEFT RAIL: live preview + required-field checklist -->
+            <div class="evd-rail">
+              <div class="evd-preview-card">
+                <div class="evd-preview-head">
+                  <div class="evd-preview-eyebrow">EVENT</div>
+                  <div class="evd-preview-name" id="evd-preview-name">
+                    Neues Event
                   </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-room-type" role="listbox">
-                    <div class="csel-option selected" data-value="internal" onclick="cselSelect('ev-room-type','internal','Internes DBI',this)">Internes DBI</div>
-                    <div class="csel-option" data-value="external" onclick="cselSelect('ev-room-type','external','Externer Raum',this)">Externer Raum</div>
-                    <div class="csel-option" data-value="online" onclick="cselSelect('ev-room-type','online','Online',this)">Online</div>
-                  </div>
-                  <input type="hidden" id="ev-room-type" value="internal">
                 </div>
-                <div class="csel-wrap" id="csel-wrap-ev-room" style="margin-top: 8px">
-                  <div class="csel-trigger" id="csel-trigger-ev-room" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room')" onkeydown="cselKeydown(event,'ev-room')">
-                    <span class="csel-label" id="csel-label-ev-room">Raum Wedau</span>
-                    <span class="csel-arrow">&#9660;</span>
+                <div class="evd-preview-body">
+                  <div class="evd-preview-row">
+                    <span class="evd-preview-row-icon">📅</span>
+                    <div class="evd-preview-row-text">
+                      <div class="evd-preview-row-label">Datum</div>
+                      <div class="evd-preview-row-value" id="evd-preview-date">
+                        Datum offen
+                      </div>
+                    </div>
                   </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-room" role="listbox">
-                    <div class="csel-option selected" data-value="Raum Wedau" onclick="cselSelect('ev-room','Raum Wedau','Raum Wedau',this)">Raum Wedau</div>
-                    <div class="csel-option" data-value="Raum Duissern" onclick="cselSelect('ev-room','Raum Duissern','Raum Duissern',this)">Raum Duissern</div>
-                    <div class="csel-option" data-value="Raum Neudorf" onclick="cselSelect('ev-room','Raum Neudorf','Raum Neudorf',this)">Raum Neudorf</div>
-                    <div class="csel-option" data-value="Raum Rumeln" onclick="cselSelect('ev-room','Raum Rumeln','Raum Rumeln',this)">Raum Rumeln</div>
-                    <div class="csel-option" data-value="Raum Marxloh" onclick="cselSelect('ev-room','Raum Marxloh','Raum Marxloh',this)">Raum Marxloh</div>
-                    <div class="csel-option" data-value="Raum Homberg" onclick="cselSelect('ev-room','Raum Homberg','Raum Homberg',this)">Raum Homberg</div>
-                    <div class="csel-option" data-value="Raum Meiderich" onclick="cselSelect('ev-room','Raum Meiderich','Raum Meiderich',this)">Raum Meiderich</div>
+                  <div class="evd-preview-row">
+                    <span class="evd-preview-row-icon">📍</span>
+                    <div class="evd-preview-row-text">
+                      <div class="evd-preview-row-label">Location</div>
+                      <div class="evd-preview-row-value" id="evd-preview-room">
+                        Internes DBI
+                      </div>
+                    </div>
                   </div>
-                  <input type="hidden" id="ev-room" value="Raum Wedau">
-                </div>
-                <input
-                  type="text"
-                  id="ev-room-manual"
-                  style="margin-top: 8px; display: none"
-                  placeholder="Bitte Location eingeben"
-                  oninput="
-                    updateRoomValue();
-                    schedSave();
-                  "
-                  onblur="
-                    updateRoomValue();
-                    saveEventNow(this);
-                  "
-                />
-                <input
-                  type="url"
-                  id="ev-room-online-url"
-                  style="margin-top: 8px; display: none"
-                  placeholder="z. B. https://zoom.us/j/... oder https://teams.microsoft.com/..."
-                  oninput="
-                    updateRoomValue();
-                    schedSave();
-                  "
-                  onblur="
-                    updateRoomValue();
-                    saveEventNow(this);
-                  "
-                />
-                <input type="hidden" id="ev-room-value" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Startdatum</label
-                ><input
-                  type="date"
-                  id="ev-start-date"
-                  onblur="saveEventNow(this)"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label"
-                  >Größe <span class="req">*</span></label
-                >
-                <div class="csel-wrap" id="csel-wrap-ev-size">
-                  <div class="csel-trigger" id="csel-trigger-ev-size" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-size')" onkeydown="cselKeydown(event,'ev-size')">
-                    <span class="csel-label" id="csel-label-ev-size">– bitte wählen –</span>
-                    <span class="csel-arrow">&#9660;</span>
+                  <div class="evd-preview-row">
+                    <span class="evd-preview-row-icon">👥</span>
+                    <div class="evd-preview-row-text">
+                      <div class="evd-preview-row-label">Größe</div>
+                      <div class="evd-preview-row-value" id="evd-preview-size">
+                        Größe offen
+                      </div>
+                    </div>
                   </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-size" role="listbox">
-                    <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-size','','– bitte wählen –',this)">– bitte wählen –</div>
-                    <div class="csel-option" data-value="12" onclick="cselSelect('ev-size','12','Klein (30–60 Pers. · 12W)',this)">Klein (30–60 Pers. · 12W)</div>
-                    <div class="csel-option" data-value="18" onclick="cselSelect('ev-size','18','Mittel (60–150 Pers. · 18W)',this)">Mittel (60–150 Pers. · 18W)</div>
-                    <div class="csel-option" data-value="24" onclick="cselSelect('ev-size','24','Groß (&gt;150 Pers. · 24W)',this)">Groß (&gt;150 Pers. · 24W)</div>
-                  </div>
-                  <input type="hidden" id="ev-size" value="">
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Thema</label
-                ><textarea id="ev-topic" onblur="saveEventNow(this)"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label"
-                  >Verantwortliche:r <span class="req">*</span></label
-                ><textarea id="ev-owner" onblur="saveEventNow(this)"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Responsible Email</label
-                ><input
-                  type="email"
-                  id="ev-email"
-                  onblur="saveEventNow(this)"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Contact Person's Email</label
-                ><input
-                  type="email"
-                  id="ev-contact-email"
-                  onblur="saveEventNow(this)"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Komm-Hub Ansprechperson</label
-                ><textarea id="ev-hub" onblur="saveEventNow(this)"></textarea>
+              <div class="evd-checklist-card">
+                <div class="evd-checklist-head">
+                  <span class="evd-checklist-title">Pflichtfelder</span>
+                  <span class="evd-checklist-count" id="evd-checklist-count"
+                    >0 / 4</span
+                  >
+                </div>
+                <div id="evd-checklist"></div>
               </div>
             </div>
-          </div>
-          <div class="card-box">
-            <div class="card-box-title">Raum & Catering</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Catering</label>
-                <div class="csel-wrap" id="csel-wrap-ev-catering">
-                  <div class="csel-trigger" id="csel-trigger-ev-catering" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-catering')" onkeydown="cselKeydown(event,'ev-catering')">
-                    <span class="csel-label" id="csel-label-ev-catering">Brezeln (Standard)</span>
-                    <span class="csel-arrow">&#9660;</span>
+
+            <!-- RIGHT: grouped editable sections -->
+            <div class="evd-main">
+              <div class="evd-section">
+                <div class="evd-section-head">
+                  <span class="evd-section-dot"></span>
+                  <span class="evd-section-title">Grunddaten</span>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Eventname <span class="req">*</span></label
+                    ><textarea
+                      id="ev-name"
+                      placeholder="z. B. Business beim Brötchen"
+                      oninput="updateEventPreview()"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
                   </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-catering" role="listbox">
-                    <div class="csel-option selected" data-value="brezel" onclick="cselSelect('ev-catering','brezel','Brezeln (Standard)',this)">Brezeln (Standard)</div>
-                    <div class="csel-option" data-value="broetchen" onclick="cselSelect('ev-catering','broetchen','Belegte Brötchen',this)">Belegte Brötchen</div>
-                    <div class="csel-option" data-value="extended" onclick="cselSelect('ev-catering','extended','Erweitertes Catering',this)">Erweitertes Catering</div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Eventdatum <span class="req">*</span></label
+                    ><input
+                      type="date"
+                      id="ev-date"
+                      oninput="updateEventPreview()"
+                      onblur="saveEventNow(this)"
+                    />
                   </div>
-                  <input type="hidden" id="ev-catering" value="brezel">
+                  <div class="form-group">
+                    <label class="form-label">Event Location / Room</label>
+                    <div class="csel-wrap" id="csel-wrap-ev-room-type">
+                      <div class="csel-trigger" id="csel-trigger-ev-room-type" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room-type')" onkeydown="cselKeydown(event,'ev-room-type')">
+                        <span class="csel-label" id="csel-label-ev-room-type">Internes DBI</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-room-type" role="listbox">
+                        <div class="csel-option selected" data-value="internal" onclick="cselSelect('ev-room-type','internal','Internes DBI',this)">Internes DBI</div>
+                        <div class="csel-option" data-value="external" onclick="cselSelect('ev-room-type','external','Externer Raum',this)">Externer Raum</div>
+                        <div class="csel-option" data-value="online" onclick="cselSelect('ev-room-type','online','Online',this)">Online</div>
+                      </div>
+                      <input type="hidden" id="ev-room-type" value="internal">
+                    </div>
+                    <div class="csel-wrap" id="csel-wrap-ev-room" style="margin-top: 8px">
+                      <div class="csel-trigger" id="csel-trigger-ev-room" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room')" onkeydown="cselKeydown(event,'ev-room')">
+                        <span class="csel-label" id="csel-label-ev-room">Raum Wedau</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-room" role="listbox">
+                        <div class="csel-option selected" data-value="Raum Wedau" onclick="cselSelect('ev-room','Raum Wedau','Raum Wedau',this)">Raum Wedau</div>
+                        <div class="csel-option" data-value="Raum Duissern" onclick="cselSelect('ev-room','Raum Duissern','Raum Duissern',this)">Raum Duissern</div>
+                        <div class="csel-option" data-value="Raum Neudorf" onclick="cselSelect('ev-room','Raum Neudorf','Raum Neudorf',this)">Raum Neudorf</div>
+                        <div class="csel-option" data-value="Raum Rumeln" onclick="cselSelect('ev-room','Raum Rumeln','Raum Rumeln',this)">Raum Rumeln</div>
+                        <div class="csel-option" data-value="Raum Marxloh" onclick="cselSelect('ev-room','Raum Marxloh','Raum Marxloh',this)">Raum Marxloh</div>
+                        <div class="csel-option" data-value="Raum Homberg" onclick="cselSelect('ev-room','Raum Homberg','Raum Homberg',this)">Raum Homberg</div>
+                        <div class="csel-option" data-value="Raum Meiderich" onclick="cselSelect('ev-room','Raum Meiderich','Raum Meiderich',this)">Raum Meiderich</div>
+                      </div>
+                      <input type="hidden" id="ev-room" value="Raum Wedau">
+                    </div>
+                    <input
+                      type="text"
+                      id="ev-room-manual"
+                      style="margin-top: 8px; display: none"
+                      placeholder="Bitte Location eingeben"
+                      oninput="
+                        updateRoomValue();
+                        updateEventPreview();
+                        schedSave();
+                      "
+                      onblur="
+                        updateRoomValue();
+                        saveEventNow(this);
+                      "
+                    />
+                    <input
+                      type="url"
+                      id="ev-room-online-url"
+                      style="margin-top: 8px; display: none"
+                      placeholder="z. B. https://zoom.us/j/... oder https://teams.microsoft.com/..."
+                      oninput="
+                        updateRoomValue();
+                        updateEventPreview();
+                        schedSave();
+                      "
+                      onblur="
+                        updateRoomValue();
+                        saveEventNow(this);
+                      "
+                    />
+                    <input type="hidden" id="ev-room-value" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Startdatum</label
+                    ><input
+                      type="date"
+                      id="ev-start-date"
+                      onblur="saveEventNow(this)"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Größe <span class="req">*</span></label
+                    >
+                    <div class="csel-wrap" id="csel-wrap-ev-size">
+                      <div class="csel-trigger" id="csel-trigger-ev-size" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-size')" onkeydown="cselKeydown(event,'ev-size')">
+                        <span class="csel-label" id="csel-label-ev-size">– bitte wählen –</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-size" role="listbox">
+                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-size','','– bitte wählen –',this)">– bitte wählen –</div>
+                        <div class="csel-option" data-value="12" onclick="cselSelect('ev-size','12','Klein (30–60 Pers. · 12W)',this)">Klein (30–60 Pers. · 12W)</div>
+                        <div class="csel-option" data-value="18" onclick="cselSelect('ev-size','18','Mittel (60–150 Pers. · 18W)',this)">Mittel (60–150 Pers. · 18W)</div>
+                        <div class="csel-option" data-value="24" onclick="cselSelect('ev-size','24','Groß (&gt;150 Pers. · 24W)',this)">Groß (&gt;150 Pers. · 24W)</div>
+                      </div>
+                      <input type="hidden" id="ev-size" value="">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Thema</label
+                    ><textarea
+                      id="ev-topic"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Verantwortliche:r <span class="req">*</span></label
+                    ><textarea
+                      id="ev-owner"
+                      oninput="updateEventPreview()"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Responsible Email</label
+                    ><input
+                      type="email"
+                      id="ev-email"
+                      onblur="saveEventNow(this)"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Contact Person's Email</label
+                    ><input
+                      type="email"
+                      id="ev-contact-email"
+                      onblur="saveEventNow(this)"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Komm-Hub Ansprechperson</label
+                    ><textarea
+                      id="ev-hub"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
+                  </div>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label"
-                  >Catering Ansprechpartner / Details</label
-                ><textarea
-                  id="ev-catering-contact"
-                  placeholder="Name, Telefon, E-Mail"
-                  onblur="saveEventNow(this)"
-                ></textarea>
+
+              <div class="evd-section">
+                <div class="evd-section-head">
+                  <span class="evd-section-dot"></span>
+                  <span class="evd-section-title">Raum & Catering</span>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Catering</label>
+                    <div class="csel-wrap" id="csel-wrap-ev-catering">
+                      <div class="csel-trigger" id="csel-trigger-ev-catering" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-catering')" onkeydown="cselKeydown(event,'ev-catering')">
+                        <span class="csel-label" id="csel-label-ev-catering">Brezeln (Standard)</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-catering" role="listbox">
+                        <div class="csel-option selected" data-value="brezel" onclick="cselSelect('ev-catering','brezel','Brezeln (Standard)',this)">Brezeln (Standard)</div>
+                        <div class="csel-option" data-value="broetchen" onclick="cselSelect('ev-catering','broetchen','Belegte Brötchen',this)">Belegte Brötchen</div>
+                        <div class="csel-option" data-value="extended" onclick="cselSelect('ev-catering','extended','Erweitertes Catering',this)">Erweitertes Catering</div>
+                      </div>
+                      <input type="hidden" id="ev-catering" value="brezel">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"
+                      >Catering Ansprechpartner / Details</label
+                    ><textarea
+                      id="ev-catering-contact"
+                      placeholder="Name, Telefon, E-Mail"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
+                  </div>
+                  <div class="form-group full">
+                    <label class="form-label"
+                      >Externer Raum – Rasmus abgestimmt?</label
+                    ><textarea
+                      id="ev-rasmus"
+                      placeholder="Ja / Nein + Details"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
+                  </div>
+                </div>
               </div>
-              <div class="form-group full">
-                <label class="form-label"
-                  >Externer Raum – Rasmus abgestimmt?</label
-                ><textarea
-                  id="ev-rasmus"
-                  placeholder="Ja / Nein + Details"
-                  onblur="saveEventNow(this)"
-                ></textarea>
+
+              <div class="evd-section">
+                <div class="evd-section-head">
+                  <span class="evd-section-dot"></span>
+                  <span class="evd-section-title">Teams & Ablage</span>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Teams-Chat</label>
+                    <div class="csel-wrap" id="csel-wrap-ev-teams">
+                      <div class="csel-trigger" id="csel-trigger-ev-teams" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-teams')" onkeydown="cselKeydown(event,'ev-teams')">
+                        <span class="csel-label" id="csel-label-ev-teams">– offen –</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-teams" role="listbox">
+                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-teams','','– offen –',this)">– offen –</div>
+                        <div class="csel-option" data-value="ja" onclick="cselSelect('ev-teams','ja','Ja – alle hinzugefügt',this)">Ja – alle hinzugefügt</div>
+                        <div class="csel-option" data-value="nein" onclick="cselSelect('ev-teams','nein','Nein',this)">Nein</div>
+                      </div>
+                      <input type="hidden" id="ev-teams" value="">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Dateien gesichert?</label>
+                    <div class="csel-wrap" id="csel-wrap-ev-ablage">
+                      <div class="csel-trigger" id="csel-trigger-ev-ablage" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-ablage')" onkeydown="cselKeydown(event,'ev-ablage')">
+                        <span class="csel-label" id="csel-label-ev-ablage">– offen –</span>
+                        <span class="csel-arrow">&#9660;</span>
+                      </div>
+                      <div class="csel-dropdown" id="csel-dropdown-ev-ablage" role="listbox">
+                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-ablage','','– offen –',this)">– offen –</div>
+                        <div class="csel-option" data-value="ja" onclick="cselSelect('ev-ablage','ja','Ja',this)">Ja</div>
+                        <div class="csel-option" data-value="nein" onclick="cselSelect('ev-ablage','nein','Nein (⚠️ Chats werden gelöscht!)',this)">Nein (⚠️ Chats werden gelöscht!)</div>
+                      </div>
+                      <input type="hidden" id="ev-ablage" value="">
+                    </div>
+                  </div>
+                  <div class="form-group full">
+                    <label class="form-label">Ablageort / Pfad</label
+                    ><input
+                      type="text"
+                      id="ev-path"
+                      placeholder="Link oder Pfad"
+                      onblur="saveEventNow(this)"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="card-box">
-            <div class="card-box-title">Teams & Ablage</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Teams-Chat</label>
-                <div class="csel-wrap" id="csel-wrap-ev-teams">
-                  <div class="csel-trigger" id="csel-trigger-ev-teams" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-teams')" onkeydown="cselKeydown(event,'ev-teams')">
-                    <span class="csel-label" id="csel-label-ev-teams">– offen –</span>
-                    <span class="csel-arrow">&#9660;</span>
-                  </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-teams" role="listbox">
-                    <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-teams','','– offen –',this)">– offen –</div>
-                    <div class="csel-option" data-value="ja" onclick="cselSelect('ev-teams','ja','Ja – alle hinzugefügt',this)">Ja – alle hinzugefügt</div>
-                    <div class="csel-option" data-value="nein" onclick="cselSelect('ev-teams','nein','Nein',this)">Nein</div>
-                  </div>
-                  <input type="hidden" id="ev-teams" value="">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Dateien gesichert?</label>
-                <div class="csel-wrap" id="csel-wrap-ev-ablage">
-                  <div class="csel-trigger" id="csel-trigger-ev-ablage" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-ablage')" onkeydown="cselKeydown(event,'ev-ablage')">
-                    <span class="csel-label" id="csel-label-ev-ablage">– offen –</span>
-                    <span class="csel-arrow">&#9660;</span>
-                  </div>
-                  <div class="csel-dropdown" id="csel-dropdown-ev-ablage" role="listbox">
-                    <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-ablage','','– offen –',this)">– offen –</div>
-                    <div class="csel-option" data-value="ja" onclick="cselSelect('ev-ablage','ja','Ja',this)">Ja</div>
-                    <div class="csel-option" data-value="nein" onclick="cselSelect('ev-ablage','nein','Nein (⚠️ Chats werden gelöscht!)',this)">Nein (⚠️ Chats werden gelöscht!)</div>
-                  </div>
-                  <input type="hidden" id="ev-ablage" value="">
-                </div>
-              </div>
-              <div class="form-group full">
-                <label class="form-label">Ablageort / Pfad</label
-                ><input
-                  type="text"
-                  id="ev-path"
-                  placeholder="Link oder Pfad"
-                  onblur="saveEventNow(this)"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="btn-row">
-            <button class="btn" onclick="saveEventNow()">💾 Speichern</button>
-            <button class="btn btn-secondary" onclick="showPage('dashboard')">
-              → Dashboard
-            </button>
           </div>
         </div>
 
@@ -2320,6 +2755,7 @@
         if (id === "ev-room-type") { handleRoomTypeChange(); schedSave(); }
         else if (id === "ev-room") { updateRoomValue(); schedSave(); }
         else { schedSave(); }
+        updateEventPreview();
       }
       function cselSetValue(id, value, label) {
         const hidden = document.getElementById(id);
@@ -3137,6 +3573,7 @@
             : typeEl.value === "online"
               ? (onlineUrlEl.value || "").trim()
               : (roomEl.value || "").trim();
+        updateEventPreview();
       }
 
       function handleRoomTypeChange() {
@@ -3305,6 +3742,95 @@
           );
           if (fallback) startEl.value = fallback;
         }
+        updateEventPreview();
+      }
+
+      // ══ EVENT DETAILS — LIVE PREVIEW & CHECKLIST ══
+      // Reads the Eventdaten form fields directly (not the saved event
+      // record) so the preview card and required-field checklist update
+      // instantly as the person types/selects — independent of the normal
+      // debounced save cycle. No-ops safely if the preview isn't on screen
+      // (e.g. called from cselSelect()/updateRoomValue(), which run on every
+      // page, not just Eventdaten).
+      function updateEventPreview() {
+        const nameEl = document.getElementById("evd-preview-name");
+        if (!nameEl) return;
+        const name = (document.getElementById("ev-name")?.value || "").trim();
+        nameEl.textContent = name || "Neues Event";
+
+        const dateEl = document.getElementById("evd-preview-date");
+        if (dateEl) {
+          const rawDate = document.getElementById("ev-date")?.value || "";
+          const parsed = rawDate ? parseISO(rawDate) : null;
+          dateEl.textContent = parsed ? fmtDE(parsed) : "Datum offen";
+        }
+
+        const roomEl = document.getElementById("evd-preview-room");
+        if (roomEl) {
+          const roomType =
+            document.getElementById("ev-room-type")?.value || "internal";
+          let roomLabel;
+          if (roomType === "online") {
+            roomLabel = "Online-Meeting";
+          } else if (roomType === "external") {
+            const manual = (
+              document.getElementById("ev-room-manual")?.value || ""
+            ).trim();
+            roomLabel = manual || "Externe Location";
+          } else {
+            roomLabel =
+              document.getElementById("csel-label-ev-room")?.textContent ||
+              "Internes DBI";
+          }
+          roomEl.textContent = roomLabel;
+        }
+
+        const sizeEl = document.getElementById("evd-preview-size");
+        if (sizeEl) {
+          const sizeLabel =
+            document.getElementById("csel-label-ev-size")?.textContent || "";
+          sizeEl.textContent =
+            !sizeLabel || sizeLabel === "– bitte wählen –"
+              ? "Größe offen"
+              : sizeLabel;
+        }
+
+        updateEventChecklist();
+      }
+
+      function updateEventChecklist() {
+        const list = document.getElementById("evd-checklist");
+        if (!list) return;
+        const checks = [
+          {
+            label: "Eventname",
+            ok: !!(document.getElementById("ev-name")?.value || "").trim(),
+          },
+          {
+            label: "Eventdatum",
+            ok: !!document.getElementById("ev-date")?.value,
+          },
+          {
+            label: "Größe",
+            ok: !!document.getElementById("ev-size")?.value,
+          },
+          {
+            label: "Verantwortliche:r",
+            ok: !!(document.getElementById("ev-owner")?.value || "").trim(),
+          },
+        ];
+        const doneCount = checks.filter((c) => c.ok).length;
+        const countEl = document.getElementById("evd-checklist-count");
+        if (countEl) {
+          countEl.textContent = `${doneCount} / ${checks.length}`;
+          countEl.classList.toggle("complete", doneCount === checks.length);
+        }
+        list.innerHTML = checks
+          .map(
+            (c) =>
+              `<div class="evd-check-item${c.ok ? " done" : ""}"><span class="evd-check-dot">${c.ok ? "✓" : ""}</span>${esc(c.label)}</div>`,
+          )
+          .join("");
       }
       setEventDetailsAccess();
 
@@ -4360,10 +4886,16 @@
                     : "var(--mid)";
             const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint || "").trim());
             const isYesNoReason = row.type === "yesno_reason";
+            const isDateType = row.type === "date";
+            const isDatePair = row.type === "date_pair";
             const isSourceField = !!row.sourceField;
             const valToShow = isSourceField
               ? resolveSourceFieldValue(row, ev, wfRows)
               : stored.input_value || getFallbackValue(id, row.key, ev);
+            const pairStored = isDatePair ? getRow(id, row.pairKey) : null;
+            const pairValToShow = isDatePair
+              ? pairStored.input_value || getFallbackValue(id, row.pairKey, ev)
+              : null;
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
             const inputCell = isAutoStatus
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
@@ -4375,6 +4907,13 @@
               ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
               ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
+              : isDatePair
+              ? `<div class="date-pair-row">
+  <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.primaryLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div></div>
+  <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.pairLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(pairValToShow)}" onchange="setWorkflowInput('${id}','${row.pairKey}',this.value)"></div></div>
+</div>`
+              : isDateType
+              ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
               : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
             const doneCell = isAutoStatus
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
@@ -4861,6 +5400,7 @@
                   label: "Veröffentlichungsdatum",
                   hint: "",
                   offset: -42,
+                  type: "date",
                 },
                 {
                   key: "sa4",
@@ -4922,8 +5462,16 @@
                   offset: -70,
                   sourceField: { workflow: "pflicht", key: "lo4" },
                 },
-                { key: "px2", label: "Aufbaudatum", hint: "", offset: -70 },
-                { key: "px3", label: "Rückgabedatum", hint: "", offset: -70 },
+                {
+                  key: "px2",
+                  label: "Aufbau- & Rückgabedatum",
+                  hint: "",
+                  offset: -70,
+                  type: "date_pair",
+                  primaryLabel: "Aufbaudatum",
+                  pairKey: "px3",
+                  pairLabel: "Rückgabedatum",
+                },
                 {
                   key: "px4",
                   label: "Verantwortliche Person",
