@@ -3358,12 +3358,14 @@
                   ? "Heute!"
                   : "vor " + Math.abs(diff) + " Tagen"
               : "Kein Datum";
+          const pct = Number.isFinite(ev.progress_pct) ? ev.progress_pct : 0;
           card.innerHTML = `<div class="event-card-name">${esc(ev.name)}</div>
 <div class="event-card-date">${evDate ? fmtDE(evDate) : "– kein Datum –"} · ${diffStr}</div>
 <div class="event-card-badges">
   <span class="pill pill-${evDate && diff < 0 ? "red" : diff <= 14 ? "amb" : "grn"}">${ev.size === "12" ? "Klein" : ev.size === "18" ? "Mittel" : ev.size === "24" ? "Groß" : "–"}</span>
   ${ev.owner ? `<span class="pill pill-blu">${esc(ev.owner)}</span>` : ""}
 </div>
+<div class="todo-progress" title="${pct}% der Meilensteine erledigt"><div class="todo-progress-bar"><span style="width:${pct}%"></span></div><span>${pct}%</span></div>
 <div class="event-card-actions">
   <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
   <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
