@@ -1919,18 +1919,25 @@
       #page-eventdaten .form-group input[type="text"],
       #page-eventdaten .form-group input[type="email"],
       #page-eventdaten .form-group input[type="date"],
-      #page-eventdaten .form-group input[type="url"] {
+      #page-eventdaten .form-group input[type="url"],
+      #page-eventdaten .form-group select {
         border: 1px solid var(--line);
         border-radius: 8px;
         padding: 9px 12px;
         background: var(--paper);
         min-height: 40px;
+        width: 100%;
+        font-family: inherit;
+        font-size: 0.86rem;
+        color: var(--ink);
       }
       #page-eventdaten .form-group textarea:focus,
-      #page-eventdaten .form-group input:focus {
+      #page-eventdaten .form-group input:focus,
+      #page-eventdaten .form-group select:focus {
         border-color: var(--accent);
         background: #fff;
         box-shadow: 0 0 0 3px rgba(194, 24, 91, 0.12);
+        outline: none;
       }
       #page-eventdaten .csel-trigger {
         border-radius: 8px;
@@ -2380,17 +2387,17 @@
                     </div>
                     <div class="csel-wrap" id="csel-wrap-ev-room" style="margin-top: 8px">
                       <div class="csel-trigger" id="csel-trigger-ev-room" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room')" onkeydown="cselKeydown(event,'ev-room')">
-                        <span class="csel-label" id="csel-label-ev-room">Raum Wedau</span>
+                        <span class="csel-label" id="csel-label-ev-room">Raum Wedau · 👤 6</span>
                         <span class="csel-arrow">&#9660;</span>
                       </div>
                       <div class="csel-dropdown" id="csel-dropdown-ev-room" role="listbox">
-                        <div class="csel-option selected" data-value="Raum Wedau" onclick="cselSelect('ev-room','Raum Wedau','Raum Wedau',this)">Raum Wedau</div>
-                        <div class="csel-option" data-value="Raum Duissern" onclick="cselSelect('ev-room','Raum Duissern','Raum Duissern',this)">Raum Duissern</div>
-                        <div class="csel-option" data-value="Raum Neudorf" onclick="cselSelect('ev-room','Raum Neudorf','Raum Neudorf',this)">Raum Neudorf</div>
-                        <div class="csel-option" data-value="Raum Rumeln" onclick="cselSelect('ev-room','Raum Rumeln','Raum Rumeln',this)">Raum Rumeln</div>
-                        <div class="csel-option" data-value="Raum Marxloh" onclick="cselSelect('ev-room','Raum Marxloh','Raum Marxloh',this)">Raum Marxloh</div>
-                        <div class="csel-option" data-value="Raum Homberg" onclick="cselSelect('ev-room','Raum Homberg','Raum Homberg',this)">Raum Homberg</div>
-                        <div class="csel-option" data-value="Raum Meiderich" onclick="cselSelect('ev-room','Raum Meiderich','Raum Meiderich',this)">Raum Meiderich</div>
+                        <div class="csel-option selected" data-value="Raum Wedau" onclick="cselSelect('ev-room','Raum Wedau','Raum Wedau · 👤 6',this)">Raum Wedau · 👤 6</div>
+                        <div class="csel-option" data-value="Raum Duissern" onclick="cselSelect('ev-room','Raum Duissern','Raum Duissern · 👤 4',this)">Raum Duissern · 👤 4</div>
+                        <div class="csel-option" data-value="Raum Neudorf" onclick="cselSelect('ev-room','Raum Neudorf','Raum Neudorf · 👤 20',this)">Raum Neudorf · 👤 20</div>
+                        <div class="csel-option" data-value="Raum Rumeln" onclick="cselSelect('ev-room','Raum Rumeln','Raum Rumeln · 👤 6',this)">Raum Rumeln · 👤 6</div>
+                        <div class="csel-option" data-value="Raum Marxloh" onclick="cselSelect('ev-room','Raum Marxloh','Raum Marxloh · 👤 8',this)">Raum Marxloh · 👤 8</div>
+                        <div class="csel-option" data-value="Raum Homburg" onclick="cselSelect('ev-room','Raum Homburg','Raum Homburg · 👤 55',this)">Raum Homburg · 👤 55</div>
+                        <div class="csel-option" data-value="Raum Nutte" onclick="cselSelect('ev-room','Raum Nutte','Raum Nutte · 👤 10',this)">Raum Nutte · 👤 10</div>
                       </div>
                       <input type="hidden" id="ev-room" value="Raum Wedau">
                     </div>
@@ -2461,15 +2468,26 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label"
-                      >Verantwortliche:r <span class="req">*</span></label
-                    ><textarea
+                      >Hub/Department <span class="req">*</span></label
+                    >
+                    <select
                       id="ev-owner"
-                      oninput="updateEventPreview()"
-                      onblur="saveEventNow(this)"
-                    ></textarea>
+                      onchange="updateEventPreview(); saveEventNow(this);"
+                    >
+                      <option value="">– bitte wählen –</option>
+                      <option value="Corporate Communications & Events and Marketing">Corporate Communications & Events and Marketing</option>
+                      <option value="Business Services">Business Services</option>
+                      <option value="Innovation & Start-ups">Innovation & Start-ups</option>
+                      <option value="Internalization and Business relocation Partnerships">Internalization and Business relocation Partnerships</option>
+                      <option value="City Management & Neighborhood Development">City Management & Neighborhood Development</option>
+                      <option value="Skilled workers & regional cooperation">Skilled workers & regional cooperation</option>
+                      <option value="Hydrogen & Sustainability">Hydrogen & Sustainability</option>
+                      <option value="Investor and Start Ups Collaboration">Investor and Start Ups Collaboration</option>
+                      <option value="Project Development & Europe">Project Development & Europe</option>
+                    </select>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Responsible Email</label
+                    <label class="form-label">Hub Contact Person Email</label
                     ><input
                       type="email"
                       id="ev-email"
@@ -2485,7 +2503,7 @@
                     />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Komm-Hub Ansprechperson</label
+                    <label class="form-label">Hub Contact Person Name</label
                     ><textarea
                       id="ev-hub"
                       onblur="saveEventNow(this)"
@@ -2527,11 +2545,23 @@
                   <div class="form-group full">
                     <label class="form-label"
                       >Externer Raum – Rasmus abgestimmt?</label
-                    ><textarea
-                      id="ev-rasmus"
-                      placeholder="Ja / Nein + Details"
-                      onblur="saveEventNow(this)"
+                    >
+                    <select
+                      id="ev-rasmus-select"
+                      onchange="handleRasmusReasonVisibility(); updateRasmusValue();"
+                    >
+                      <option value="">– bitte wählen –</option>
+                      <option value="Ja">Ja</option>
+                      <option value="Nein">Nein</option>
+                    </select>
+                    <textarea
+                      id="ev-rasmus-reason"
+                      style="margin-top: 8px; display: none"
+                      placeholder="Warum nicht? / Details"
+                      oninput="updateRasmusValue()"
+                      onblur="updateRasmusValue(); saveEventNow(this);"
                     ></textarea>
+                    <input type="hidden" id="ev-rasmus" />
                   </div>
                 </div>
               </div>
@@ -3528,9 +3558,22 @@
         "Raum Neudorf",
         "Raum Rumeln",
         "Raum Marxloh",
-        "Raum Homberg",
-        "Raum Meiderich",
+        "Raum Homburg",
+        "Raum Nutte",
       ];
+      const ROOM_CAPACITY = {
+        "Raum Wedau": 6,
+        "Raum Duissern": 4,
+        "Raum Marxloh": 8,
+        "Raum Homburg": 55,
+        "Raum Nutte": 10,
+        "Raum Neudorf": 20,
+        "Raum Rumeln": 6,
+      };
+      function formatRoomOptionLabel(roomName) {
+        const cap = ROOM_CAPACITY[roomName];
+        return cap ? `${roomName} · 👤 ${cap}` : roomName;
+      }
 
       function getRoomLabel(roomValue) {
         const value = (roomValue || "").trim();
@@ -3598,6 +3641,28 @@
           onlineUrlEl.style.display = "none";
         }
         updateRoomValue();
+      }
+
+      // ══ RASMUS FIELD — YES/NO + REASON (event-level, not a workflow row) ══
+      // Reuses the same {value, reason} JSON-in-a-text-column convention as
+      // the workflow yesno_reason type (parseYesNoReason), just applied to a
+      // plain `events.rasmus` column instead of workflow_rows.input_value —
+      // no schema change needed.
+      function handleRasmusReasonVisibility() {
+        const selectEl = document.getElementById("ev-rasmus-select");
+        const reasonEl = document.getElementById("ev-rasmus-reason");
+        if (!selectEl || !reasonEl) return;
+        reasonEl.style.display = selectEl.value === "Nein" ? "block" : "none";
+      }
+      function updateRasmusValue() {
+        const selectEl = document.getElementById("ev-rasmus-select");
+        const reasonEl = document.getElementById("ev-rasmus-reason");
+        const hiddenEl = document.getElementById("ev-rasmus");
+        if (!selectEl || !reasonEl || !hiddenEl) return;
+        const value = selectEl.value;
+        const reason = value === "Nein" ? reasonEl.value.trim() : "";
+        hiddenEl.value = value || reason ? JSON.stringify({ value, reason }) : "";
+        schedSave();
       }
 
       function getOnlineRoomUrl(value) {
@@ -3686,7 +3751,7 @@
               (opt) => opt.toLowerCase() === normalized,
             ) || INTERNAL_ROOM_OPTIONS[0];
           roomEl.value = matched;
-          cselSetValue("ev-room", matched, matched);
+          cselSetValue("ev-room", matched, formatRoomOptionLabel(matched));
           if (roomWrap) roomWrap.style.display = "block";
           manualEl.style.display = "none";
           onlineUrlEl.style.display = "none";
@@ -3735,6 +3800,19 @@
         cselSetValue("ev-teams",   ev.teams || "",          TM[ev.teams || ""] || "– offen –");
         cselSetValue("ev-ablage",  ev.ablage || "",         AB[ev.ablage || ""] || "– offen –");
         setRoomControlsFromValue(ev.room || "", ev.room_type || "");
+        // Rasmus (Yes/No + reason, stored as JSON in the same `rasmus` column)
+        const rasmusParsed = parseYesNoReason(ev.rasmus || "");
+        const rasmusSelectEl = document.getElementById("ev-rasmus-select");
+        if (rasmusSelectEl && document.activeElement !== rasmusSelectEl) {
+          rasmusSelectEl.value = ["Ja", "Nein"].includes(rasmusParsed.value)
+            ? rasmusParsed.value
+            : "";
+        }
+        const rasmusReasonEl = document.getElementById("ev-rasmus-reason");
+        if (rasmusReasonEl && document.activeElement !== rasmusReasonEl) {
+          rasmusReasonEl.value = rasmusParsed.reason || "";
+        }
+        handleRasmusReasonVisibility();
         const startEl = document.getElementById("ev-start-date");
         if (startEl && !startEl.value && document.activeElement !== startEl) {
           const fallback = toDateInputValue(
@@ -3815,7 +3893,7 @@
             ok: !!document.getElementById("ev-size")?.value,
           },
           {
-            label: "Verantwortliche:r",
+            label: "Hub/Department",
             ok: !!(document.getElementById("ev-owner")?.value || "").trim(),
           },
         ];
