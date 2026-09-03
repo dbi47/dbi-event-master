@@ -97,7 +97,8 @@ exports.handler = async (event) => {
         .select("*")
         .eq("archived", false)
         .order("event_date", { ascending: true });
-      return json(200, { role: "hub", events: events || [] });
+      const eventsWithProgress = await attachMilestoneProgress(events || []);
+      return json(200, { role: "hub", events: eventsWithProgress });
     }
 
     // GET /event?id=X — full event detail (hub only)
@@ -588,6 +589,37 @@ async function loadFullEvent(event_id) {
     task_assignments: ta || [],
     milestone_todos: mt || [],
   };
+}
+
+// Total number of fixed planning milestones (see MILESTONE_OFFSETS in
+// index.html / reminders.js / ics.js — all three keep their own copy of
+// this same 9-item list). Kept here as a plain constant rather than trying
+// to share it across files, matching how the rest of this codebase already
+// duplicates that list per-file.
+const TOTAL_MILESTONES = 9;
+
+// Attaches a `progress_pct` (0–100) to each event, based on how many of the
+// 9 fixed milestones have a done_date — used for the "Alle Events" card grid
+// so the Hub can see each event's progress at a glance without opening it.
+// Runs one batched query across all events (not one query per event).
+async function attachMilestoneProgress(events) {
+  if (!events.length) return events;
+  const eventIds = events.map((e) => e.id);
+  const { data: msRows } = await supabase
+    .from("milestones")
+    .select("event_id, done_date")
+    .in("event_id", eventIds);
+  const completedCounts = {};
+  (msRows || []).forEach((row) => {
+    if (!row.done_date) return;
+    completedCounts[row.event_id] = (completedCounts[row.event_id] || 0) + 1;
+  });
+  return events.map((ev) => ({
+    ...ev,
+    progress_pct: Math.round(
+      ((completedCounts[ev.id] || 0) / TOTAL_MILESTONES) * 100,
+    ),
+  }));
 }
 
 function json(status, body) {
