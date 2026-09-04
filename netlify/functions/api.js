@@ -134,6 +134,7 @@ exports.handler = async (event) => {
             "contact_email",
             "phone",
             "hub_contact",
+            "marketing_contact_person",
             "room",
             "room_type",
             "catering",
@@ -155,6 +156,7 @@ exports.handler = async (event) => {
             "contact_email",
             "phone",
             "hub_contact",
+            "marketing_contact_person",
             "room",
             "room_type",
             "catering",
@@ -351,7 +353,9 @@ exports.handler = async (event) => {
           workflow_id === "pflicht" &&
           ["me1", "me2", "me3"].includes(row_key)
         )
-          return json(403, { error: "Nur Event-HUB darf dieses Feld bearbeiten" });
+          return json(403, {
+            error: "Nur Event-HUB darf dieses Feld bearbeiten",
+          });
         // If this row has a specific assignee, only they may edit it
         const { data: assignment } = await supabase
           .from("task_assignments")
@@ -404,7 +408,9 @@ exports.handler = async (event) => {
       const archived = event.queryStringParameters?.archived === "true";
       let query = supabase
         .from("notifications")
-        .select("id,event_id,actor_role,actor_name,message,is_read,archived,created_at,events(name)")
+        .select(
+          "id,event_id,actor_role,actor_name,message,is_read,archived,created_at,events(name)",
+        )
         .eq("archived", archived)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -428,7 +434,8 @@ exports.handler = async (event) => {
       method === "POST"
     ) {
       const { notification_id, token, password, archived } = body;
-      if (!notification_id) return json(400, { error: "Missing notification_id" });
+      if (!notification_id)
+        return json(400, { error: "Missing notification_id" });
       let query = supabase
         .from("notifications")
         .update(
@@ -454,7 +461,8 @@ exports.handler = async (event) => {
     // DELETE /notifications — permanently remove an inbox item
     if (path === "/notifications" && method === "DELETE") {
       const { notification_id, token, password } = body;
-      if (!notification_id) return json(400, { error: "Missing notification_id" });
+      if (!notification_id)
+        return json(400, { error: "Missing notification_id" });
       let query = supabase
         .from("notifications")
         .delete()
