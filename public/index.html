@@ -141,7 +141,9 @@
         border-radius: 99px;
         background: var(--accent);
         color: white;
-        font: 700 0.62rem/17px "DM Mono", monospace;
+        font:
+          700 0.62rem/17px "DM Mono",
+          monospace;
       }
       .notification-count.show {
         display: block;
@@ -181,7 +183,9 @@
         border-bottom: 1px solid var(--line);
       }
       .notification-header h2 {
-        font: 700 1.2rem "Fraunces", serif;
+        font:
+          700 1.2rem "Fraunces",
+          serif;
       }
       .notification-close,
       .notification-action {
@@ -191,7 +195,9 @@
         cursor: pointer;
         border-radius: 4px;
         padding: 6px 9px;
-        font: 600 0.72rem "Instrument Sans", sans-serif;
+        font:
+          600 0.72rem "Instrument Sans",
+          sans-serif;
       }
       .notification-close {
         font-size: 1rem;
@@ -234,7 +240,9 @@
       }
       .notification-meta {
         margin-top: 4px;
-        font: 0.68rem "DM Mono", monospace;
+        font:
+          0.68rem "DM Mono",
+          monospace;
         color: var(--mid);
       }
       .notification-actions {
@@ -1102,7 +1110,7 @@
       .ms-mini-bar-wrap {
         width: 56px;
         height: 5px;
-        background: rgba(45,58,140,0.12);
+        background: rgba(45, 58, 140, 0.12);
         border-radius: 999px;
         overflow: hidden;
         flex-shrink: 0;
@@ -1192,7 +1200,7 @@
         border-top: none;
         border-bottom-left-radius: 4px;
         border-bottom-right-radius: 4px;
-        box-shadow: 0 8px 24px rgba(45,58,140,0.15);
+        box-shadow: 0 8px 24px rgba(45, 58, 140, 0.15);
         display: none;
         max-height: 220px;
         overflow-y: auto;
@@ -2282,9 +2290,7 @@
               >
                 → Dashboard
               </button>
-              <button class="btn" onclick="saveEventNow()">
-                💾 Speichern
-              </button>
+              <button class="btn" onclick="saveEventNow()">💾 Speichern</button>
             </div>
           </div>
           <div id="event-details-note" class="field-note"></div>
@@ -2374,32 +2380,191 @@
                   <div class="form-group">
                     <label class="form-label">Event Location / Room</label>
                     <div class="csel-wrap" id="csel-wrap-ev-room-type">
-                      <div class="csel-trigger" id="csel-trigger-ev-room-type" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room-type')" onkeydown="cselKeydown(event,'ev-room-type')">
-                        <span class="csel-label" id="csel-label-ev-room-type">Internes DBI</span>
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-room-type"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-room-type')"
+                        onkeydown="cselKeydown(event, 'ev-room-type')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-room-type"
+                          >Internes DBI</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-room-type" role="listbox">
-                        <div class="csel-option selected" data-value="internal" onclick="cselSelect('ev-room-type','internal','Internes DBI',this)">Internes DBI</div>
-                        <div class="csel-option" data-value="external" onclick="cselSelect('ev-room-type','external','Externer Raum',this)">Externer Raum</div>
-                        <div class="csel-option" data-value="online" onclick="cselSelect('ev-room-type','online','Online',this)">Online</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-room-type"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option selected"
+                          data-value="internal"
+                          onclick="
+                            cselSelect(
+                              'ev-room-type',
+                              'internal',
+                              'Internes DBI',
+                              this,
+                            )
+                          "
+                        >
+                          Internes DBI
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="external"
+                          onclick="
+                            cselSelect(
+                              'ev-room-type',
+                              'external',
+                              'Externer Raum',
+                              this,
+                            )
+                          "
+                        >
+                          Externer Raum
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="online"
+                          onclick="
+                            cselSelect('ev-room-type', 'online', 'Online', this)
+                          "
+                        >
+                          Online
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-room-type" value="internal">
+                      <input type="hidden" id="ev-room-type" value="internal" />
                     </div>
-                    <div class="csel-wrap" id="csel-wrap-ev-room" style="margin-top: 8px">
-                      <div class="csel-trigger" id="csel-trigger-ev-room" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-room')" onkeydown="cselKeydown(event,'ev-room')">
-                        <span class="csel-label" id="csel-label-ev-room">Raum Wedau · 👤 6</span>
+                    <div
+                      class="csel-wrap"
+                      id="csel-wrap-ev-room"
+                      style="margin-top: 8px"
+                    >
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-room"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-room')"
+                        onkeydown="cselKeydown(event, 'ev-room')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-room"
+                          >Raum Wedau · 👤 6</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-room" role="listbox">
-                        <div class="csel-option selected" data-value="Raum Wedau" onclick="cselSelect('ev-room','Raum Wedau','Raum Wedau · 👤 6',this)">Raum Wedau · 👤 6</div>
-                        <div class="csel-option" data-value="Raum Duissern" onclick="cselSelect('ev-room','Raum Duissern','Raum Duissern · 👤 4',this)">Raum Duissern · 👤 4</div>
-                        <div class="csel-option" data-value="Raum Neudorf" onclick="cselSelect('ev-room','Raum Neudorf','Raum Neudorf · 👤 20',this)">Raum Neudorf · 👤 20</div>
-                        <div class="csel-option" data-value="Raum Rumeln" onclick="cselSelect('ev-room','Raum Rumeln','Raum Rumeln · 👤 6',this)">Raum Rumeln · 👤 6</div>
-                        <div class="csel-option" data-value="Raum Marxloh" onclick="cselSelect('ev-room','Raum Marxloh','Raum Marxloh · 👤 8',this)">Raum Marxloh · 👤 8</div>
-                        <div class="csel-option" data-value="Raum Homburg" onclick="cselSelect('ev-room','Raum Homburg','Raum Homburg · 👤 55',this)">Raum Homburg · 👤 55</div>
-                        <div class="csel-option" data-value="Raum Mitte" onclick="cselSelect('ev-room','Raum Nutte','Raum Mitte · 👤 10',this)">Raum Mitte · 👤 10</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-room"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option selected"
+                          data-value="Raum Wedau"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Wedau',
+                              'Raum Wedau · 👤 6',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Wedau · 👤 6
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Duissern"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Duissern',
+                              'Raum Duissern · 👤 4',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Duissern · 👤 4
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Neudorf"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Neudorf',
+                              'Raum Neudorf · 👤 20',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Neudorf · 👤 20
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Rumeln"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Rumeln',
+                              'Raum Rumeln · 👤 6',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Rumeln · 👤 6
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Marxloh"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Marxloh',
+                              'Raum Marxloh · 👤 8',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Marxloh · 👤 8
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Homburg"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Homburg',
+                              'Raum Homburg · 👤 55',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Homburg · 👤 55
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="Raum Mitte"
+                          onclick="
+                            cselSelect(
+                              'ev-room',
+                              'Raum Nutte',
+                              'Raum Mitte · 👤 10',
+                              this,
+                            )
+                          "
+                        >
+                          Raum Mitte · 👤 10
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-room" value="Raum Wedau">
+                      <input type="hidden" id="ev-room" value="Raum Wedau" />
                     </div>
                     <input
                       type="text"
@@ -2446,17 +2611,79 @@
                       >Größe <span class="req">*</span></label
                     >
                     <div class="csel-wrap" id="csel-wrap-ev-size">
-                      <div class="csel-trigger" id="csel-trigger-ev-size" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-size')" onkeydown="cselKeydown(event,'ev-size')">
-                        <span class="csel-label" id="csel-label-ev-size">– bitte wählen –</span>
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-size"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-size')"
+                        onkeydown="cselKeydown(event, 'ev-size')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-size"
+                          >– bitte wählen –</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-size" role="listbox">
-                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-size','','– bitte wählen –',this)">– bitte wählen –</div>
-                        <div class="csel-option" data-value="12" onclick="cselSelect('ev-size','12','Klein (30–60 Pers. · 12W)',this)">Klein (30–60 Pers. · 12W)</div>
-                        <div class="csel-option" data-value="18" onclick="cselSelect('ev-size','18','Mittel (60–150 Pers. · 18W)',this)">Mittel (60–150 Pers. · 18W)</div>
-                        <div class="csel-option" data-value="24" onclick="cselSelect('ev-size','24','Groß (&gt;150 Pers. · 24W)',this)">Groß (&gt;150 Pers. · 24W)</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-size"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option placeholder selected"
+                          data-value=""
+                          onclick="
+                            cselSelect('ev-size', '', '– bitte wählen –', this)
+                          "
+                        >
+                          – bitte wählen –
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="12"
+                          onclick="
+                            cselSelect(
+                              'ev-size',
+                              '12',
+                              'Klein (30–60 Pers. · 12W)',
+                              this,
+                            )
+                          "
+                        >
+                          Klein (30–60 Pers. · 12W)
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="18"
+                          onclick="
+                            cselSelect(
+                              'ev-size',
+                              '18',
+                              'Mittel (60–150 Pers. · 18W)',
+                              this,
+                            )
+                          "
+                        >
+                          Mittel (60–150 Pers. · 18W)
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="24"
+                          onclick="
+                            cselSelect(
+                              'ev-size',
+                              '24',
+                              'Groß (&gt;150 Pers. · 24W)',
+                              this,
+                            )
+                          "
+                        >
+                          Groß (&gt;150 Pers. · 24W)
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-size" value="">
+                      <input type="hidden" id="ev-size" value="" />
                     </div>
                   </div>
                   <div class="form-group">
@@ -2472,43 +2699,72 @@
                     >
                     <select
                       id="ev-owner"
-                      onchange="updateEventPreview(); saveEventNow(this);"
+                      onchange="
+                        updateEventPreview();
+                        saveEventNow(this);
+                      "
                     >
                       <option value="">– bitte wählen –</option>
-                      <option value="Corporate Communications & Events and Marketing">Corporate Communications & Events and Marketing</option>
-                      <option value="Business Services">Business Services</option>
-                      <option value="Innovation & Start-ups">Innovation & Start-ups</option>
-                      <option value="Internalization and Business relocation Partnerships">Internalization and Business relocation Partnerships</option>
-                      <option value="City Management & Neighborhood Development">City Management & Neighborhood Development</option>
-                      <option value="Skilled workers & regional cooperation">Skilled workers & regional cooperation</option>
-                      <option value="Hydrogen & Sustainability">Hydrogen & Sustainability</option>
-                      <option value="Investor and Start Ups Collaboration">Investor and Start Ups Collaboration</option>
-                      <option value="Project Development & Europe">Project Development & Europe</option>
-                      <option value="Project Development & Europe">Investment Services</option>
+                      <option
+                        value="Corporate Communications & Events and Marketing"
+                      >
+                        Corporate Communications & Events and Marketing
+                      </option>
+                      <option value="Business Services">
+                        Business Services
+                      </option>
+                      <option value="Innovation & Start-ups">
+                        Innovation & Start-ups
+                      </option>
+                      <option
+                        value="Internalization and Business relocation Partnerships"
+                      >
+                        Internalization and Business relocation Partnerships
+                      </option>
+                      <option
+                        value="City Management & Neighborhood Development"
+                      >
+                        City Management & Neighborhood Development
+                      </option>
+                      <option value="Skilled workers & regional cooperation">
+                        Skilled workers & regional cooperation
+                      </option>
+                      <option value="Hydrogen & Sustainability">
+                        Hydrogen & Sustainability
+                      </option>
+                      <option value="Investor and Start Ups Collaboration">
+                        Investor and Start Ups Collaboration
+                      </option>
+                      <option value="Project Development & Europe">
+                        Project Development & Europe
+                      </option>
+                      <option value="Investment Services">
+                        Investment Services
+                      </option>
                     </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hub Contact Person Name</label
+                    ><textarea
+                      id="ev-hub-contact-name"
+                      onblur="saveEventNow(this)"
+                    ></textarea>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Hub Contact Person Email</label
                     ><input
                       type="email"
-                      id="ev-email"
+                      id="ev-hub-email"
                       onblur="saveEventNow(this)"
                     />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Contact Person's Email</label
+                    <label class="form-label">Communication Person</label
                     ><input
-                      type="email"
-                      id="ev-contact-email"
+                      type="text"
+                      id="ev-marketing-contact-person"
                       onblur="saveEventNow(this)"
                     />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Hub Contact Person Name</label
-                    ><textarea
-                      id="ev-hub"
-                      onblur="saveEventNow(this)"
-                    ></textarea>
                   </div>
                 </div>
               </div>
@@ -2522,16 +2778,70 @@
                   <div class="form-group">
                     <label class="form-label">Catering</label>
                     <div class="csel-wrap" id="csel-wrap-ev-catering">
-                      <div class="csel-trigger" id="csel-trigger-ev-catering" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-catering')" onkeydown="cselKeydown(event,'ev-catering')">
-                        <span class="csel-label" id="csel-label-ev-catering">Brezeln (Standard)</span>
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-catering"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-catering')"
+                        onkeydown="cselKeydown(event, 'ev-catering')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-catering"
+                          >Brezeln (Standard)</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-catering" role="listbox">
-                        <div class="csel-option selected" data-value="brezel" onclick="cselSelect('ev-catering','brezel','Brezeln (Standard)',this)">Brezeln (Standard)</div>
-                        <div class="csel-option" data-value="broetchen" onclick="cselSelect('ev-catering','broetchen','Belegte Brötchen',this)">Belegte Brötchen</div>
-                        <div class="csel-option" data-value="extended" onclick="cselSelect('ev-catering','extended','Erweitertes Catering',this)">Erweitertes Catering</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-catering"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option selected"
+                          data-value="brezel"
+                          onclick="
+                            cselSelect(
+                              'ev-catering',
+                              'brezel',
+                              'Brezeln (Standard)',
+                              this,
+                            )
+                          "
+                        >
+                          Brezeln (Standard)
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="broetchen"
+                          onclick="
+                            cselSelect(
+                              'ev-catering',
+                              'broetchen',
+                              'Belegte Brötchen',
+                              this,
+                            )
+                          "
+                        >
+                          Belegte Brötchen
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="extended"
+                          onclick="
+                            cselSelect(
+                              'ev-catering',
+                              'extended',
+                              'Erweitertes Catering',
+                              this,
+                            )
+                          "
+                        >
+                          Erweitertes Catering
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-catering" value="brezel">
+                      <input type="hidden" id="ev-catering" value="brezel" />
                     </div>
                   </div>
                   <div class="form-group">
@@ -2549,7 +2859,10 @@
                     >
                     <select
                       id="ev-rasmus-select"
-                      onchange="handleRasmusReasonVisibility(); updateRasmusValue();"
+                      onchange="
+                        handleRasmusReasonVisibility();
+                        updateRasmusValue();
+                      "
                     >
                       <option value="">– bitte wählen –</option>
                       <option value="Ja">Ja</option>
@@ -2560,7 +2873,10 @@
                       style="margin-top: 8px; display: none"
                       placeholder="Warum nicht? / Details"
                       oninput="updateRasmusValue()"
-                      onblur="updateRasmusValue(); saveEventNow(this);"
+                      onblur="
+                        updateRasmusValue();
+                        saveEventNow(this);
+                      "
                     ></textarea>
                     <input type="hidden" id="ev-rasmus" />
                   </div>
@@ -2576,31 +2892,115 @@
                   <div class="form-group">
                     <label class="form-label">Teams-Chat</label>
                     <div class="csel-wrap" id="csel-wrap-ev-teams">
-                      <div class="csel-trigger" id="csel-trigger-ev-teams" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-teams')" onkeydown="cselKeydown(event,'ev-teams')">
-                        <span class="csel-label" id="csel-label-ev-teams">– offen –</span>
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-teams"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-teams')"
+                        onkeydown="cselKeydown(event, 'ev-teams')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-teams"
+                          >– offen –</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-teams" role="listbox">
-                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-teams','','– offen –',this)">– offen –</div>
-                        <div class="csel-option" data-value="ja" onclick="cselSelect('ev-teams','ja','Ja – alle hinzugefügt',this)">Ja – alle hinzugefügt</div>
-                        <div class="csel-option" data-value="nein" onclick="cselSelect('ev-teams','nein','Nein',this)">Nein</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-teams"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option placeholder selected"
+                          data-value=""
+                          onclick="
+                            cselSelect('ev-teams', '', '– offen –', this)
+                          "
+                        >
+                          – offen –
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="ja"
+                          onclick="
+                            cselSelect(
+                              'ev-teams',
+                              'ja',
+                              'Ja – alle hinzugefügt',
+                              this,
+                            )
+                          "
+                        >
+                          Ja – alle hinzugefügt
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="nein"
+                          onclick="cselSelect('ev-teams', 'nein', 'Nein', this)"
+                        >
+                          Nein
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-teams" value="">
+                      <input type="hidden" id="ev-teams" value="" />
                     </div>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Dateien gesichert?</label>
                     <div class="csel-wrap" id="csel-wrap-ev-ablage">
-                      <div class="csel-trigger" id="csel-trigger-ev-ablage" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" onclick="cselToggle('ev-ablage')" onkeydown="cselKeydown(event,'ev-ablage')">
-                        <span class="csel-label" id="csel-label-ev-ablage">– offen –</span>
+                      <div
+                        class="csel-trigger"
+                        id="csel-trigger-ev-ablage"
+                        tabindex="0"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="cselToggle('ev-ablage')"
+                        onkeydown="cselKeydown(event, 'ev-ablage')"
+                      >
+                        <span class="csel-label" id="csel-label-ev-ablage"
+                          >– offen –</span
+                        >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
-                      <div class="csel-dropdown" id="csel-dropdown-ev-ablage" role="listbox">
-                        <div class="csel-option placeholder selected" data-value="" onclick="cselSelect('ev-ablage','','– offen –',this)">– offen –</div>
-                        <div class="csel-option" data-value="ja" onclick="cselSelect('ev-ablage','ja','Ja',this)">Ja</div>
-                        <div class="csel-option" data-value="nein" onclick="cselSelect('ev-ablage','nein','Nein (⚠️ Chats werden gelöscht!)',this)">Nein (⚠️ Chats werden gelöscht!)</div>
+                      <div
+                        class="csel-dropdown"
+                        id="csel-dropdown-ev-ablage"
+                        role="listbox"
+                      >
+                        <div
+                          class="csel-option placeholder selected"
+                          data-value=""
+                          onclick="
+                            cselSelect('ev-ablage', '', '– offen –', this)
+                          "
+                        >
+                          – offen –
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="ja"
+                          onclick="cselSelect('ev-ablage', 'ja', 'Ja', this)"
+                        >
+                          Ja
+                        </div>
+                        <div
+                          class="csel-option"
+                          data-value="nein"
+                          onclick="
+                            cselSelect(
+                              'ev-ablage',
+                              'nein',
+                              'Nein (⚠️ Chats werden gelöscht!)',
+                              this,
+                            )
+                          "
+                        >
+                          Nein (⚠️ Chats werden gelöscht!)
+                        </div>
                       </div>
-                      <input type="hidden" id="ev-ablage" value="">
+                      <input type="hidden" id="ev-ablage" value="" />
                     </div>
                   </div>
                   <div class="form-group full">
@@ -2705,15 +3105,29 @@
     <div
       class="notification-overlay"
       id="notification-overlay"
-      onclick="if (event.target === this) closeNotifications()"
+      onclick="if (event.target === this) closeNotifications();"
     >
       <section class="notification-modal" aria-label="Benachrichtigungen">
         <div class="notification-header">
           <h2>Benachrichtigungen</h2>
-          <button class="notification-close" type="button" onclick="closeNotifications()" aria-label="Schließen">×</button>
+          <button
+            class="notification-close"
+            type="button"
+            onclick="closeNotifications()"
+            aria-label="Schließen"
+          >
+            ×
+          </button>
         </div>
         <div class="notification-toolbar">
-          <button class="notification-action" type="button" id="notification-archive-toggle" onclick="toggleArchivedNotifications()">Archiv anzeigen</button>
+          <button
+            class="notification-action"
+            type="button"
+            id="notification-archive-toggle"
+            onclick="toggleArchivedNotifications()"
+          >
+            Archiv anzeigen
+          </button>
         </div>
         <div class="notification-list" id="notification-list"></div>
       </section>
@@ -2765,8 +3179,9 @@
         if (!trigger || !dropdown) return;
         const isOpen = dropdown.classList.contains("open");
         cselCloseAll(id);
-        if (isOpen) { cselClose(id); }
-        else {
+        if (isOpen) {
+          cselClose(id);
+        } else {
           trigger.classList.add("open");
           trigger.setAttribute("aria-expanded", "true");
           dropdown.classList.add("open");
@@ -2779,13 +3194,21 @@
         if (labelEl) labelEl.textContent = label;
         const dropdown = document.getElementById("csel-dropdown-" + id);
         if (dropdown) {
-          dropdown.querySelectorAll(".csel-option").forEach((o) => o.classList.remove("selected"));
+          dropdown
+            .querySelectorAll(".csel-option")
+            .forEach((o) => o.classList.remove("selected"));
         }
         if (optionEl) optionEl.classList.add("selected");
         cselClose(id);
-        if (id === "ev-room-type") { handleRoomTypeChange(); schedSave(); }
-        else if (id === "ev-room") { updateRoomValue(); schedSave(); }
-        else { schedSave(); }
+        if (id === "ev-room-type") {
+          handleRoomTypeChange();
+          schedSave();
+        } else if (id === "ev-room") {
+          updateRoomValue();
+          schedSave();
+        } else {
+          schedSave();
+        }
         updateEventPreview();
       }
       function cselSetValue(id, value, label) {
@@ -2801,22 +3224,38 @@
         }
       }
       function cselKeydown(e, id) {
-        if (e.key === "Escape") { cselClose(id); return; }
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cselToggle(id); return; }
+        if (e.key === "Escape") {
+          cselClose(id);
+          return;
+        }
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          cselToggle(id);
+          return;
+        }
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           e.preventDefault();
           const dropdown = document.getElementById("csel-dropdown-" + id);
-          const opts = dropdown ? [...dropdown.querySelectorAll(".csel-option")] : [];
-          const selIdx = opts.findIndex((o) => o.classList.contains("selected"));
-          const next = e.key === "ArrowDown"
-            ? Math.min(selIdx + 1, opts.length - 1)
-            : Math.max(selIdx - 1, 0);
+          const opts = dropdown
+            ? [...dropdown.querySelectorAll(".csel-option")]
+            : [];
+          const selIdx = opts.findIndex((o) =>
+            o.classList.contains("selected"),
+          );
+          const next =
+            e.key === "ArrowDown"
+              ? Math.min(selIdx + 1, opts.length - 1)
+              : Math.max(selIdx - 1, 0);
           if (opts[next]) opts[next].click();
         }
       }
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".csel-wrap")) cselCloseAll(null);
-      }, true);
+      document.addEventListener(
+        "click",
+        (e) => {
+          if (!e.target.closest(".csel-wrap")) cselCloseAll(null);
+        },
+        true,
+      );
 
       // ══ SESSION MANAGEMENT & INACTIVITY ══
       let inactivityTimeout = null;
@@ -3042,7 +3481,9 @@
         await fetchNotifications();
       }
       function closeNotifications() {
-        document.getElementById("notification-overlay").classList.remove("show");
+        document
+          .getElementById("notification-overlay")
+          .classList.remove("show");
       }
       function toggleArchivedNotifications() {
         showArchivedNotifications = !showArchivedNotifications;
@@ -3510,11 +3951,13 @@
           size: document.getElementById("ev-size").value,
           topic: document.getElementById("ev-topic").value.trim(),
           owner: document.getElementById("ev-owner").value.trim(),
-          owner_email: document.getElementById("ev-email").value.trim(),
-          contact_email: document
-            .getElementById("ev-contact-email")
+          owner_email: document.getElementById("ev-hub-email").value.trim(),
+          hub_contact: document
+            .getElementById("ev-hub-contact-name")
             .value.trim(),
-          hub_contact: document.getElementById("ev-hub").value.trim(),
+          marketing_contact_person: document
+            .getElementById("ev-marketing-contact-person")
+            .value.trim(),
           room: document.getElementById("ev-room-value").value.trim(),
           room_type: document.getElementById("ev-room-type").value,
           catering: document.getElementById("ev-catering").value,
@@ -3563,13 +4006,14 @@
         "Raum Marxloh",
         "Raum Homburg",
         "Raum Nutte",
+        "Raum Mitte",
       ];
       const ROOM_CAPACITY = {
         "Raum Wedau": 6,
         "Raum Duissern": 4,
         "Raum Marxloh": 8,
         "Raum Homburg": 55,
-        "Raum Nutte": 10,
+        "Raum Mitte": 10,
         "Raum Neudorf": 20,
         "Raum Rumeln": 6,
       };
@@ -3664,7 +4108,8 @@
         if (!selectEl || !reasonEl || !hiddenEl) return;
         const value = selectEl.value;
         const reason = value === "Nein" ? reasonEl.value.trim() : "";
-        hiddenEl.value = value || reason ? JSON.stringify({ value, reason }) : "";
+        hiddenEl.value =
+          value || reason ? JSON.stringify({ value, reason }) : "";
         schedSave();
       }
 
@@ -3781,9 +4226,9 @@
           "ev-start-date": ev.start_date || "",
           "ev-topic": ev.topic || "",
           "ev-owner": ev.owner || "",
-          "ev-email": ev.owner_email || "",
-          "ev-contact-email": ev.contact_email || "",
-          "ev-hub": ev.hub_contact || "",
+          "ev-hub-email": ev.owner_email || "",
+          "ev-hub-contact-name": ev.hub_contact || "",
+          "ev-marketing-contact-person": ev.marketing_contact_person || "",
           "ev-room-value": ev.room || "",
           "ev-catering-contact": ev.catering_contact || "",
           "ev-rasmus": ev.rasmus || "",
@@ -3794,14 +4239,47 @@
           if (el && document.activeElement !== el) el.value = val;
         });
         // Custom selects
-        const SZ = { "": "– bitte wählen –", "12": "Klein (30–60 Pers. · 12W)", "18": "Mittel (60–150 Pers. · 18W)", "24": "Groß (>150 Pers. · 24W)" };
-        const CA = { brezel: "Brezeln (Standard)", broetchen: "Belegte Brötchen", extended: "Erweitertes Catering" };
-        const TM = { "": "– offen –", ja: "Ja – alle hinzugefügt", nein: "Nein" };
-        const AB = { "": "– offen –", ja: "Ja", nein: "Nein (⚠️ Chats werden gelöscht!)" };
-        cselSetValue("ev-size",    ev.size || "",           SZ[ev.size || ""] || "– bitte wählen –");
-        cselSetValue("ev-catering",ev.catering || "brezel", CA[ev.catering || "brezel"] || "Brezeln (Standard)");
-        cselSetValue("ev-teams",   ev.teams || "",          TM[ev.teams || ""] || "– offen –");
-        cselSetValue("ev-ablage",  ev.ablage || "",         AB[ev.ablage || ""] || "– offen –");
+        const SZ = {
+          "": "– bitte wählen –",
+          12: "Klein (30–60 Pers. · 12W)",
+          18: "Mittel (60–150 Pers. · 18W)",
+          24: "Groß (>150 Pers. · 24W)",
+        };
+        const CA = {
+          brezel: "Brezeln (Standard)",
+          broetchen: "Belegte Brötchen",
+          extended: "Erweitertes Catering",
+        };
+        const TM = {
+          "": "– offen –",
+          ja: "Ja – alle hinzugefügt",
+          nein: "Nein",
+        };
+        const AB = {
+          "": "– offen –",
+          ja: "Ja",
+          nein: "Nein (⚠️ Chats werden gelöscht!)",
+        };
+        cselSetValue(
+          "ev-size",
+          ev.size || "",
+          SZ[ev.size || ""] || "– bitte wählen –",
+        );
+        cselSetValue(
+          "ev-catering",
+          ev.catering || "brezel",
+          CA[ev.catering || "brezel"] || "Brezeln (Standard)",
+        );
+        cselSetValue(
+          "ev-teams",
+          ev.teams || "",
+          TM[ev.teams || ""] || "– offen –",
+        );
+        cselSetValue(
+          "ev-ablage",
+          ev.ablage || "",
+          AB[ev.ablage || ""] || "– offen –",
+        );
         setRoomControlsFromValue(ev.room || "", ev.room_type || "");
         // Rasmus (Yes/No + reason, stored as JSON in the same `rasmus` column)
         const rasmusParsed = parseYesNoReason(ev.rasmus || "");
@@ -4386,9 +4864,7 @@
           const position = speaker.position
             ? `<div>${esc(speaker.position)}</div>`
             : "";
-          const topic = speaker.topic
-            ? `<div>${esc(speaker.topic)}</div>`
-            : "";
+          const topic = speaker.topic ? `<div>${esc(speaker.topic)}</div>` : "";
           const contact = speaker.contact
             ? `<div><a class="summary-link" href="${esc(
                 /^mailto:/i.test(speaker.contact)
@@ -4547,7 +5023,8 @@
           if (hasTodos) {
             const { completed: mc, total: mt } = todoState;
             const mpct = mt > 0 ? Math.round((mc / mt) * 100) : 0;
-            const barCls = mpct > 0 && mpct < 100 ? "ms-mini-bar partial" : "ms-mini-bar";
+            const barCls =
+              mpct > 0 && mpct < 100 ? "ms-mini-bar partial" : "ms-mini-bar";
             miniProgress = `<div class="ms-mini-progress"><div class="ms-mini-bar-wrap"><div class="${barCls}" style="width:${mpct}%"></div></div><span class="ms-mini-label">${mc}/${mt}</span></div>`;
           }
 
@@ -4981,26 +5458,26 @@
             const inputCell = isAutoStatus
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
               : isSourceField
-              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
-              : isHubOnlyLocked
-              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
-              : isYesNoReason
-              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
-              : isYesNo
-              ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
-              : isDatePair
-              ? `<div class="date-pair-row">
+                ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+                : isHubOnlyLocked
+                  ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+                  : isYesNoReason
+                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+                    : isYesNo
+                      ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
+                      : isDatePair
+                        ? `<div class="date-pair-row">
   <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.primaryLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div></div>
   <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.pairLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(pairValToShow)}" onchange="setWorkflowInput('${id}','${row.pairKey}',this.value)"></div></div>
 </div>`
-              : isDateType
-              ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
-              : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
+                        : isDateType
+                          ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
+                          : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
             const doneCell = isAutoStatus
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
               : isHubOnlyLocked
-              ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
-              : `<input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
+                ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
+                : `<input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
             html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
           });
         });
@@ -5048,8 +5525,8 @@
             const inputCell = isYesNoReason
               ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
-              ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
-              : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
+                ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
+                : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
             html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
           });
         });
