@@ -437,37 +437,39 @@
       }
       .speaker-section {
         display: grid;
-        gap: 12px;
-        padding: 8px 0 2px;
+        gap: 8px;
+        padding: 6px 0 2px;
       }
       .speaker-card {
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        padding: 12px;
+        padding: 9px 10px;
         background: rgba(255, 255, 255, 0.72);
         display: grid;
-        gap: 10px;
+        gap: 7px;
       }
       .speaker-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-weight: 600;
+        font-size: 0.85rem;
         color: var(--ink);
       }
       .speaker-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        gap: 7px;
       }
       .speaker-field {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        font-size: 0.78rem;
+        gap: 3px;
+        font-size: 0.75rem;
       }
       .speaker-field label {
         font-weight: 600;
+        font-size: 0.7rem;
         color: var(--mid);
       }
       .speaker-field input,
@@ -475,12 +477,13 @@
         width: 100%;
         border: 1px solid var(--line);
         border-radius: 4px;
-        padding: 8px 10px;
+        padding: 5px 8px;
         font: inherit;
+        font-size: 0.78rem;
         background: white;
       }
       .speaker-field textarea {
-        min-height: 76px;
+        min-height: 52px;
         resize: vertical;
       }
       .speaker-actions {
@@ -493,8 +496,8 @@
         border: 1px solid var(--line);
         background: white;
         border-radius: 999px;
-        padding: 6px 10px;
-        font-size: 0.75rem;
+        padding: 5px 9px;
+        font-size: 0.72rem;
         font-weight: 600;
         cursor: pointer;
       }
@@ -960,7 +963,7 @@
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        padding: 10px 12px;
+        padding: 8px 10px;
         text-align: left;
         white-space: nowrap;
       }
@@ -975,7 +978,7 @@
         background: #edeaf6;
       }
       tbody td {
-        padding: 10px 12px;
+        padding: 8px 10px;
         font-size: 0.82rem;
         vertical-align: middle;
       }
@@ -2800,7 +2803,7 @@
                           onclick="
                             cselSelect(
                               'ev-room',
-                              'Raum Nutte',
+                              'Raum Mitte',
                               'Raum Mitte · 👤 10',
                               this,
                             )
@@ -4734,11 +4737,13 @@
         }
         updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal || null });
         if (dateVal) showToast(`✅ "${label}" completed`);
-        // Defer so the browser finishes the date-input change before the
-        // workflow table DOM is destroyed and recreated (prevents dropdown closing).
+        // Defer so the browser finishes the date-input change before the DOM
+        // is rebuilt. Scoped to just the one workflow tab that changed (not
+        // all three) so any typing in progress on another tab is untouched;
+        // the dashboard still refreshes since completion affects progress %.
         requestAnimationFrame(() => {
-          renderAllWorkflows();
-          renderProjTodosFromPMData();
+          renderWorkflow(workflowId);
+          if (currentRole === "proj") renderProjTodosFromPMData();
           if (currentRole === "hub") renderDashboard();
         });
       }
@@ -4805,10 +4810,14 @@
         await setWorkflowInput(workflowId, rowKey, JSON.stringify(merged));
         // Re-render so the "Warum nicht?" field appears/disappears immediately.
         // Deferred for the same reason as setWorkflowDone: let the browser
-        // finish the change event before the table DOM is rebuilt.
+        // finish the change event before the DOM is rebuilt. Scoped to just
+        // the ONE workflow tab that actually changed (not all three, and not
+        // the PM task view unless that's what's currently on screen) — this
+        // keeps whatever the person might be doing on the OTHER two tabs
+        // completely undisturbed.
         requestAnimationFrame(() => {
-          renderAllWorkflows();
-          renderProjTodosFromPMData();
+          renderWorkflow(workflowId);
+          if (currentRole === "proj") renderProjTodosFromPMData();
         });
       }
       function updateLocalWorkflow(wid, rkey, patch) {
@@ -5525,7 +5534,7 @@
       }
       async function saveSpeakerSectionData(workflowId, data) {
         const ev = eventDetail?.event || pmData?.event;
-        if (!ev) return;
+        if (!ev) return false;
         const body = {
           event_id: ev.id,
           workflow_id: workflowId,
@@ -5542,18 +5551,39 @@
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
           showToast("❌ " + (d.error || "Fehler"));
-          return;
+          return false;
         }
         updateLocalWorkflow(workflowId, "sp-data", {
           input_value: JSON.stringify(data),
         });
+        return true;
       }
-      async function addSpeakerRow(workflowId) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getSpeakerSectionData(workflowId, wfRows);
+
+      // ══ SERVICE PROVIDERS — LOCAL DRAFT / EXPLICIT SAVE ══
+      // Same reasoning and mechanism as the Agenda builder: edits only touch
+      // an in-memory draft; nothing is sent to the backend (and nothing
+      // rebuilds the page) until "Änderungen speichern" is clicked.
+      const speakerDrafts = {};
+      const speakerDirty = {};
+      function speakerDraftKey(workflowId) {
+        const ev = eventDetail?.event || pmData?.event;
+        return `${ev?.id || "?"}:${workflowId}`;
+      }
+      function getSpeakerDraft(workflowId, wfRows) {
+        const key = speakerDraftKey(workflowId);
+        if (!speakerDrafts[key]) {
+          speakerDrafts[key] = getSpeakerSectionData(workflowId, wfRows);
+        }
+        return speakerDrafts[key];
+      }
+      function markSpeakerDirty(workflowId) {
+        speakerDirty[speakerDraftKey(workflowId)] = true;
+      }
+      function isSpeakerDirty(workflowId) {
+        return !!speakerDirty[speakerDraftKey(workflowId)];
+      }
+      function addSpeakerRow(workflowId) {
+        const data = getSpeakerDraft(workflowId, currentWfRowsForRole());
         data.speakers.push({
           name: "",
           position: "",
@@ -5561,28 +5591,18 @@
           contact: "",
           category: DEFAULT_CONTACT_CATEGORY,
         });
-        await saveSpeakerSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markSpeakerDirty(workflowId);
+        refreshSpeakerSectionDOM(workflowId);
       }
-      async function removeSpeakerRow(workflowId, index) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getSpeakerSectionData(workflowId, wfRows);
+      function removeSpeakerRow(workflowId, index) {
+        const data = getSpeakerDraft(workflowId, currentWfRowsForRole());
         if (data.speakers.length <= 1) return;
         data.speakers.splice(index, 1);
-        await saveSpeakerSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markSpeakerDirty(workflowId);
+        refreshSpeakerSectionDOM(workflowId);
       }
-      async function setSpeakerField(workflowId, index, field, value) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getSpeakerSectionData(workflowId, wfRows);
+      function setSpeakerField(workflowId, index, field, value) {
+        const data = getSpeakerDraft(workflowId, currentWfRowsForRole());
         if (!data.speakers[index]) {
           data.speakers[index] = {
             name: "",
@@ -5593,16 +5613,97 @@
           };
         }
         data.speakers[index][field] = value;
-        await saveSpeakerSectionData(workflowId, data);
+        markSpeakerDirty(workflowId);
+        updateSpeakerLightweightUI(workflowId);
       }
-      async function setSpeakerGuests(workflowId, value) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getSpeakerSectionData(workflowId, wfRows);
+      function setSpeakerGuests(workflowId, value) {
+        const data = getSpeakerDraft(workflowId, currentWfRowsForRole());
         data.guests = value;
-        await saveSpeakerSectionData(workflowId, data);
+        markSpeakerDirty(workflowId);
+        updateSpeakerLightweightUI(workflowId);
+      }
+      function updateSpeakerLightweightUI(workflowId) {
+        const saveBtn = document.getElementById(
+          `speaker-save-btn-${workflowId}`,
+        );
+        if (saveBtn) {
+          saveBtn.textContent = "💾 Änderungen speichern";
+          saveBtn.classList.add("dirty");
+        }
+        const hint = document.getElementById(
+          `speaker-save-hint-${workflowId}`,
+        );
+        if (hint) hint.textContent = "Ungespeicherte Änderungen";
+      }
+      async function saveSpeakerDraft(workflowId) {
+        const data = getSpeakerDraft(workflowId, currentWfRowsForRole());
+        const saveBtn = document.getElementById(
+          `speaker-save-btn-${workflowId}`,
+        );
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = "Speichern…";
+        }
+        const ok = await saveSpeakerSectionData(workflowId, data);
+        if (saveBtn) saveBtn.disabled = false;
+        if (!ok) return;
+        delete speakerDirty[speakerDraftKey(workflowId)];
+        delete speakerDrafts[speakerDraftKey(workflowId)];
+        showToast("💾 Service Provider gespeichert");
+        refreshSpeakerSectionDOM(workflowId);
+      }
+      function buildSpeakerSectionHtml(workflowId, wfRows) {
+        const data = getSpeakerDraft(workflowId, wfRows);
+        const speakers = data.speakers.length
+          ? data.speakers
+          : getDefaultSpeakerData().speakers;
+        const dirty = isSpeakerDirty(workflowId);
+        let html = `<div class="speaker-section" id="speaker-section-${workflowId}">`;
+        html += `<div class="speaker-field" style="margin-bottom:14px"><a class="summary-link" href="https://dynamic-trouble-ece.notion.site/d99ef7eee6e4442aab72689ab79d14e2?v=5e069b574b5746cd87823f3064ebbb1b" target="_blank" rel="noopener">📋 Service-Provider-Liste ansehen ↗</a></div>`;
+        speakers.forEach((speaker, index) => {
+          const categoryOptions = CONTACT_CATEGORIES.map(
+            (c) =>
+              `<option value="${c.value}" ${speaker.category === c.value ? "selected" : ""}>${esc(c.label)}</option>`,
+          ).join("");
+          html += `<div class="speaker-card">
+  <div class="speaker-card-header">
+    <span>Service Provider ${index + 1}</span>
+    <button class="speaker-remove-btn" type="button" onclick="removeSpeakerRow('${workflowId}', ${index})" ${speakers.length <= 1 ? "disabled" : ""}>− Entfernen</button>
+  </div>
+  <div class="speaker-grid">
+    <div class="speaker-field"><label>Kategorie</label><select onchange="setSpeakerField('${workflowId}', ${index}, 'category', this.value)">${categoryOptions}</select></div>
+    <div class="speaker-field"><label>Name of Company</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Firmenname" /></div>
+    <div class="speaker-field"><label>Contact Person Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name der Ansprechperson" /></div>
+    <div class="speaker-field"><label>Describe what they are providing</label><textarea class="speaker-textarea" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="z. B. Catering für 100 Personen, Mittagsmenü + Snacks">${esc(speaker.topic)}</textarea></div>
+    <div class="speaker-field"><label>Kontakt / E-Mail</label><input type="text" value="${esc(speaker.contact)}" onchange="setSpeakerField('${workflowId}', ${index}, 'contact', this.value)" placeholder="E-Mail" /></div>
+  </div>
+</div>`;
+        });
+        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Service Provider hinzufügen</button></div>`;
+        html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
+        html += `<div class="agenda-save-row" style="margin-top:10px">
+    <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="speaker-save-btn-${workflowId}" onclick="saveSpeakerDraft('${workflowId}')">${dirty ? "💾 Änderungen speichern" : "✅ Gespeichert"}</button>
+    <span class="agenda-save-hint" id="speaker-save-hint-${workflowId}">${dirty ? "Ungespeicherte Änderungen" : ""}</span>
+  </div>`;
+        html += `</div>`;
+        return html;
+      }
+      // Replaces ONLY the Service Providers widget's own DOM (not the
+      // surrounding table/page) — used for structural edits (add/remove a
+      // provider). Falls back to a full render if not mounted yet.
+      function refreshSpeakerSectionDOM(workflowId) {
+        const container = document.getElementById(
+          `speaker-section-${workflowId}`,
+        );
+        if (!container) {
+          renderAllWorkflows();
+          renderProjTodosFromPMData();
+          return;
+        }
+        container.outerHTML = buildSpeakerSectionHtml(
+          workflowId,
+          currentWfRowsForRole(),
+        );
       }
 
       // ══ AGENDA BUILDER DATA MODEL ══
@@ -5935,35 +6036,8 @@
       }
 
       function renderSpeakerSection(sec, workflowId, wfRows) {
-        const data = getSpeakerSectionData(workflowId, wfRows);
-        const speakers = data.speakers.length
-          ? data.speakers
-          : getDefaultSpeakerData().speakers;
         let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
-        html += `<tr><td colspan="6"><div class="speaker-section">`;
-        html += `<div class="speaker-field" style="margin-bottom:14px"><a class="summary-link" href="https://dynamic-trouble-ece.notion.site/d99ef7eee6e4442aab72689ab79d14e2?v=5e069b574b5746cd87823f3064ebbb1b" target="_blank" rel="noopener">📋 Service-Provider-Liste ansehen ↗</a></div>`;
-        speakers.forEach((speaker, index) => {
-          const categoryOptions = CONTACT_CATEGORIES.map(
-            (c) =>
-              `<option value="${c.value}" ${speaker.category === c.value ? "selected" : ""}>${esc(c.label)}</option>`,
-          ).join("");
-          html += `<div class="speaker-card">
-  <div class="speaker-card-header">
-    <span>Service Provider ${index + 1}</span>
-    <button class="speaker-remove-btn" type="button" onclick="removeSpeakerRow('${workflowId}', ${index})" ${speakers.length <= 1 ? "disabled" : ""}>− Entfernen</button>
-  </div>
-  <div class="speaker-grid">
-    <div class="speaker-field"><label>Kategorie</label><select onchange="setSpeakerField('${workflowId}', ${index}, 'category', this.value)">${categoryOptions}</select></div>
-    <div class="speaker-field"><label>Name of Company</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Firmenname" /></div>
-    <div class="speaker-field"><label>Contact Person Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name der Ansprechperson" /></div>
-    <div class="speaker-field"><label>Describe what they are providing</label><textarea class="speaker-textarea" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="z. B. Catering für 100 Personen, Mittagsmenü + Snacks">${esc(speaker.topic)}</textarea></div>
-    <div class="speaker-field"><label>Kontakt / E-Mail</label><input type="text" value="${esc(speaker.contact)}" onchange="setSpeakerField('${workflowId}', ${index}, 'contact', this.value)" placeholder="E-Mail" /></div>
-  </div>
-</div>`;
-        });
-        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Service Provider hinzufügen</button></div>`;
-        html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
-        html += `</div></td></tr>`;
+        html += `<tr><td colspan="6">${buildSpeakerSectionHtml(workflowId, wfRows)}</td></tr>`;
         return html;
       }
       function renderAllWorkflows() {
