@@ -5216,7 +5216,7 @@
         }
         return "";
       }
-      // ══ CONTACT PERSONS (formerly "Speaker") DATA MODEL ══
+      // ══ CONTACT PERSONS / SERVICE PROVIDERS DATA MODEL ══
       // Order here is also the display order used when grouping the Summary
       // tab's contact-persons card.
       const CONTACT_CATEGORIES = [
@@ -5224,6 +5224,13 @@
         { value: "catering", label: "Catering" },
         { value: "technik", label: "Technik" },
         { value: "speaker", label: "Speaker/Moderation" },
+        { value: "foodtruck", label: "Food Truck" },
+        { value: "hotel", label: "Hotel" },
+        { value: "restaurant", label: "Restaurant" },
+        { value: "drinks", label: "Drinks" },
+        { value: "printshop", label: "Print Shop" },
+        { value: "vendorlist", label: "Vendor List" },
+        { value: "photography", label: "Photography" },
       ];
       const DEFAULT_CONTACT_CATEGORY = "speaker";
       function getDefaultSpeakerData() {
@@ -5368,6 +5375,7 @@
           : getDefaultSpeakerData().speakers;
         let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
         html += `<tr><td colspan="6"><div class="speaker-section">`;
+        html += `<div class="speaker-field" style="margin-bottom:14px"><a class="summary-link" href="https://dynamic-trouble-ece.notion.site/d99ef7eee6e4442aab72689ab79d14e2?v=5e069b574b5746cd87823f3064ebbb1b" target="_blank" rel="noopener">📋 Service-Provider-Liste ansehen ↗</a></div>`;
         speakers.forEach((speaker, index) => {
           const categoryOptions = CONTACT_CATEGORIES.map(
             (c) =>
@@ -5375,19 +5383,19 @@
           ).join("");
           html += `<div class="speaker-card">
   <div class="speaker-card-header">
-    <span>Kontaktperson ${index + 1}</span>
+    <span>Service Provider ${index + 1}</span>
     <button class="speaker-remove-btn" type="button" onclick="removeSpeakerRow('${workflowId}', ${index})" ${speakers.length <= 1 ? "disabled" : ""}>− Entfernen</button>
   </div>
   <div class="speaker-grid">
     <div class="speaker-field"><label>Kategorie</label><select onchange="setSpeakerField('${workflowId}', ${index}, 'category', this.value)">${categoryOptions}</select></div>
-    <div class="speaker-field"><label>Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name" /></div>
-    <div class="speaker-field"><label>Position & Institution</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Position & Institution" /></div>
-    <div class="speaker-field"><label>Thema / Titel</label><input type="text" value="${esc(speaker.topic)}" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="Thema / Titel" /></div>
+    <div class="speaker-field"><label>Name of Company</label><input type="text" value="${esc(speaker.position)}" onchange="setSpeakerField('${workflowId}', ${index}, 'position', this.value)" placeholder="Firmenname" /></div>
+    <div class="speaker-field"><label>Contact Person Name</label><input type="text" value="${esc(speaker.name)}" onchange="setSpeakerField('${workflowId}', ${index}, 'name', this.value)" placeholder="Name der Ansprechperson" /></div>
+    <div class="speaker-field"><label>Describe what they are providing</label><textarea class="speaker-textarea" onchange="setSpeakerField('${workflowId}', ${index}, 'topic', this.value)" placeholder="z. B. Catering für 100 Personen, Mittagsmenü + Snacks">${esc(speaker.topic)}</textarea></div>
     <div class="speaker-field"><label>Kontakt / E-Mail</label><input type="text" value="${esc(speaker.contact)}" onchange="setSpeakerField('${workflowId}', ${index}, 'contact', this.value)" placeholder="E-Mail" /></div>
   </div>
 </div>`;
         });
-        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Kontaktperson hinzufügen</button></div>`;
+        html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Service Provider hinzufügen</button></div>`;
         html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
         html += `</div></td></tr>`;
         return html;
@@ -5767,7 +5775,7 @@
               ],
             },
             {
-              title: "SPEAKER & GÄSTE",
+              title: "SERVICE PROVIDERS",
               color: "#f0eeff",
               type: "speakers",
             },
@@ -6238,7 +6246,7 @@
           ],
         },
         {
-          title: "SPEAKER & GÄSTE",
+          title: "SERVICE PROVIDERS",
           color: "#f0eeff",
           type: "speakers",
         },
