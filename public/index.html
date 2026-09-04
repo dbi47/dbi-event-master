@@ -648,6 +648,103 @@
         color: var(--ink);
       }
 
+      /* Compact sizing — scoped specifically to the agenda widget (via the
+         .agenda-* container classes) so the visually-identical Service
+         Providers cards, which share the same underlying .speaker-card /
+         .speaker-field classes, are NOT affected by this. */
+      .agenda-layout {
+        gap: 14px;
+      }
+      .agenda-info-panel {
+        padding: 12px 14px;
+        font-size: 0.75rem;
+        line-height: 1.45;
+      }
+      .agenda-info-panel h4 {
+        font-size: 0.86rem;
+        margin: 10px 0 4px;
+      }
+      .agenda-info-example {
+        font-size: 0.68rem;
+        padding: 8px 10px;
+        line-height: 1.5;
+      }
+      .agenda-editor {
+        gap: 8px;
+      }
+      .agenda-item-card {
+        padding: 9px 10px;
+        gap: 6px;
+      }
+      .agenda-item-header {
+        font-size: 0.83rem;
+      }
+      .agenda-item-toprow {
+        grid-template-columns: 84px 1fr;
+        gap: 7px;
+      }
+      .agenda-item-card .speaker-field {
+        gap: 3px;
+      }
+      .agenda-item-card .speaker-field label {
+        font-size: 0.68rem;
+      }
+      .agenda-item-card .speaker-field input {
+        padding: 5px 8px;
+        font-size: 0.78rem;
+      }
+      .agenda-people-list {
+        gap: 4px;
+      }
+      .agenda-people-row input {
+        padding: 5px 8px;
+        font-size: 0.78rem;
+      }
+      .agenda-person-remove {
+        width: 22px;
+        height: 22px;
+        font-size: 0.72rem;
+      }
+      .agenda-add-person-btn {
+        padding: 3px 9px;
+        font-size: 0.68rem;
+      }
+      .agenda-copy-preview {
+        min-height: 90px;
+        font-size: 0.7rem;
+        padding: 8px;
+      }
+      .agenda-save-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .agenda-save-btn {
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--mid);
+        border-radius: 999px;
+        padding: 6px 13px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .agenda-save-btn.dirty {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: white;
+      }
+      .agenda-save-btn:disabled {
+        opacity: 0.65;
+        cursor: default;
+      }
+      .agenda-save-hint {
+        font-size: 0.7rem;
+        color: var(--amb-fg);
+        font-weight: 600;
+      }
+
       /* LAYOUT */
       .app-body {
         display: flex;
@@ -5602,82 +5699,121 @@
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
           showToast("❌ " + (d.error || "Fehler"));
-          return;
+          return false;
         }
         updateLocalWorkflow(workflowId, "ag-data", {
           input_value: JSON.stringify(data),
         });
+        return true;
       }
-      async function addAgendaItem(workflowId) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+
+      // ══ AGENDA — LOCAL DRAFT / EXPLICIT SAVE ══
+      // Every keystroke used to trigger an immediate network save followed by
+      // a full-page re-render — which could land mid-typing (e.g. right as
+      // the person moved from "Zeit" to "Titel") and visibly cut their entry
+      // short. Agenda edits now only ever touch a local, in-memory draft;
+      // nothing is sent to the backend until the person explicitly clicks
+      // "Änderungen speichern". Drafts are keyed by event+workflow so
+      // switching events never leaks one event's unsaved draft into another.
+      const agendaDrafts = {};
+      const agendaDirty = {};
+      function agendaDraftKey(workflowId) {
+        const ev = eventDetail?.event || pmData?.event;
+        return `${ev?.id || "?"}:${workflowId}`;
+      }
+      function getAgendaDraft(workflowId, wfRows) {
+        const key = agendaDraftKey(workflowId);
+        if (!agendaDrafts[key]) {
+          agendaDrafts[key] = getAgendaSectionData(workflowId, wfRows);
+        }
+        return agendaDrafts[key];
+      }
+      function markAgendaDirty(workflowId) {
+        agendaDirty[agendaDraftKey(workflowId)] = true;
+      }
+      function isAgendaDirty(workflowId) {
+        return !!agendaDirty[agendaDraftKey(workflowId)];
+      }
+      function currentWfRowsForRole() {
+        return currentRole === "hub"
+          ? eventDetail?.workflow_rows || []
+          : pmData?.workflow_rows || [];
+      }
+      function addAgendaItem(workflowId) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         data.items.push(getDefaultAgendaItem());
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        refreshAgendaSectionDOM(workflowId);
       }
-      async function removeAgendaItem(workflowId, index) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function removeAgendaItem(workflowId, index) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (data.items.length <= 1) return;
         data.items.splice(index, 1);
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        refreshAgendaSectionDOM(workflowId);
       }
-      async function setAgendaItemField(workflowId, index, field, value) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function setAgendaItemField(workflowId, index, field, value) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (!data.items[index]) data.items[index] = getDefaultAgendaItem();
         data.items[index][field] = value;
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        // Text field edits only patch the copy-preview + save button —
+        // never rebuild the section DOM, so focus/typing is never disturbed.
+        updateAgendaLightweightUI(workflowId);
       }
-      async function addAgendaPerson(workflowId, itemIndex) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function addAgendaPerson(workflowId, itemIndex) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (!data.items[itemIndex]) return;
         data.items[itemIndex].people.push("");
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        refreshAgendaSectionDOM(workflowId);
       }
-      async function removeAgendaPerson(workflowId, itemIndex, personIndex) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function removeAgendaPerson(workflowId, itemIndex, personIndex) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (!data.items[itemIndex]) return;
         data.items[itemIndex].people.splice(personIndex, 1);
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        refreshAgendaSectionDOM(workflowId);
       }
-      async function setAgendaPerson(workflowId, itemIndex, personIndex, value) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function setAgendaPerson(workflowId, itemIndex, personIndex, value) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (!data.items[itemIndex]) return;
         data.items[itemIndex].people[personIndex] = value;
-        await saveAgendaSectionData(workflowId, data);
-        renderAllWorkflows();
-        renderProjTodosFromPMData();
+        markAgendaDirty(workflowId);
+        updateAgendaLightweightUI(workflowId);
+      }
+      function updateAgendaLightweightUI(workflowId) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
+        const preview = document.getElementById(
+          `agenda-copy-preview-${workflowId}`,
+        );
+        if (preview) preview.value = buildAgendaCopyText(data);
+        const saveBtn = document.getElementById(
+          `agenda-save-btn-${workflowId}`,
+        );
+        if (saveBtn) {
+          saveBtn.textContent = "💾 Änderungen speichern";
+          saveBtn.classList.add("dirty");
+        }
+        const hint = document.getElementById(`agenda-save-hint-${workflowId}`);
+        if (hint) hint.textContent = "Ungespeicherte Änderungen";
+      }
+      async function saveAgendaDraft(workflowId) {
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
+        const saveBtn = document.getElementById(
+          `agenda-save-btn-${workflowId}`,
+        );
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = "Speichern…";
+        }
+        const ok = await saveAgendaSectionData(workflowId, data);
+        if (saveBtn) saveBtn.disabled = false;
+        if (!ok) return; // error toast already shown; keep the draft so nothing is lost
+        delete agendaDirty[agendaDraftKey(workflowId)];
+        delete agendaDrafts[agendaDraftKey(workflowId)];
+        showToast("💾 Agenda gespeichert");
+        refreshAgendaSectionDOM(workflowId);
       }
       // Builds the exact plain-text block the admin copies into reports:
       // "HH.MM Title" on its own line, then each person as an indented
@@ -5698,11 +5834,7 @@
           .join("\n");
       }
       async function copyAgendaText(workflowId) {
-        const wfRows =
-          currentRole === "hub"
-            ? eventDetail?.workflow_rows || []
-            : pmData?.workflow_rows || [];
-        const data = getAgendaSectionData(workflowId, wfRows);
+        const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         const text = buildAgendaCopyText(data);
         if (!text) {
           showToast("⚠️ Keine Agenda-Einträge vorhanden");
@@ -5715,10 +5847,11 @@
           showToast("❌ Kopieren fehlgeschlagen – bitte manuell markieren");
         }
       }
-      function renderAgendaSection(sec, workflowId, wfRows) {
-        const data = getAgendaSectionData(workflowId, wfRows);
+      function buildAgendaLayoutHtml(workflowId, wfRows) {
+        const data = getAgendaDraft(workflowId, wfRows);
         const items = data.items.length ? data.items : [getDefaultAgendaItem()];
         const copyText = buildAgendaCopyText(data);
+        const dirty = isAgendaDirty(workflowId);
         const infoPanel = `<div class="agenda-info-panel">
   <h4>Requirements for the agenda</h4>
   <div>Each agenda item must be worded in full.</div>
@@ -5769,13 +5902,35 @@
     <div class="speaker-field"><label>Vorschau zum Kopieren (für Berichte)</label>
       <textarea class="agenda-copy-preview" id="agenda-copy-preview-${workflowId}" readonly onclick="this.select()">${esc(copyText)}</textarea>
     </div>
-    <div class="speaker-actions" style="justify-content:flex-start">
+    <div class="agenda-save-row">
+      <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="agenda-save-btn-${workflowId}" onclick="saveAgendaDraft('${workflowId}')">${dirty ? "💾 Änderungen speichern" : "✅ Gespeichert"}</button>
       <button class="speaker-add-btn" type="button" onclick="copyAgendaText('${workflowId}')">📋 Agenda kopieren</button>
+      <span class="agenda-save-hint" id="agenda-save-hint-${workflowId}">${dirty ? "Ungespeicherte Änderungen" : ""}</span>
     </div>
   </div>
 </div>`;
+        return `<div class="agenda-layout" id="agenda-layout-${workflowId}">${infoPanel}${editorPanel}</div>`;
+      }
+      // Replaces ONLY the agenda widget's own DOM (not the surrounding
+      // table/page) — used for structural edits (add/remove item or
+      // person), which come from button clicks so there's no typing/focus
+      // to protect. Falls back to a full render if the node isn't mounted
+      // yet (e.g. very first render).
+      function refreshAgendaSectionDOM(workflowId) {
+        const container = document.getElementById(`agenda-layout-${workflowId}`);
+        if (!container) {
+          renderAllWorkflows();
+          renderProjTodosFromPMData();
+          return;
+        }
+        container.outerHTML = buildAgendaLayoutHtml(
+          workflowId,
+          currentWfRowsForRole(),
+        );
+      }
+      function renderAgendaSection(sec, workflowId, wfRows) {
         let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
-        html += `<tr><td colspan="6"><div class="agenda-layout">${infoPanel}${editorPanel}</div></td></tr>`;
+        html += `<tr><td colspan="6">${buildAgendaLayoutHtml(workflowId, wfRows)}</td></tr>`;
         return html;
       }
 
