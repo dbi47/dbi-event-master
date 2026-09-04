@@ -599,35 +599,56 @@ async function loadFullEvent(event_id) {
   };
 }
 
-// Total number of fixed planning milestones (see MILESTONE_OFFSETS in
-// index.html / reminders.js / ics.js — all three keep their own copy of
-// this same 9-item list). Kept here as a plain constant rather than trying
-// to share it across files, matching how the rest of this codebase already
-// duplicates that list per-file.
-const TOTAL_MILESTONES = 9;
+// Canonical set of the 9 fixed planning milestone keys (see MILESTONE_OFFSETS
+// in index.html / reminders.js / ics.js — all three keep their own copy of
+// this same list). Kept here as a plain constant rather than trying to share
+// it across files, matching how the rest of this codebase already duplicates
+// that list per-file.
+const MILESTONE_KEYS = new Set([
+  "m10w",
+  "m8w",
+  "m7w",
+  "m6w",
+  "m4w",
+  "m3w",
+  "m2w",
+  "m1w",
+  "m1d",
+]);
+const TOTAL_MILESTONES = MILESTONE_KEYS.size;
 
 // Attaches a `progress_pct` (0–100) to each event, based on how many of the
 // 9 fixed milestones have a done_date — used for the "Alle Events" card grid
 // so the Hub can see each event's progress at a glance without opening it.
 // Runs one batched query across all events (not one query per event).
+//
+// Counts DISTINCT completed ms_key values per event (via a Set), and only
+// ones matching the current canonical list — this guards against the
+// milestones table ever containing duplicate rows for the same key, or
+// leftover rows from a ms_key that no longer exists in MILESTONE_OFFSETS,
+// either of which would otherwise inflate the count past 9 and push the
+// percentage above 100%.
 async function attachMilestoneProgress(events) {
   if (!events.length) return events;
   const eventIds = events.map((e) => e.id);
   const { data: msRows } = await supabase
     .from("milestones")
-    .select("event_id, done_date")
+    .select("event_id, ms_key, done_date")
     .in("event_id", eventIds);
-  const completedCounts = {};
+  const completedByEvent = {}; // event_id -> Set<ms_key>
   (msRows || []).forEach((row) => {
     if (!row.done_date) return;
-    completedCounts[row.event_id] = (completedCounts[row.event_id] || 0) + 1;
+    if (!MILESTONE_KEYS.has(row.ms_key)) return;
+    if (!completedByEvent[row.event_id]) {
+      completedByEvent[row.event_id] = new Set();
+    }
+    completedByEvent[row.event_id].add(row.ms_key);
   });
-  return events.map((ev) => ({
-    ...ev,
-    progress_pct: Math.round(
-      ((completedCounts[ev.id] || 0) / TOTAL_MILESTONES) * 100,
-    ),
-  }));
+  return events.map((ev) => {
+    const completedCount = completedByEvent[ev.id]?.size || 0;
+    const pct = Math.round((completedCount / TOTAL_MILESTONES) * 100);
+    return { ...ev, progress_pct: Math.min(100, Math.max(0, pct)) };
+  });
 }
 
 function json(status, body) {
