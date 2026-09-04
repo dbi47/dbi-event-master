@@ -506,6 +506,148 @@
         cursor: not-allowed;
       }
 
+      /* ══ AGENDA BUILDER — two-column: static requirements/example on the
+         left, dynamic repeatable agenda items on the right. ══ */
+      .agenda-layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 320px) 1fr;
+        gap: 18px;
+        align-items: start;
+        padding: 8px 0 2px;
+      }
+      @media (max-width: 900px) {
+        .agenda-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .agenda-info-panel {
+        background: var(--cream);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        font-size: 0.8rem;
+        line-height: 1.55;
+        color: var(--ink);
+        position: sticky;
+        top: 8px;
+      }
+      .agenda-info-panel h4 {
+        font-family: "Fraunces", serif;
+        font-size: 0.95rem;
+        margin: 14px 0 6px;
+      }
+      .agenda-info-panel h4:first-child {
+        margin-top: 0;
+      }
+      .agenda-info-panel ul {
+        margin: 4px 0 10px 18px;
+        padding: 0;
+      }
+      .agenda-info-example {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-family: "DM Mono", monospace;
+        font-size: 0.72rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        color: var(--ink);
+        margin: 6px 0 10px;
+      }
+      .agenda-info-warning {
+        color: var(--red-fg);
+        font-weight: 700;
+        font-size: 0.76rem;
+        margin-top: 10px;
+      }
+      .agenda-editor {
+        display: grid;
+        gap: 12px;
+        min-width: 0;
+      }
+      .agenda-item-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.72);
+        display: grid;
+        gap: 10px;
+      }
+      .agenda-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .agenda-item-toprow {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 10px;
+      }
+      .agenda-people-list {
+        display: grid;
+        gap: 6px;
+      }
+      .agenda-people-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .agenda-people-row input {
+        flex: 1;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 8px 10px;
+        font: inherit;
+        background: white;
+      }
+      .agenda-person-remove {
+        border: 1px solid var(--line);
+        background: white;
+        border-radius: 999px;
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--accent);
+      }
+      .agenda-add-person-btn {
+        align-self: start;
+        border: 1px dashed var(--line);
+        background: transparent;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--mid);
+      }
+      .agenda-copy-box {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 12px;
+        background: var(--cream);
+        display: grid;
+        gap: 8px;
+      }
+      .agenda-copy-preview {
+        width: 100%;
+        min-height: 140px;
+        font-family: "DM Mono", monospace;
+        font-size: 0.76rem;
+        line-height: 1.5;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        background: white;
+        resize: vertical;
+        color: var(--ink);
+      }
+
       /* LAYOUT */
       .app-body {
         display: flex;
@@ -4902,33 +5044,24 @@
         }).join("");
       }
       function buildSummaryAgendaHtml(source) {
-        const agendaRows = [
-          { key: "ag2", label: "Agendapunkt 1 – Thema" },
-          { key: "ag3", label: "Agendapunkt 1 – Person & Position" },
-          { key: "ag4", label: "Agendapunkt 1 – Institution" },
-          { key: "ag5", label: "Agendapunkt 2 – Thema" },
-          { key: "ag6", label: "Agendapunkt 2 – Person & Position" },
-          { key: "ag7", label: "Agendapunkt 2 – Institution" },
-          { key: "ag8", label: "Agendapunkt 3 – Thema" },
-          { key: "ag9", label: "Agendapunkt 3 – Person & Position" },
-          { key: "ag10", label: "Agendapunkt 3 – Institution" },
-        ];
-        const items = agendaRows
-          .map((row) => {
-            const value = getWorkflowRowValue(
-              source,
-              "pflicht",
-              row.key,
-            ).trim();
-            return value
-              ? `<div class="summary-list-item"><strong>${esc(row.label)}</strong><div>${esc(value)}</div></div>`
-              : "";
+        const data = getAgendaSectionData("pflicht", source?.workflow_rows || []);
+        const items = (data.items || []).filter(
+          (item) => item.time || item.title || (item.people || []).some((p) => p && p.trim()),
+        );
+        if (!items.length) {
+          return '<div class="summary-empty">Noch keine Hauptpunkte der Agenda hinterlegt.</div>';
+        }
+        return items
+          .map((item) => {
+            const head = [item.time, item.title].filter(Boolean).join(" ");
+            const people = (item.people || [])
+              .map((p) => (p || "").trim())
+              .filter(Boolean)
+              .map((p) => `<div>${esc(p)}</div>`)
+              .join("");
+            return `<div class="summary-list-item"><strong>${esc(head) || "–"}</strong>${people}</div>`;
           })
-          .filter(Boolean)
-          .slice(0, 4);
-        return items.length
-          ? items.join("")
-          : '<div class="summary-empty">Noch keine Hauptpunkte der Agenda hinterlegt.</div>';
+          .join("");
       }
       function buildSummaryRegistrationHtml(source) {
         const linkValue = [
@@ -5374,6 +5507,278 @@
         data.guests = value;
         await saveSpeakerSectionData(workflowId, data);
       }
+
+      // ══ AGENDA BUILDER DATA MODEL ══
+      // Replaces the old fixed "3 slots × Thema/Person/Institution" rows
+      // (ag2–ag10) with a repeatable list of agenda items, each with a time,
+      // a title, and zero or more "Person, Position, Institution" lines —
+      // matching the real required format (see the rulebook example shown
+      // in the info panel). Stored as one JSON blob under row_key "ag-data",
+      // same convention as the Service Providers ("sp-data") widget.
+      function getDefaultAgendaItem() {
+        return { time: "", title: "", people: [] };
+      }
+      function getDefaultAgendaData() {
+        return { items: [getDefaultAgendaItem()] };
+      }
+      function normalizeAgendaData(value) {
+        if (!value) return null; // null = "nothing saved yet" (caller may fall back to legacy migration)
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === "object" && Array.isArray(parsed.items)) {
+            return {
+              items: parsed.items.length
+                ? parsed.items.map((it) => ({
+                    time: it?.time || "",
+                    title: it?.title || "",
+                    people: Array.isArray(it?.people)
+                      ? it.people.map((p) => (typeof p === "string" ? p : ""))
+                      : [],
+                  }))
+                : [getDefaultAgendaItem()],
+            };
+          }
+        } catch {}
+        return null;
+      }
+      // One-time recovery for events whose agenda was entered under the old
+      // fixed ag2/ag3/ag4 (item 1), ag5/ag6/ag7 (item 2), ag8/ag9/ag10
+      // (item 3) rows, before this widget existed — so existing agendas
+      // don't just disappear when this section first renders for them.
+      function migrateLegacyAgenda(workflowId, wfRows) {
+        const get = (key) =>
+          (
+            (wfRows || []).find(
+              (r) => r.workflow_id === workflowId && r.row_key === key,
+            ) || {}
+          ).input_value || "";
+        const slots = [
+          ["ag2", "ag3", "ag4"],
+          ["ag5", "ag6", "ag7"],
+          ["ag8", "ag9", "ag10"],
+        ];
+        const items = [];
+        slots.forEach(([themaKey, personKey, instKey]) => {
+          const thema = get(themaKey).trim();
+          const person = get(personKey).trim();
+          const inst = get(instKey).trim();
+          if (!thema && !person && !inst) return;
+          const personLine = [person, inst].filter(Boolean).join(", ");
+          items.push({
+            time: "",
+            title: thema,
+            people: personLine ? [personLine] : [],
+          });
+        });
+        return items.length ? { items } : null;
+      }
+      function getAgendaSectionData(workflowId, wfRows) {
+        const stored =
+          (wfRows || []).find(
+            (row) => row.workflow_id === workflowId && row.row_key === "ag-data",
+          ) || {};
+        const normalized = normalizeAgendaData(stored.input_value);
+        if (normalized) return normalized;
+        return (
+          migrateLegacyAgenda(workflowId, wfRows || []) || getDefaultAgendaData()
+        );
+      }
+      async function saveAgendaSectionData(workflowId, data) {
+        const ev = eventDetail?.event || pmData?.event;
+        if (!ev) return;
+        const body = {
+          event_id: ev.id,
+          workflow_id: workflowId,
+          row_key: "ag-data",
+          input_value: JSON.stringify(data),
+        };
+        if (currentRole === "hub") body.password = hubPassword;
+        else body.token = pmToken;
+        const r = await fetch(`${API}/workflow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          showToast("❌ " + (d.error || "Fehler"));
+          return;
+        }
+        updateLocalWorkflow(workflowId, "ag-data", {
+          input_value: JSON.stringify(data),
+        });
+      }
+      async function addAgendaItem(workflowId) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        data.items.push(getDefaultAgendaItem());
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function removeAgendaItem(workflowId, index) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        if (data.items.length <= 1) return;
+        data.items.splice(index, 1);
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function setAgendaItemField(workflowId, index, field, value) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        if (!data.items[index]) data.items[index] = getDefaultAgendaItem();
+        data.items[index][field] = value;
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function addAgendaPerson(workflowId, itemIndex) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        if (!data.items[itemIndex]) return;
+        data.items[itemIndex].people.push("");
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function removeAgendaPerson(workflowId, itemIndex, personIndex) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        if (!data.items[itemIndex]) return;
+        data.items[itemIndex].people.splice(personIndex, 1);
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      async function setAgendaPerson(workflowId, itemIndex, personIndex, value) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        if (!data.items[itemIndex]) return;
+        data.items[itemIndex].people[personIndex] = value;
+        await saveAgendaSectionData(workflowId, data);
+        renderAllWorkflows();
+        renderProjTodosFromPMData();
+      }
+      // Builds the exact plain-text block the admin copies into reports:
+      // "HH.MM Title" on its own line, then each person as an indented
+      // "  - Person, Position, Institution" line directly beneath it.
+      function buildAgendaCopyText(data) {
+        return (data.items || [])
+          .map((item) => {
+            const timePart = (item.time || "").trim();
+            const titlePart = (item.title || "").trim();
+            const headLine = [timePart, titlePart].filter(Boolean).join(" ");
+            const peopleLines = (item.people || [])
+              .map((p) => (p || "").trim())
+              .filter(Boolean)
+              .map((p) => `  - ${p}`);
+            return [headLine, ...peopleLines].filter(Boolean).join("\n");
+          })
+          .filter(Boolean)
+          .join("\n");
+      }
+      async function copyAgendaText(workflowId) {
+        const wfRows =
+          currentRole === "hub"
+            ? eventDetail?.workflow_rows || []
+            : pmData?.workflow_rows || [];
+        const data = getAgendaSectionData(workflowId, wfRows);
+        const text = buildAgendaCopyText(data);
+        if (!text) {
+          showToast("⚠️ Keine Agenda-Einträge vorhanden");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("📋 Agenda in Zwischenablage kopiert");
+        } catch {
+          showToast("❌ Kopieren fehlgeschlagen – bitte manuell markieren");
+        }
+      }
+      function renderAgendaSection(sec, workflowId, wfRows) {
+        const data = getAgendaSectionData(workflowId, wfRows);
+        const items = data.items.length ? data.items : [getDefaultAgendaItem()];
+        const copyText = buildAgendaCopyText(data);
+        const infoPanel = `<div class="agenda-info-panel">
+  <h4>Requirements for the agenda</h4>
+  <div>Each agenda item must be worded in full.</div>
+  <div style="margin-top:6px">Compulsory components:</div>
+  <ul><li>Thema</li><li>Person</li><li>Institution</li></ul>
+  <h4>Example</h4>
+  <div class="agenda-info-example">09.00 Reception &amp; Registration
+09.30 Welcome
+  - Person, Position, Institution
+  - Person, Position, Institution
+09.40 Lecture: 'The title of the lecture goes here'
+  - Person, Position, Institution
+
+10.00 Panel: 'This is the topic'
+  - Person, Position, Institution
+11.30 Networking
+12.00 End of the event</div>
+  <div class="agenda-info-warning">⚠️ Incomplete agendas cannot be processed.</div>
+</div>`;
+        const itemCards = items
+          .map((item, index) => {
+            const peopleRows = (item.people || [])
+              .map(
+                (p, pIndex) =>
+                  `<div class="agenda-people-row"><input type="text" value="${esc(p)}" placeholder="Person, Position, Institution" onchange="setAgendaPerson('${workflowId}', ${index}, ${pIndex}, this.value)" /><button type="button" class="agenda-person-remove" onclick="removeAgendaPerson('${workflowId}', ${index}, ${pIndex})" title="Person entfernen">×</button></div>`,
+              )
+              .join("");
+            return `<div class="agenda-item-card">
+  <div class="agenda-item-header">
+    <span>Agendapunkt ${index + 1}</span>
+    <button class="speaker-remove-btn" type="button" onclick="removeAgendaItem('${workflowId}', ${index})" ${items.length <= 1 ? "disabled" : ""}>− Entfernen</button>
+  </div>
+  <div class="agenda-item-toprow">
+    <div class="speaker-field"><label>Zeit</label><input type="text" value="${esc(item.time)}" placeholder="09.00" onchange="setAgendaItemField('${workflowId}', ${index}, 'time', this.value)" /></div>
+    <div class="speaker-field"><label>Titel</label><input type="text" value="${esc(item.title)}" placeholder="z. B. Reception &amp; Registration oder Lecture: 'Titel'" onchange="setAgendaItemField('${workflowId}', ${index}, 'title', this.value)" /></div>
+  </div>
+  <div class="speaker-field"><label>Personen (optional — Person, Position, Institution)</label>
+    <div class="agenda-people-list">${peopleRows}</div>
+    <button type="button" class="agenda-add-person-btn" onclick="addAgendaPerson('${workflowId}', ${index})">＋ Person hinzufügen</button>
+  </div>
+</div>`;
+          })
+          .join("");
+        const editorPanel = `<div class="agenda-editor">
+  ${itemCards}
+  <div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addAgendaItem('${workflowId}')">＋ Agendapunkt hinzufügen</button></div>
+  <div class="agenda-copy-box">
+    <div class="speaker-field"><label>Vorschau zum Kopieren (für Berichte)</label>
+      <textarea class="agenda-copy-preview" id="agenda-copy-preview-${workflowId}" readonly onclick="this.select()">${esc(copyText)}</textarea>
+    </div>
+    <div class="speaker-actions" style="justify-content:flex-start">
+      <button class="speaker-add-btn" type="button" onclick="copyAgendaText('${workflowId}')">📋 Agenda kopieren</button>
+    </div>
+  </div>
+</div>`;
+        let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
+        html += `<tr><td colspan="6"><div class="agenda-layout">${infoPanel}${editorPanel}</div></td></tr>`;
+        return html;
+      }
+
       function renderSpeakerSection(sec, workflowId, wfRows) {
         const data = getSpeakerSectionData(workflowId, wfRows);
         const speakers = data.speakers.length
@@ -5429,6 +5834,10 @@
         def.sections.forEach((sec) => {
           if (sec.type === "speakers") {
             html += renderSpeakerSection(sec, id, wfRows);
+            return;
+          }
+          if (sec.type === "agenda") {
+            html += renderAgendaSection(sec, id, wfRows);
             return;
           }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
@@ -5512,6 +5921,10 @@
         PROJ_SECTIONS.forEach((sec) => {
           if (sec.type === "speakers") {
             html += renderSpeakerSection(sec, "pflicht", wfRows);
+            return;
+          }
+          if (sec.type === "agenda") {
+            html += renderAgendaSection(sec, "pflicht", wfRows);
             return;
           }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
@@ -5682,61 +6095,12 @@
                   hint: "Thema · Person · Institution",
                   offset: -56,
                 },
-                {
-                  key: "ag2",
-                  label: "Agendapunkt 1 – Thema",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag3",
-                  label: "Agendapunkt 1 – Person & Position",
-                  hint: "Name, Position",
-                  offset: -56,
-                },
-                {
-                  key: "ag4",
-                  label: "Agendapunkt 1 – Institution",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag5",
-                  label: "Agendapunkt 2 – Thema",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag6",
-                  label: "Agendapunkt 2 – Person & Position",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag7",
-                  label: "Agendapunkt 2 – Institution",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag8",
-                  label: "Agendapunkt 3 – Thema",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag9",
-                  label: "Agendapunkt 3 – Person & Position",
-                  hint: "",
-                  offset: -56,
-                },
-                {
-                  key: "ag10",
-                  label: "Agendapunkt 3 – Institution",
-                  hint: "",
-                  offset: -56,
-                },
               ],
+            },
+            {
+              title: "AGENDA-INHALT",
+              color: "#e6f4f0",
+              type: "agenda",
             },
             {
               title: "EINLADUNG",
@@ -6146,69 +6510,6 @@
               req: true,
             },
             {
-              key: "ag2",
-              label: "Agendapunkt 1 – Thema",
-              hint: "",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "ag3",
-              label: "Agendapunkt 1 – Person & Position",
-              hint: "Name, Position",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "ag4",
-              label: "Agendapunkt 1 – Institution",
-              hint: "",
-              offset: -56,
-              req: true,
-            },
-            {
-              key: "ag5",
-              label: "Agendapunkt 2 – Thema",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "ag6",
-              label: "Agendapunkt 2 – Person & Position",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "ag7",
-              label: "Agendapunkt 2 – Institution",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "ag8",
-              label: "Agendapunkt 3 – Thema",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "ag9",
-              label: "Agendapunkt 3 – Person & Position",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
-              key: "ag10",
-              label: "Agendapunkt 3 – Institution",
-              hint: "",
-              offset: -56,
-              req: false,
-            },
-            {
               key: "ag11",
               label: "Titel & Beschreibung",
               hint: "Für Kommunikation & Einladung",
@@ -6216,6 +6517,11 @@
               req: true,
             },
           ],
+        },
+        {
+          title: "AGENDA-INHALT",
+          color: "#e6f4f0",
+          type: "agenda",
         },
         {
           title: "VERTEILER & KOMMUNIKATION",
