@@ -58,6 +58,22 @@ function checkHubOnlyEventFields(isToken, fields, currentEvent) {
     : null;
 }
 
+// Only events whose date has already passed may be archived. event_date is
+// stored (and always written by the frontend's <input type="date">) as a
+// plain "YYYY-MM-DD" string, so a lexicographic comparison against today's
+// date is safe and avoids timezone drift from parsing into Date objects.
+// `todayStr` is injectable so tests don't depend on the system clock.
+function checkEventCanBeArchived(
+  eventDateStr,
+  todayStr = new Date().toISOString().slice(0, 10),
+) {
+  if (!eventDateStr)
+    return "Event hat kein Datum – kann nicht archiviert werden";
+  if (eventDateStr >= todayStr)
+    return "Nur bereits vergangene Events können archiviert werden";
+  return null;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -583,13 +599,24 @@ exports.handler = async (event) => {
       return json(200, { tokens });
     }
 
-    // POST /archive — archive an event (hub only)
+    // POST /archive — archive an event (hub only, and only once it's over)
     if (path === "/archive" && method === "POST") {
       if (!isHub(body)) return json(401, { error: "Unauthorized" });
-      await supabase
+      const { event_id } = body;
+      if (!event_id) return json(400, { error: "Missing event_id" });
+      const { data: ev, error: fetchError } = await supabase
+        .from("events")
+        .select("id, event_date")
+        .eq("id", event_id)
+        .single();
+      if (fetchError || !ev) return json(404, { error: "Event nicht gefunden" });
+      const archiveViolation = checkEventCanBeArchived(ev.event_date);
+      if (archiveViolation) return json(400, { error: archiveViolation });
+      const { error } = await supabase
         .from("events")
         .update({ archived: true })
-        .eq("id", body.event_id);
+        .eq("id", event_id);
+      if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
     }
 
@@ -606,6 +633,7 @@ exports.handler = async (event) => {
 exports.getAllowedEventFields = getAllowedEventFields;
 exports.checkHubOnlyEventFields = checkHubOnlyEventFields;
 exports.HUB_ONLY_EVENT_FIELDS = HUB_ONLY_EVENT_FIELDS;
+exports.checkEventCanBeArchived = checkEventCanBeArchived;
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
