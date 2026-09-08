@@ -4192,7 +4192,7 @@
         }
       }
       function readEventForm() {
-        return {
+        const fields = {
           name: document.getElementById("ev-name").value.trim(),
           event_date: document.getElementById("ev-date").value || null,
           start_date: document.getElementById("ev-start-date").value || null,
@@ -4217,6 +4217,14 @@
           ablage: document.getElementById("ev-ablage").value,
           file_path: document.getElementById("ev-path").value.trim(),
         };
+        // Belt-and-suspenders: name/event_date are already disabled inputs
+        // for a PM, but strip them from the payload outright too — the
+        // backend independently rejects any attempt to change them anyway.
+        if (currentRole === "proj") {
+          delete fields.name;
+          delete fields.event_date;
+        }
+        return fields;
       }
       function setEventDetailsAccess() {
         const locked = ["ev-name", "ev-date"];
