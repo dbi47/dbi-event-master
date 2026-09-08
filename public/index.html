@@ -4736,7 +4736,7 @@
           return;
         }
         updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal || null });
-        if (dateVal) showToast(`✅ "${label}" completed`);
+        if (dateVal) showToast(`✅ "${label}" erledigt`);
         // Defer so the browser finishes the date-input change before the DOM
         // is rebuilt. Scoped to just the one workflow tab that changed (not
         // all three) so any typing in progress on another tab is untouched;
@@ -5465,17 +5465,17 @@
       // Order here is also the display order used when grouping the Summary
       // tab's contact-persons card.
       const CONTACT_CATEGORIES = [
-        { value: "location", label: "Location" },
+        { value: "location", label: "Veranstaltungsort" },
         { value: "catering", label: "Catering" },
         { value: "technik", label: "Technik" },
-        { value: "speaker", label: "Speaker/Moderation" },
-        { value: "foodtruck", label: "Food Truck" },
+        { value: "speaker", label: "Redner/Moderation" },
+        { value: "foodtruck", label: "Imbisswagen" },
         { value: "hotel", label: "Hotel" },
         { value: "restaurant", label: "Restaurant" },
-        { value: "drinks", label: "Drinks" },
-        { value: "printshop", label: "Print Shop" },
-        { value: "vendorlist", label: "Vendor List" },
-        { value: "photography", label: "Photography" },
+        { value: "drinks", label: "Getränke" },
+        { value: "printshop", label: "Druckerei" },
+        { value: "vendorlist", label: "Lieferantenliste" },
+        { value: "photography", label: "Fotografie" },
       ];
       const DEFAULT_CONTACT_CATEGORY = "speaker";
       function getDefaultSpeakerData() {
@@ -5954,23 +5954,23 @@
         const copyText = buildAgendaCopyText(data);
         const dirty = isAgendaDirty(workflowId);
         const infoPanel = `<div class="agenda-info-panel">
-  <h4>Requirements for the agenda</h4>
-  <div>Each agenda item must be worded in full.</div>
-  <div style="margin-top:6px">Compulsory components:</div>
+  <h4>Anforderungen an die Agenda</h4>
+  <div>Jeder Agendapunkt muss vollständig ausformuliert sein.</div>
+  <div style="margin-top:6px">Pflichtbestandteile:</div>
   <ul><li>Thema</li><li>Person</li><li>Institution</li></ul>
-  <h4>Example</h4>
-  <div class="agenda-info-example">09.00 Reception &amp; Registration
-09.30 Welcome
+  <h4>Beispiel</h4>
+  <div class="agenda-info-example">09.00 Empfang &amp; Anmeldung
+09.30 Begrüßung
   - Person, Position, Institution
   - Person, Position, Institution
-09.40 Lecture: 'The title of the lecture goes here'
+09.40 Vortrag: 'Der Titel des Vortrags steht hier'
   - Person, Position, Institution
 
-10.00 Panel: 'This is the topic'
+10.00 Podium: 'Dies ist das Thema'
   - Person, Position, Institution
 11.30 Networking
-12.00 End of the event</div>
-  <div class="agenda-info-warning">⚠️ Incomplete agendas cannot be processed.</div>
+12.00 Ende der Veranstaltung</div>
+  <div class="agenda-info-warning">⚠️ Unvollständige Agenden können nicht verarbeitet werden.</div>
 </div>`;
         const itemCards = items
           .map((item, index) => {
@@ -6222,7 +6222,7 @@
       }
       function fmtDE(d) {
         if (!d) return "–";
-        return new Intl.DateTimeFormat("en-US", {
+        return new Intl.DateTimeFormat("de-DE", {
           month: "long",
           day: "numeric",
           year: "numeric",
