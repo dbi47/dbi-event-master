@@ -8,6 +8,56 @@ const supabase = createClient(
 // Password comes ONLY from Netlify environment variable — no fallback
 const HUB_PW = process.env.HUB_PASSWORD;
 
+// Event fields a PM (token auth) may NEVER change — locked to Event-HUB no
+// matter what a request payload contains. The frontend also disables these
+// inputs for PMs, but that's UI-only; this is the actual enforcement point.
+const HUB_ONLY_EVENT_FIELDS = ["name", "event_date"];
+
+const PM_ALLOWED_EVENT_FIELDS = [
+  "start_date",
+  "topic",
+  "owner",
+  "owner_email",
+  "contact_email",
+  "phone",
+  "hub_contact",
+  "marketing_contact_person",
+  "room",
+  "room_type",
+  "catering",
+  "catering_contact",
+  "rasmus",
+  "teams",
+  "ablage",
+  "file_path",
+  "archived",
+];
+
+const HUB_ALLOWED_EVENT_FIELDS = [
+  ...HUB_ONLY_EVENT_FIELDS,
+  "size",
+  ...PM_ALLOWED_EVENT_FIELDS,
+];
+
+function getAllowedEventFields(isToken) {
+  return isToken ? PM_ALLOWED_EVENT_FIELDS : HUB_ALLOWED_EVENT_FIELDS;
+}
+
+// Returns an error message if a PM's payload actually tries to change a
+// hub-only field (i.e. the value differs from what's currently stored) —
+// re-sending the unchanged value (e.g. because a disabled input still gets
+// read into the save payload) is not treated as an attempt. Returns null
+// when there's nothing to reject.
+function checkHubOnlyEventFields(isToken, fields, currentEvent) {
+  if (!isToken || !currentEvent) return null;
+  const violated = HUB_ONLY_EVENT_FIELDS.find(
+    (key) => fields[key] !== undefined && fields[key] !== currentEvent[key],
+  );
+  return violated
+    ? `Feld "${violated}" darf nur vom Event-HUB geändert werden`
+    : null;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -125,65 +175,39 @@ exports.handler = async (event) => {
       } = body.event ? { ...body.event } : { ...body };
       if (isToken && pm && id && pm.event_id !== id)
         return json(403, { error: "Forbidden" });
-      const allowed = isToken
-        ? [
-            "start_date",
-            "topic",
-            "owner",
-            "owner_email",
-            "contact_email",
-            "phone",
-            "hub_contact",
-            "marketing_contact_person",
-            "room",
-            "room_type",
-            "catering",
-            "catering_contact",
-            "rasmus",
-            "teams",
-            "ablage",
-            "file_path",
-            "archived",
-          ]
-        : [
-            "name",
-            "event_date",
-            "start_date",
-            "size",
-            "topic",
-            "owner",
-            "owner_email",
-            "contact_email",
-            "phone",
-            "hub_contact",
-            "marketing_contact_person",
-            "room",
-            "room_type",
-            "catering",
-            "catering_contact",
-            "rasmus",
-            "teams",
-            "ablage",
-            "file_path",
-            "archived",
-          ];
+      // PMs only ever update their own already-created event — an id is
+      // required so we always have a currentEvent to enforce the hub-only
+      // field lock against, and so a PM request can never insert a new row.
+      if (isToken && !id) return json(400, { error: "Missing event id" });
+
+      let currentEvent = null;
+      if (id) {
+        const { data } = await supabase
+          .from("events")
+          .select("*")
+          .eq("id", id)
+          .single();
+        currentEvent = data;
+      }
+
+      const hubOnlyViolation = checkHubOnlyEventFields(
+        isToken,
+        fields,
+        currentEvent,
+      );
+      if (hubOnlyViolation) return json(403, { error: hubOnlyViolation });
+
+      const allowed = getAllowedEventFields(isToken);
       const cleanFields = {};
       allowed.forEach((k) => {
         if (fields[k] !== undefined) cleanFields[k] = fields[k];
       });
       if (!isToken && !cleanFields.name) cleanFields.name = "Neues Event";
       let eventChanged = true;
-      if (id) {
-        const { data: currentEvent } = await supabase
-          .from("events")
-          .select("*")
-          .eq("id", id)
-          .single();
-        if (currentEvent) {
-          eventChanged = Object.keys(cleanFields).some(
-            (key) => currentEvent[key] !== cleanFields[key],
-          );
-        }
+      if (id && currentEvent) {
+        eventChanged = Object.keys(cleanFields).some(
+          (key) => currentEvent[key] !== cleanFields[key],
+        );
       }
       let result;
       if (id) {
@@ -574,6 +598,14 @@ exports.handler = async (event) => {
     return json(500, { error: err.message });
   }
 };
+
+// Exported alongside `handler` purely so unit tests can exercise the
+// hub-only-field enforcement logic directly without mocking Supabase.
+// Netlify's runtime only ever looks at exports.handler, so this is a no-op
+// for deployment.
+exports.getAllowedEventFields = getAllowedEventFields;
+exports.checkHubOnlyEventFields = checkHubOnlyEventFields;
+exports.HUB_ONLY_EVENT_FIELDS = HUB_ONLY_EVENT_FIELDS;
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
