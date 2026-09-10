@@ -204,9 +204,37 @@
       }
       .notification-toolbar {
         display: flex;
-        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 14px;
         padding: 12px 20px;
         border-bottom: 1px solid var(--line);
+      }
+      .notification-select-all {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: var(--mid);
+        cursor: pointer;
+        user-select: none;
+      }
+      .notification-select-all input[type="checkbox"] {
+        accent-color: var(--accent);
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+      }
+      .notification-bulk-bar {
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 10px 20px;
+        background: var(--red-bg);
+        border-bottom: 1px solid var(--line);
+        font-size: 0.78rem;
+        color: var(--red-fg);
+        font-weight: 600;
       }
       .notification-action.danger {
         color: var(--red-fg);
@@ -220,6 +248,14 @@
         gap: 12px;
         padding: 14px 0;
         border-bottom: 1px solid var(--line);
+      }
+      .notification-item-check {
+        margin-top: 3px;
+        accent-color: var(--accent);
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        cursor: pointer;
       }
       .notification-item.unread {
         border-left: 3px solid var(--accent);
@@ -2454,7 +2490,8 @@
           <span class="nav-badge" id="badge-pixlip"></span>
         </div>
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
-          <span class="nav-icon">🧾</span><span class="nav-label">Zusammenfassung</span>
+          <span class="nav-icon">🧾</span
+          ><span class="nav-label">Zusammenfassung</span>
         </div>
         <div class="sidebar-section hub-only" style="display: none">System</div>
         <div
@@ -3051,7 +3088,8 @@
                     ></textarea>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">E-Mail der Hub-Ansprechperson</label
+                    <label class="form-label"
+                      >E-Mail der Hub-Ansprechperson</label
                     ><input
                       type="email"
                       id="ev-hub-email"
@@ -3059,7 +3097,8 @@
                     />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Ansprechperson Kommunikation</label
+                    <label class="form-label"
+                      >Ansprechperson Kommunikation</label
                     ><input
                       type="text"
                       id="ev-marketing-contact-person"
@@ -3420,6 +3459,14 @@
           </button>
         </div>
         <div class="notification-toolbar">
+          <label class="notification-select-all">
+            <input
+              type="checkbox"
+              id="notification-select-all"
+              onchange="toggleSelectAllNotifications()"
+            />
+            Alle auswählen
+          </label>
           <button
             class="notification-action"
             type="button"
@@ -3427,6 +3474,35 @@
             onclick="toggleArchivedNotifications()"
           >
             Archiv anzeigen
+          </button>
+        </div>
+        <div
+          class="notification-bulk-bar"
+          id="notification-bulk-bar"
+          style="display: none"
+        >
+          <span id="notification-bulk-count"></span>
+          <button
+            class="notification-action"
+            type="button"
+            onclick="bulkNotificationAction('read')"
+          >
+            Gelesen
+          </button>
+          <button
+            class="notification-action"
+            type="button"
+            id="notification-bulk-archive-btn"
+            onclick="bulkNotificationAction('archive')"
+          >
+            Archivieren
+          </button>
+          <button
+            class="notification-action danger"
+            type="button"
+            onclick="bulkNotificationAction('delete')"
+          >
+            Löschen
           </button>
         </div>
         <div class="notification-list" id="notification-list"></div>
@@ -3449,6 +3525,7 @@
 
       let notifications = [];
       let showArchivedNotifications = false;
+      let selectedNotificationIds = new Set();
 
       // ══ ARCHIVED EVENTS VIEW ══
       let showArchivedEvents = false;
@@ -3706,6 +3783,23 @@
         toggle.textContent = showArchivedNotifications
           ? "Aktuelle anzeigen"
           : "Archiv anzeigen";
+
+        // Drop any selected ids that no longer exist in the current list
+        // (e.g. after switching current/archived, or one got deleted).
+        const currentIds = new Set(notifications.map((n) => n.id));
+        [...selectedNotificationIds].forEach((id) => {
+          if (!currentIds.has(id)) selectedNotificationIds.delete(id);
+        });
+
+        const selectAllEl = document.getElementById("notification-select-all");
+        if (selectAllEl) {
+          selectAllEl.checked =
+            notifications.length > 0 &&
+            selectedNotificationIds.size === notifications.length;
+          selectAllEl.disabled = !notifications.length;
+        }
+        updateNotificationBulkBar();
+
         if (!notifications.length) {
           list.innerHTML =
             '<div class="notification-empty">Keine Benachrichtigungen vorhanden.</div>';
@@ -3728,10 +3822,17 @@
               : '<button class="notification-action" type="button" onclick="setNotificationArchived(\'' +
                 esc(item.id) +
                 "', true)\">Archivieren</button>";
+            const checked = selectedNotificationIds.has(item.id)
+              ? " checked"
+              : "";
             return (
               '<article class="notification-item' +
               (item.is_read ? "" : " unread") +
-              '"><div class="notification-content"><strong>' +
+              '"><input type="checkbox" class="notification-item-check" aria-label="Benachrichtigung auswählen"' +
+              checked +
+              " onchange=\"toggleNotificationSelected('" +
+              esc(item.id) +
+              '\')" /><div class="notification-content"><strong>' +
               esc(item.actor_name) +
               "</strong><span>" +
               esc(item.message) +
@@ -3770,7 +3871,15 @@
           // Notifications are non-blocking; the next poll will retry.
         }
       }
-      async function notificationRequest(path, notificationId, extra = {}) {
+      // `silent` skips the per-call toast/refetch — used by bulk actions,
+      // which report one combined toast and refetch once after all calls
+      // finish instead of once per notification.
+      async function notificationRequest(
+        path,
+        notificationId,
+        extra = {},
+        { silent = false } = {},
+      ) {
         const r = await fetch(API + path, {
           method: path === "/notifications" ? "DELETE" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -3779,14 +3888,16 @@
           ),
         });
         if (!r.ok) {
-          showToast("❌ Benachrichtigung konnte nicht aktualisiert werden");
+          if (!silent)
+            showToast("❌ Benachrichtigung konnte nicht aktualisiert werden");
           return false;
         }
-        await fetchNotifications();
+        if (!silent) await fetchNotifications();
         return true;
       }
       async function openNotifications() {
         showArchivedNotifications = false;
+        selectedNotificationIds.clear();
         document.getElementById("notification-overlay").classList.add("show");
         await fetchNotifications();
       }
@@ -3797,6 +3908,7 @@
       }
       function toggleArchivedNotifications() {
         showArchivedNotifications = !showArchivedNotifications;
+        selectedNotificationIds.clear();
         fetchNotifications();
       }
       function markNotificationRead(id) {
@@ -3808,6 +3920,87 @@
       function deleteNotification(id) {
         if (confirm("Diese Benachrichtigung endgültig löschen?"))
           notificationRequest("/notifications", id);
+      }
+
+      // ══ NOTIFICATIONS — BULK SELECTION ══
+      function toggleNotificationSelected(id) {
+        if (selectedNotificationIds.has(id)) selectedNotificationIds.delete(id);
+        else selectedNotificationIds.add(id);
+        const selectAllEl = document.getElementById("notification-select-all");
+        if (selectAllEl)
+          selectAllEl.checked =
+            notifications.length > 0 &&
+            selectedNotificationIds.size === notifications.length;
+        updateNotificationBulkBar();
+      }
+      function toggleSelectAllNotifications() {
+        const selectAllEl = document.getElementById("notification-select-all");
+        selectedNotificationIds = selectAllEl?.checked
+          ? new Set(notifications.map((n) => n.id))
+          : new Set();
+        renderNotifications();
+      }
+      function updateNotificationBulkBar() {
+        const bar = document.getElementById("notification-bulk-bar");
+        if (!bar) return;
+        const count = selectedNotificationIds.size;
+        bar.style.display = count > 0 ? "flex" : "none";
+        const countEl = document.getElementById("notification-bulk-count");
+        if (countEl) countEl.textContent = `${count} ausgewählt`;
+        const archiveBtn = document.getElementById(
+          "notification-bulk-archive-btn",
+        );
+        if (archiveBtn)
+          archiveBtn.textContent = showArchivedNotifications
+            ? "Wiederherstellen"
+            : "Archivieren";
+      }
+      async function bulkNotificationAction(action) {
+        const ids = [...selectedNotificationIds];
+        if (!ids.length) return;
+        let path;
+        let extra = {};
+        if (action === "read") {
+          path = "/notifications/read";
+        } else if (action === "archive") {
+          path = "/notifications/archive";
+          extra = { archived: !showArchivedNotifications };
+        } else if (action === "delete") {
+          if (
+            !confirm(
+              `${ids.length} Benachrichtigung${ids.length > 1 ? "en" : ""} endgültig löschen?`,
+            )
+          )
+            return;
+          path = "/notifications";
+        } else {
+          return;
+        }
+        const results = await Promise.all(
+          ids.map((id) =>
+            notificationRequest(path, id, extra, { silent: true }),
+          ),
+        );
+        selectedNotificationIds.clear();
+        await fetchNotifications();
+        const failCount = results.filter((ok) => !ok).length;
+        if (failCount) {
+          showToast(
+            `⚠️ ${failCount} von ${ids.length} Aktionen fehlgeschlagen`,
+          );
+          return;
+        }
+        const verb =
+          action === "read"
+            ? "als gelesen markiert"
+            : action === "archive"
+              ? showArchivedNotifications
+                ? "wiederhergestellt"
+                : "archiviert"
+              : "gelöscht";
+        showToast(
+          `✅ ${ids.length} Benachrichtigung${ids.length > 1 ? "en" : ""} ${verb}`,
+        );
       }
 
       // ══ MILESTONE TODO DEFINITIONS ══
@@ -4040,6 +4233,7 @@
         document.body.classList.remove("role-hub", "role-proj");
         clearSessionStorage();
         notifications = [];
+        selectedNotificationIds.clear();
         updateNotificationBadge();
       }
       function selectRole(role) {
@@ -4107,7 +4301,9 @@
           .trim()
           .toLowerCase();
         const source = showArchivedEvents ? archivedEvents : allEvents;
-        const events = source.filter((ev) => eventMatchesSearch(ev, searchTerm));
+        const events = source.filter((ev) =>
+          eventMatchesSearch(ev, searchTerm),
+        );
         events.forEach((ev) => {
           const card = document.createElement("div");
           card.className =
@@ -4224,7 +4420,13 @@
           return;
         }
         const sizeLabel = (size) =>
-          size === "12" ? "Klein" : size === "18" ? "Mittel" : size === "24" ? "Groß" : "";
+          size === "12"
+            ? "Klein"
+            : size === "18"
+              ? "Mittel"
+              : size === "24"
+                ? "Groß"
+                : "";
         const headers = [
           "Name",
           "Datum",
@@ -5386,9 +5588,15 @@
         }).join("");
       }
       function buildSummaryAgendaHtml(source) {
-        const data = getAgendaSectionData("pflicht", source?.workflow_rows || []);
+        const data = getAgendaSectionData(
+          "pflicht",
+          source?.workflow_rows || [],
+        );
         const items = (data.items || []).filter(
-          (item) => item.time || item.title || (item.people || []).some((p) => p && p.trim()),
+          (item) =>
+            item.time ||
+            item.title ||
+            (item.people || []).some((p) => p && p.trim()),
         );
         if (!items.length) {
           return '<div class="summary-empty">Noch keine Hauptpunkte der Agenda hinterlegt.</div>';
@@ -5866,9 +6074,7 @@
           saveBtn.textContent = "💾 Änderungen speichern";
           saveBtn.classList.add("dirty");
         }
-        const hint = document.getElementById(
-          `speaker-save-hint-${workflowId}`,
-        );
+        const hint = document.getElementById(`speaker-save-hint-${workflowId}`);
         if (hint) hint.textContent = "Ungespeicherte Änderungen";
       }
       async function saveSpeakerDraft(workflowId) {
@@ -5959,7 +6165,11 @@
         if (!value) return null; // null = "nothing saved yet" (caller may fall back to legacy migration)
         try {
           const parsed = JSON.parse(value);
-          if (parsed && typeof parsed === "object" && Array.isArray(parsed.items)) {
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            Array.isArray(parsed.items)
+          ) {
             return {
               items: parsed.items.length
                 ? parsed.items.map((it) => ({
@@ -6009,12 +6219,14 @@
       function getAgendaSectionData(workflowId, wfRows) {
         const stored =
           (wfRows || []).find(
-            (row) => row.workflow_id === workflowId && row.row_key === "ag-data",
+            (row) =>
+              row.workflow_id === workflowId && row.row_key === "ag-data",
           ) || {};
         const normalized = normalizeAgendaData(stored.input_value);
         if (normalized) return normalized;
         return (
-          migrateLegacyAgenda(workflowId, wfRows || []) || getDefaultAgendaData()
+          migrateLegacyAgenda(workflowId, wfRows || []) ||
+          getDefaultAgendaData()
         );
       }
       async function saveAgendaSectionData(workflowId, data) {
@@ -6254,7 +6466,9 @@
       // to protect. Falls back to a full render if the node isn't mounted
       // yet (e.g. very first render).
       function refreshAgendaSectionDOM(workflowId) {
-        const container = document.getElementById(`agenda-layout-${workflowId}`);
+        const container = document.getElementById(
+          `agenda-layout-${workflowId}`,
+        );
         if (!container) {
           renderAllWorkflows();
           renderProjTodosFromPMData();
