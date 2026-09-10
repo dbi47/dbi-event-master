@@ -30,6 +30,48 @@ const WORKFLOW_TASKS = [
   { id: "pixlip", key: "pv2", label: "Pixlip Druckdaten", offset: -28 },
 ];
 
+// ── RFC 5545: fold lines longer than 75 chars (Outlook enforces this strictly with CRLF) ──
+// Pure text helpers, hoisted to module scope (out of the handler closure)
+// purely so they can be unit tested directly — see ics.test.js.
+function foldLine(line) {
+  if (line.length <= 75) return line;
+  let result = "";
+  let pos = 0;
+  while (pos < line.length) {
+    if (pos === 0) {
+      result += line.slice(0, 75);
+      pos = 75;
+    } else {
+      result += "\r\n " + line.slice(pos, pos + 74);
+      pos += 74;
+    }
+  }
+  return result;
+}
+
+function cleanText(s) {
+  return String(s || "")
+    .normalize("NFKD")
+    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
+    .replace(/[–—−]/g, "-")
+    .replace(/[\%)”]/g, '"')
+    .replace(/[’]/g, "'")
+    .replace(/[^\x00-\x7F]/g, "")
+    .trim();
+}
+
+function safe(s) {
+  return cleanText(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
+function ds(d) {
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod && event.httpMethod !== "GET") {
     return {
@@ -102,48 +144,8 @@ exports.handler = async (event) => {
 
   const lines = [];
 
-  // ── RFC 5545: fold lines longer than 75 chars (Outlook enforces this strictly with CRLF) ──
-  function foldLine(line) {
-    if (line.length <= 75) return line;
-    let result = "";
-    let pos = 0;
-    while (pos < line.length) {
-      if (pos === 0) {
-        result += line.slice(0, 75);
-        pos = 75;
-      } else {
-        result += "\r\n " + line.slice(pos, pos + 74);
-        pos += 74;
-      }
-    }
-    return result;
-  }
-
   function addLine(str) {
     lines.push(foldLine(str));
-  }
-
-  function cleanText(s) {
-    return String(s || "")
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[–—−]/g, "-")
-      .replace(/[\%)”]/g, '"')
-      .replace(/[’]/g, "'")
-      .replace(/[^\x00-\x7F]/g, "")
-      .trim();
-  }
-
-  function safe(s) {
-    return cleanText(s)
-      .replace(/\\/g, "\\\\")
-      .replace(/;/g, "\\;")
-      .replace(/,/g, "\\,")
-      .replace(/\n/g, "\\n");
-  }
-
-  function ds(d) {
-    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
   }
 
   // Calendar header
@@ -260,3 +262,9 @@ function errRes(code, msg) {
     body: JSON.stringify({ error: msg }),
   };
 }
+
+// Exported alongside `handler` purely for unit testing - see ics.test.js.
+exports.foldLine = foldLine;
+exports.cleanText = cleanText;
+exports.safe = safe;
+exports.ds = ds;
