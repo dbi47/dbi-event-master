@@ -30,6 +30,37 @@ const MILESTONE_OFFSETS = [
   { key:'m1d',  label:'−1T: Letzter Check',    offset:-1  },
 ];
 
+// Pure: given an event's date and what's already marked done, returns every
+// still-open milestone/workflow task whose deadline falls ON OR BEFORE
+// `in3Str` — i.e. due within the next 3 days, or already overdue.
+//
+// This used to check `due === in3Str` (exactly 3 days out), which meant a
+// single missed run of this scheduled function (Netlify hiccup, deploy
+// window, etc.) would permanently skip that task's only reminder — the
+// window would already be in the past by the next run. Using <= means a
+// task keeps showing up as "due" on every subsequent run until it's
+// actually been sent, so a missed day just gets caught on the next one
+// instead of silently disappearing. The reminder_log dedup in the handler
+// is keyed per-task (not per-day) for the same reason — see there.
+function computeDueTasks(evDate, msDone, wfDone, in3Str) {
+  const dueTasks = [];
+
+  MILESTONE_OFFSETS.forEach((m) => {
+    if (msDone.has(m.key)) return;
+    const due = addDays(evDate, m.offset).toISOString().split('T')[0];
+    if (due <= in3Str) dueTasks.push({ key: 'ms_' + m.key, label: m.label });
+  });
+
+  WORKFLOW_TASKS.forEach((t) => {
+    if (wfDone.has(t.id + '_' + t.key)) return;
+    const due = addDays(evDate, t.offset).toISOString().split('T')[0];
+    if (due <= in3Str)
+      dueTasks.push({ key: 'wf_' + t.id + '_' + t.key, label: t.label });
+  });
+
+  return dueTasks;
+}
+
 exports.handler = async () => {
   const today = new Date(); today.setHours(0,0,0,0);
   const in3   = new Date(today); in3.setDate(in3.getDate() + 3);
@@ -55,26 +86,15 @@ exports.handler = async () => {
     const wfDone = new Set((wf||[]).filter(r=>r.done_date)
       .map(r=>r.workflow_id+'_'+r.row_key));
 
-    const dueTasks = [];
-
-    MILESTONE_OFFSETS.forEach(m => {
-      if (msDone.has(m.key)) return;
-      const due = addDays(evDate, m.offset).toISOString().split('T')[0];
-      if (due === in3Str) dueTasks.push({ key:'ms_'+m.key, label:m.label });
-    });
-
-    WORKFLOW_TASKS.forEach(t => {
-      if (wfDone.has(t.id+'_'+t.key)) return;
-      const due = addDays(evDate, t.offset).toISOString().split('T')[0];
-      if (due === in3Str) dueTasks.push({ key:'wf_'+t.id+'_'+t.key, label:t.label });
-    });
-
+    const dueTasks = computeDueTasks(evDate, msDone, wfDone, in3Str);
     if (!dueTasks.length) continue;
 
-    // Check reminder log — avoid sending duplicates
+    // Check reminder log — a task is reminded ONCE ever per event, not once
+    // per calendar day, so no `sent_date` filter here: dedup is purely
+    // "has this task_key already been logged for this event."
     const { data: alreadySent } = await supabase
       .from('reminder_log').select('task_key')
-      .eq('event_id', ev.id).eq('sent_date', in3Str);
+      .eq('event_id', ev.id);
     const sentKeys = new Set((alreadySent||[]).map(r=>r.task_key));
     const toSend   = dueTasks.filter(t => !sentKeys.has(t.key));
     if (!toSend.length) continue;
@@ -90,15 +110,15 @@ exports.handler = async () => {
 
     const evDateStr = new Date(ev.event_date)
       .toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
-    const subject = `⏰ Frist in 3 Tagen – ${ev.name} (${evDateStr})`;
+    const subject = `⏰ Anstehende Frist – ${ev.name} (${evDateStr})`;
     const html = `
-      
-        ⏰ Erinnerung: Frist in 3 Tagen
+
+        ⏰ Erinnerung: anstehende Frist
         Event: ${ev.name} – ${evDateStr}
-        Fällig am ${in3Str}:
-        
+        Fällig bis spätestens ${in3Str}:
+
           ${toSend.map(t=>`${t.label}`).join('')}
-        
+
         — DBI Event Planner
       `;
 
@@ -107,7 +127,7 @@ exports.handler = async () => {
       totalSent++;
     }
 
-    // Log sent so we don't repeat today
+    // Log sent — task_key alone is the dedup key (see query above)
     await supabase.from('reminder_log').insert(
       toSend.map(t => ({ event_id: ev.id, task_key: t.key, sent_date: in3Str }))
     );
@@ -136,3 +156,8 @@ async function sendEmail(to, subject, html) {
 function addDays(d, n) {
   const r = new Date(d); r.setDate(r.getDate() + n); return r;
 }
+
+// Exported alongside `handler` purely for unit testing — see reminders.test.js.
+exports.computeDueTasks = computeDueTasks;
+exports.WORKFLOW_TASKS = WORKFLOW_TASKS;
+exports.MILESTONE_OFFSETS = MILESTONE_OFFSETS;
