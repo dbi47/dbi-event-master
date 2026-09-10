@@ -74,6 +74,18 @@ function checkEventCanBeArchived(
   return null;
 }
 
+// Archiving/restoring must always go through the dedicated /archive
+// endpoint (which enforces the "only past events" rule above) — this
+// strips `archived` from any event UPDATE payload so it can never be
+// flipped as a side effect of an ordinary details save, for either role.
+// Creation (hasId === false) is unaffected, so createNewEvent() can still
+// seed a fresh event as archived:false.
+function sanitizeEventUpdateFields(cleanFields, hasId) {
+  if (!hasId) return cleanFields;
+  const { archived, ...rest } = cleanFields;
+  return rest;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -158,10 +170,11 @@ exports.handler = async (event) => {
       }
       if (event.queryStringParameters?.password !== HUB_PW)
         return json(401, { error: "Unauthorized" });
+      const showArchived = event.queryStringParameters?.archived === "true";
       const { data: events } = await supabase
         .from("events")
         .select("*")
-        .eq("archived", false)
+        .eq("archived", showArchived)
         .order("event_date", { ascending: true });
       const eventsWithProgress = await attachMilestoneProgress(events || []);
       return json(200, { role: "hub", events: eventsWithProgress });
@@ -219,17 +232,18 @@ exports.handler = async (event) => {
         if (fields[k] !== undefined) cleanFields[k] = fields[k];
       });
       if (!isToken && !cleanFields.name) cleanFields.name = "Neues Event";
+      const updateFields = sanitizeEventUpdateFields(cleanFields, Boolean(id));
       let eventChanged = true;
       if (id && currentEvent) {
-        eventChanged = Object.keys(cleanFields).some(
-          (key) => currentEvent[key] !== cleanFields[key],
+        eventChanged = Object.keys(updateFields).some(
+          (key) => currentEvent[key] !== updateFields[key],
         );
       }
       let result;
       if (id) {
         result = await supabase
           .from("events")
-          .update(cleanFields)
+          .update(updateFields)
           .eq("id", id)
           .select()
           .single();
@@ -599,22 +613,27 @@ exports.handler = async (event) => {
       return json(200, { tokens });
     }
 
-    // POST /archive — archive an event (hub only, and only once it's over)
+    // POST /archive — archive an event (hub only, and only once it's over),
+    // or restore one (pass archived:false — no date restriction on restore)
     if (path === "/archive" && method === "POST") {
       if (!isHub(body)) return json(401, { error: "Unauthorized" });
-      const { event_id } = body;
+      const { event_id, archived } = body;
       if (!event_id) return json(400, { error: "Missing event_id" });
-      const { data: ev, error: fetchError } = await supabase
-        .from("events")
-        .select("id, event_date")
-        .eq("id", event_id)
-        .single();
-      if (fetchError || !ev) return json(404, { error: "Event nicht gefunden" });
-      const archiveViolation = checkEventCanBeArchived(ev.event_date);
-      if (archiveViolation) return json(400, { error: archiveViolation });
+      const wantArchived = archived !== false;
+      if (wantArchived) {
+        const { data: ev, error: fetchError } = await supabase
+          .from("events")
+          .select("id, event_date")
+          .eq("id", event_id)
+          .single();
+        if (fetchError || !ev)
+          return json(404, { error: "Event nicht gefunden" });
+        const archiveViolation = checkEventCanBeArchived(ev.event_date);
+        if (archiveViolation) return json(400, { error: archiveViolation });
+      }
       const { error } = await supabase
         .from("events")
-        .update({ archived: true })
+        .update({ archived: wantArchived })
         .eq("id", event_id);
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true });
@@ -634,6 +653,7 @@ exports.getAllowedEventFields = getAllowedEventFields;
 exports.checkHubOnlyEventFields = checkHubOnlyEventFields;
 exports.HUB_ONLY_EVENT_FIELDS = HUB_ONLY_EVENT_FIELDS;
 exports.checkEventCanBeArchived = checkEventCanBeArchived;
+exports.sanitizeEventUpdateFields = sanitizeEventUpdateFields;
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
