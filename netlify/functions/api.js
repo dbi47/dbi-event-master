@@ -398,8 +398,12 @@ exports.handler = async (event) => {
         const pm = await getPMToken(token);
         if (!pm || pm.event_id !== event_id)
           return json(403, { error: "Forbidden" });
-        if (!pm.workflow_ids.includes(workflow_id))
-          return json(403, { error: "Not your workflow" });
+        // A PM may edit any workflow (Pflichtinhalte/Social Media/Pixlip) on
+        // their own event — workflow_ids used to gate this per-token, but
+        // that just meant new tokens defaulted to "pflicht" only and Social
+        // Media/Pixlip silently rejected every edit. Ownership of the event
+        // (checked above) is the real boundary; there's no per-workflow
+        // restriction left to enforce here.
         // me1–me3 ("Alle Pflichtfelder ausgefüllt" / "Teams-Chat erstellt" /
         // "Dateien lokal gesichert") are Hub-only final-check rows — PMs may
         // not write to them even if they otherwise have the pflicht workflow.
@@ -539,13 +543,17 @@ exports.handler = async (event) => {
     if (path === "/pm-token" && method === "POST") {
       if (!isHub(body)) return json(401, { error: "Unauthorized" });
       const { event_id, pm_name, pm_email, workflow_ids } = body;
+      // A PM can edit every workflow on their own event (see /workflow's
+      // handler — the per-workflow_ids gate was removed there), so new
+      // tokens default to all three instead of "pflicht" only. workflow_ids
+      // is still stored/settable for the ICS feed's per-workflow filtering.
       const { data, error } = await supabase
         .from("pm_tokens")
         .insert({
           event_id,
           pm_name,
           pm_email,
-          workflow_ids: workflow_ids || ["pflicht"],
+          workflow_ids: workflow_ids || ["pflicht", "social", "pixlip"],
         })
         .select()
         .single();
