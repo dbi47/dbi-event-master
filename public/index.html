@@ -1519,6 +1519,34 @@
       }
 
       /* EVENT GRID */
+      .events-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .events-search-input {
+        flex: 1;
+        min-width: 220px;
+        border: 1px solid var(--line);
+        background: white;
+        padding: 10px 14px;
+        font-family: "Instrument Sans", sans-serif;
+        font-size: 0.85rem;
+        border-radius: 999px;
+        outline: none;
+        min-height: 40px;
+        transition: border-color 0.15s;
+      }
+      .events-search-input:focus {
+        border-color: var(--accent);
+      }
+      .events-empty {
+        color: var(--mid);
+        font-size: 0.85rem;
+        padding: 24px 4px;
+      }
       .event-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -2450,6 +2478,30 @@
           <div class="page-title">Alle Events</div>
           <div class="page-sub">
             Wähle ein Event zum Bearbeiten oder lege ein neues an.
+          </div>
+          <div class="events-toolbar">
+            <input
+              type="text"
+              id="events-search"
+              class="events-search-input"
+              placeholder="🔍 Nach Name oder Hub/Abteilung suchen…"
+              oninput="renderEventGrid()"
+            />
+            <button
+              class="btn-secondary"
+              type="button"
+              id="events-archive-toggle"
+              onclick="toggleArchivedEventsView()"
+            >
+              📦 Archiv anzeigen
+            </button>
+            <button
+              class="btn-secondary"
+              type="button"
+              onclick="exportEventsCSV()"
+            >
+              📊 CSV exportieren
+            </button>
           </div>
           <div id="events-loading" class="loading">
             <div class="spinner"></div>
@@ -3398,6 +3450,10 @@
       let notifications = [];
       let showArchivedNotifications = false;
 
+      // ══ ARCHIVED EVENTS VIEW ══
+      let showArchivedEvents = false;
+      let archivedEvents = [];
+
       // Per-milestone todo check state (kept in sync with the backend)
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
       // Staged (unsaved) todo checkbox changes. Populated by toggleTodo()
@@ -3442,11 +3498,15 @@
         if (labelEl) labelEl.textContent = label;
         const dropdown = document.getElementById("csel-dropdown-" + id);
         if (dropdown) {
-          dropdown
-            .querySelectorAll(".csel-option")
-            .forEach((o) => o.classList.remove("selected"));
+          dropdown.querySelectorAll(".csel-option").forEach((o) => {
+            o.classList.remove("selected");
+            o.setAttribute("aria-selected", "false");
+          });
         }
-        if (optionEl) optionEl.classList.add("selected");
+        if (optionEl) {
+          optionEl.classList.add("selected");
+          optionEl.setAttribute("aria-selected", "true");
+        }
         cselClose(id);
         if (id === "ev-room-type") {
           handleRoomTypeChange();
@@ -3467,7 +3527,9 @@
         const dropdown = document.getElementById("csel-dropdown-" + id);
         if (dropdown) {
           dropdown.querySelectorAll(".csel-option").forEach((o) => {
-            o.classList.toggle("selected", o.dataset.value === value);
+            const isSelected = o.dataset.value === value;
+            o.classList.toggle("selected", isSelected);
+            o.setAttribute("aria-selected", isSelected ? "true" : "false");
           });
         }
       }
@@ -4028,13 +4090,25 @@
       }
 
       // ══ EVENT GRID ══
+      function eventMatchesSearch(ev, term) {
+        if (!term) return true;
+        const haystack = `${ev.name || ""} ${ev.owner || ""}`.toLowerCase();
+        return haystack.includes(term);
+      }
       function renderEventGrid() {
         const grid = document.getElementById("event-grid");
         const loading = document.getElementById("events-loading");
         loading.style.display = "none";
         grid.style.display = "grid";
         grid.innerHTML = "";
-        allEvents.forEach((ev) => {
+        const searchTerm = (
+          document.getElementById("events-search")?.value || ""
+        )
+          .trim()
+          .toLowerCase();
+        const source = showArchivedEvents ? archivedEvents : allEvents;
+        const events = source.filter((ev) => eventMatchesSearch(ev, searchTerm));
+        events.forEach((ev) => {
           const card = document.createElement("div");
           card.className =
             "event-card" + (ev.id === currentEventId ? " active-event" : "");
@@ -4056,6 +4130,9 @@
           const archiveTitle = canArchive
             ? "Event archivieren"
             : "Nur bereits vergangene Events können archiviert werden";
+          const archiveOrRestoreBtn = showArchivedEvents
+            ? `<button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" title="Event wiederherstellen" onclick="event.stopPropagation();restoreEvent('${ev.id}','${esc(ev.name)}')">♻️</button>`
+            : `<button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" title="${archiveTitle}" ${canArchive ? `onclick="event.stopPropagation();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}>📦</button>`;
           card.innerHTML = `<div class="event-card-name">${esc(ev.name)}</div>
 <div class="event-card-date">${evDate ? fmtDE(evDate) : "– kein Datum –"} · ${diffStr}</div>
 <div class="event-card-badges">
@@ -4066,16 +4143,123 @@
 <div class="event-card-actions">
   <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
   <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
-  <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" title="${archiveTitle}" ${canArchive ? `onclick="event.stopPropagation();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}>📦</button>
+  ${archiveOrRestoreBtn}
   <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem;color:var(--red-fg);border-color:var(--red-fg)" onclick="event.stopPropagation();deleteEvent('${ev.id}','${esc(ev.name)}')">🗑</button>
 </div>`;
           grid.appendChild(card);
         });
-        const newCard = document.createElement("div");
-        newCard.className = "new-event-card";
-        newCard.innerHTML = `<div class="new-event-card-icon">+</div><div class="new-event-card-label">Neues Event anlegen</div>`;
-        newCard.onclick = createNewEvent;
-        grid.appendChild(newCard);
+        if (!events.length) {
+          const empty = document.createElement("div");
+          empty.className = "events-empty";
+          empty.textContent = searchTerm
+            ? "Keine Events gefunden."
+            : showArchivedEvents
+              ? "Keine archivierten Events vorhanden."
+              : "Noch keine Events vorhanden.";
+          grid.appendChild(empty);
+        }
+        if (!showArchivedEvents) {
+          const newCard = document.createElement("div");
+          newCard.className = "new-event-card";
+          newCard.innerHTML = `<div class="new-event-card-icon">+</div><div class="new-event-card-label">Neues Event anlegen</div>`;
+          newCard.onclick = createNewEvent;
+          grid.appendChild(newCard);
+        }
+      }
+      async function toggleArchivedEventsView() {
+        showArchivedEvents = !showArchivedEvents;
+        const toggleBtn = document.getElementById("events-archive-toggle");
+        if (toggleBtn)
+          toggleBtn.textContent = showArchivedEvents
+            ? "🗂 Aktuelle anzeigen"
+            : "📦 Archiv anzeigen";
+        if (showArchivedEvents) {
+          document.getElementById("events-loading").style.display = "flex";
+          document.getElementById("event-grid").style.display = "none";
+          try {
+            const r = await fetch(
+              `${API}/events?password=${encodeURIComponent(hubPassword)}&archived=true`,
+            );
+            const d = await r.json();
+            if (r.ok) archivedEvents = d.events || [];
+            else showToast("❌ " + (d.error || "Fehler beim Laden"));
+          } catch {
+            showToast("❌ Verbindungsfehler beim Laden");
+          }
+        }
+        renderEventGrid();
+      }
+      async function restoreEvent(eventId, eventName) {
+        try {
+          const r = await fetch(`${API}/archive`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              password: hubPassword,
+              event_id: eventId,
+              archived: false,
+            }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            showToast("❌ " + (d.error || "Fehler beim Wiederherstellen"));
+            return;
+          }
+          const restored = archivedEvents.find((e) => e.id === eventId);
+          archivedEvents = archivedEvents.filter((e) => e.id !== eventId);
+          if (restored) allEvents.push(restored);
+          showArchivedEvents = false;
+          const toggleBtn = document.getElementById("events-archive-toggle");
+          if (toggleBtn) toggleBtn.textContent = "📦 Archiv anzeigen";
+          renderEventGrid();
+          showToast(`♻️ "${eventName}" wiederhergestellt`);
+        } catch {
+          showToast("❌ Verbindungsfehler beim Wiederherstellen");
+        }
+      }
+      function exportEventsCSV() {
+        const source = showArchivedEvents ? archivedEvents : allEvents;
+        if (!source.length) {
+          showToast("⚠️ Keine Events zum Exportieren");
+          return;
+        }
+        const sizeLabel = (size) =>
+          size === "12" ? "Klein" : size === "18" ? "Mittel" : size === "24" ? "Groß" : "";
+        const headers = [
+          "Name",
+          "Datum",
+          "Größe",
+          "Hub/Abteilung",
+          "Fortschritt (%)",
+          "Archiviert",
+        ];
+        const rows = source.map((ev) => [
+          ev.name || "",
+          ev.event_date || "",
+          sizeLabel(ev.size),
+          ev.owner || "",
+          Number.isFinite(ev.progress_pct) ? ev.progress_pct : "",
+          showArchivedEvents ? "Ja" : "Nein",
+        ]);
+        const csvEscape = (val) => {
+          const str = String(val ?? "");
+          return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+        const csv = [headers, ...rows]
+          .map((row) => row.map(csvEscape).join(","))
+          .join("\r\n");
+        // Leading BOM so Excel opens the UTF-8 file (umlauts etc.) correctly.
+        const blob = new Blob(["﻿" + csv], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `DBI-Events-${showArchivedEvents ? "archiviert" : "aktiv"}-${TODAY().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
       }
       async function selectEvent(id) {
         currentEventId = id;
@@ -4936,6 +5120,7 @@
             return;
           }
           allEvents = allEvents.filter((e) => e.id !== eventId);
+          archivedEvents = archivedEvents.filter((e) => e.id !== eventId);
           if (currentEventId === eventId) {
             currentEventId = null;
             eventDetail = null;
@@ -6865,6 +7050,18 @@
       ];
 
       // ══ INIT ══
+      // Accessibility: every static .csel-option (the custom dropdowns'
+      // <div>s) is missing role/aria-selected in the raw HTML — cselSelect
+      // and cselSetValue keep it in sync from here on, but this covers the
+      // very first render before either of those has run.
+      document.querySelectorAll(".csel-option").forEach((opt) => {
+        opt.setAttribute("role", "option");
+        opt.setAttribute(
+          "aria-selected",
+          opt.classList.contains("selected") ? "true" : "false",
+        );
+      });
+
       document.addEventListener("DOMContentLoaded", () => {
         const token = new URLSearchParams(window.location.search).get("token");
         if (token) {
