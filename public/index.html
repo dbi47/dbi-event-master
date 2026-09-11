@@ -1505,6 +1505,34 @@
         color: var(--ink);
       }
 
+      /* ── ACTIVITY LOG (Dashboard, below the milestone table) ──
+         Milestone check/uncheck history only — see dev-task-list.md item 8's
+         client-decided scope (no other field edits are logged). */
+      .activity-log-wrap {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 4px 16px;
+        margin-bottom: 28px;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+      .activity-log-item {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.82rem;
+      }
+      .activity-log-item:last-child {
+        border-bottom: none;
+      }
+      .activity-log-meta {
+        font-family: "DM Mono", monospace;
+        font-size: 0.68rem;
+        color: var(--mid);
+        margin-top: 2px;
+      }
+
       /* ── CUSTOM SELECT DROPDOWN ── */
       .csel-wrap {
         position: relative;
@@ -2860,6 +2888,8 @@
               <tbody id="dash-milestones"></tbody>
             </table>
           </div>
+          <div class="section-title">Aktivität</div>
+          <div class="activity-log-wrap" id="activity-log-list"></div>
         </div>
 
         <!-- EVENTDATEN -->
@@ -6391,6 +6421,53 @@
         track.innerHTML = `<div class="ms-tl-axis"></div>${milestoneMarkers}${todayMarker}${eventMarker}`;
       }
 
+      // ── ACTIVITY LOG — milestone check/uncheck history (Dashboard) ──
+      // Fetches GET /activity-log, which only ever contains rows written by
+      // the /milestone endpoint (see api.js) — plain workflow-field edits
+      // and Eventdaten saves never appear here, by design (client-decided
+      // narrower scope, dev-task-list.md item 8).
+      async function loadActivityLog(eventId) {
+        const listEl = document.getElementById("activity-log-list");
+        if (!listEl || !eventId) return;
+        try {
+          const authParam =
+            currentRole === "hub"
+              ? `password=${encodeURIComponent(hubPassword)}`
+              : `token=${encodeURIComponent(pmToken || "")}`;
+          const r = await fetch(
+            `${API}/activity-log?event_id=${eventId}&${authParam}`,
+          );
+          if (!r.ok) return;
+          const d = await r.json();
+          renderActivityLog(d.activity || []);
+        } catch {
+          // Non-blocking — the rest of the dashboard already loaded fine.
+        }
+      }
+      function renderActivityLog(entries) {
+        const listEl = document.getElementById("activity-log-list");
+        if (!listEl) return;
+        if (!entries.length) {
+          listEl.innerHTML =
+            '<div class="events-empty">Noch keine Aktivität protokolliert.</div>';
+          return;
+        }
+        listEl.innerHTML = entries
+          .map((e) => {
+            const msLabel =
+              MILESTONES.find((m) => m.key === e.milestone_key)?.label ||
+              e.milestone_key;
+            const action = e.new_done_date
+              ? "als erledigt markiert"
+              : "wieder geöffnet";
+            return `<div class="activity-log-item">
+  <div><strong>${esc(e.actor)}</strong> hat <strong>${esc(msLabel)}</strong> ${action}</div>
+  <div class="activity-log-meta">${esc(notificationTime(e.changed_at))}</div>
+</div>`;
+          })
+          .join("");
+      }
+
       function renderDashboard() {
         const source = currentRole === "hub" ? eventDetail : pmData;
         hydrateTodoCheckedState(source);
@@ -6402,6 +6479,7 @@
           (source?.milestones || []).map((m) => [m.ms_key, m.done_date]),
         );
         renderMilestoneTimeline(eventDate, sizeWeeks, msDone);
+        loadActivityLog(ev.id);
         let sub = "Kein Datum eingetragen.";
         if (eventDate) {
           const d = daysDiff(eventDate);
