@@ -485,13 +485,24 @@ exports.handler = async (event) => {
     // POST /milestone — set done date
     if (path === "/milestone" && method === "POST") {
       const { event_id, ms_key, done_date, token, password } = body;
+      let pm = null;
       if (token) {
-        const pm = await getPMToken(token);
+        pm = await getPMToken(token);
         if (!pm || pm.event_id !== event_id)
           return json(403, { error: "Forbidden" });
       } else if (password !== HUB_PW) {
         return json(401, { error: "Unauthorized" });
       }
+
+      // Fetch the previous value BEFORE overwriting it, so activity_log can
+      // record what actually changed (not just the new state).
+      const { data: existingMs } = await supabase
+        .from("milestones")
+        .select("done_date")
+        .match({ event_id, ms_key })
+        .maybeSingle();
+      const oldDoneDate = existingMs?.done_date || null;
+
       const { error } = await supabase
         .from("milestones")
         .upsert(
@@ -499,11 +510,29 @@ exports.handler = async (event) => {
           { onConflict: "event_id,ms_key" },
         );
       if (error) return json(500, { error: error.message });
+
+      // ── Activity log — MILESTONE changes only (dev-task-list.md item 8's
+      // client-decided scope). /event and /workflow deliberately stay
+      // unlogged under this narrower rule. Failure here is non-fatal (same
+      // pattern as notifyHub/notifyPMs below) — the milestone save itself
+      // already succeeded and must not be rolled back over a logging hiccup.
+      const { error: activityError } = await supabase
+        .from("activity_log")
+        .insert({
+          event_id,
+          actor: token ? actorLabel(pm) : "Event-HUB",
+          milestone_key: ms_key,
+          old_done_date: oldDoneDate,
+          new_done_date: done_date || null,
+        });
+      if (activityError)
+        console.error("Could not write activity_log:", activityError.message);
+
       const isDone = Boolean(done_date);
       if (token)
         await notifyHub(
           event_id,
-          await getPMToken(token),
+          pm,
           "hat den Meilenstein „" +
             ms_key +
             "“ " +
@@ -521,6 +550,30 @@ exports.handler = async (event) => {
         );
       return json(200, { ok: true });
     }
+
+    // ── GET /activity-log?event_id=X — milestone change history for one
+    // event (hub, or the PM who owns that event, via the same auth pattern
+    // used everywhere else in this file) ──
+    if (path === "/activity-log" && method === "GET") {
+      const event_id = event.queryStringParameters?.event_id;
+      if (!event_id) return json(400, { error: "Missing event_id" });
+      const token = event.queryStringParameters?.token;
+      if (token) {
+        const pm = await getPMToken(token);
+        if (!pm || pm.event_id !== event_id)
+          return json(403, { error: "Forbidden" });
+      } else if (event.queryStringParameters?.password !== HUB_PW) {
+        return json(401, { error: "Unauthorized" });
+      }
+      const { data, error } = await supabase
+        .from("activity_log")
+        .select("*")
+        .eq("event_id", event_id)
+        .order("changed_at", { ascending: false });
+      if (error) return json(500, { error: error.message });
+      return json(200, { activity: data || [] });
+    }
+    // ── END /activity-log ────────────────────────────────────────────────
 
     // ── NEW: POST /milestone-todo — toggle a milestone checklist item ──
     // Body: { event_id, ms_key, todo_index, checked, token?, password? }
