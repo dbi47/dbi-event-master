@@ -1733,6 +1733,35 @@
         font-size: 0.85rem;
         padding: 24px 4px;
       }
+
+      /* ── MEINE WOCHE — cross-event due/overdue list ── */
+      .my-week-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: var(--shadow);
+      }
+      .my-week-item-main {
+        flex: 1;
+        min-width: 180px;
+      }
+      .my-week-item-event {
+        color: var(--mid);
+        font-size: 0.78rem;
+        margin-top: 2px;
+      }
+      .my-week-item-due {
+        font-family: "DM Mono", monospace;
+        font-size: 0.72rem;
+        color: var(--mid);
+        white-space: nowrap;
+      }
       .event-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -2645,6 +2674,18 @@
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
           <span class="nav-icon">🧾</span
           ><span class="nav-label">Zusammenfassung</span>
+        </div>
+        <div
+          class="nav-item hub-only"
+          onclick="
+            showPage('my-week');
+            loadMyWeek();
+          "
+          id="nav-my-week"
+        >
+          <span class="nav-icon">🗓️</span
+          ><span class="nav-label">Meine Woche</span>
+          <span class="nav-badge" id="badge-my-week"></span>
         </div>
         <div class="sidebar-section hub-only" style="display: none">System</div>
         <div
@@ -3643,6 +3684,20 @@
           </div>
         </div>
 
+        <!-- MEINE WOCHE (hub only) -->
+        <div class="page" id="page-my-week">
+          <div class="page-title">Meine Woche</div>
+          <div class="page-sub">
+            Alle fälligen und überfälligen Meilensteine & Aufgaben über alle
+            aktiven Events hinweg – sortiert nach Dringlichkeit.
+          </div>
+          <div id="my-week-loading" class="loading" style="display: none">
+            <div class="spinner"></div>
+            <div class="loading-text">Lade Meine Woche…</div>
+          </div>
+          <div id="my-week-list"></div>
+        </div>
+
         <!-- WORKFLOW PAGES -->
         <div class="page" id="page-pflicht"></div>
         <div class="page" id="page-social"></div>
@@ -4470,6 +4525,7 @@
           badge.className = "role-badge role-badge-hub";
           showPage("hub-events");
           renderEventGrid();
+          loadMyWeek();
         } else {
           badge.textContent =
             "🎯 " + (pmData?.pm_name || "Projektverantwortlich");
@@ -4946,6 +5002,89 @@
         a.remove();
         URL.revokeObjectURL(url);
       }
+
+      // ══ MEINE WOCHE — cross-event overdue/upcoming view (hub only) ══
+      // Fetches GET /my-week (server-computed, mirrors reminders.js's
+      // due-date rule — see api.js's computeWeeklyDueItems) and renders a
+      // flat, already-sorted (most overdue first, then soonest-due) list
+      // across every active event. No client-side date math here — the
+      // backend is the single source of truth for what's due, so this page
+      // can never drift from what reminders.js would actually alert on.
+      async function loadMyWeek() {
+        const listEl = document.getElementById("my-week-list");
+        const loadingEl = document.getElementById("my-week-loading");
+        if (!listEl) return;
+        loadingEl.style.display = "flex";
+        listEl.innerHTML = "";
+        try {
+          const r = await fetch(
+            `${API}/my-week?password=${encodeURIComponent(hubPassword)}`,
+          );
+          const d = await r.json().catch(() => ({}));
+          loadingEl.style.display = "none";
+          if (!r.ok) {
+            listEl.innerHTML = `<div class="events-empty">❌ ${esc(d.error || "Fehler beim Laden")}</div>`;
+            return;
+          }
+          renderMyWeekList(d.items || []);
+        } catch {
+          loadingEl.style.display = "none";
+          listEl.innerHTML =
+            '<div class="events-empty">❌ Verbindungsfehler beim Laden</div>';
+        }
+      }
+      function renderMyWeekList(items) {
+        const listEl = document.getElementById("my-week-list");
+        if (!listEl) return;
+        const badge = document.getElementById("badge-my-week");
+        if (badge) {
+          const overdueCount = items.filter((i) => i.days_until_due < 0).length;
+          badge.textContent = overdueCount > 99 ? "99+" : overdueCount;
+          badge.classList.toggle("show", overdueCount > 0);
+        }
+        if (!items.length) {
+          listEl.innerHTML =
+            '<div class="events-empty">🎉 Nichts fällig oder überfällig – alles im Zeitplan.</div>';
+          return;
+        }
+        listEl.innerHTML = items
+          .map((item) => {
+            const isOverdue = item.days_until_due < 0;
+            const dueDateObj = parseISO(item.due_date);
+            const dueLabel = dueDateObj ? fmtDE(dueDateObj) : "–";
+            const absDays = Math.abs(item.days_until_due);
+            const relLabel = isOverdue
+              ? `vor ${absDays} Tag${absDays === 1 ? "" : "en"}`
+              : item.days_until_due === 0
+                ? "Heute!"
+                : `in ${item.days_until_due} Tag${item.days_until_due === 1 ? "" : "en"}`;
+            const pillCls =
+              isOverdue || item.days_until_due <= 3
+                ? "pill-red"
+                : item.days_until_due <= 7
+                  ? "pill-amb"
+                  : "pill-grn";
+            const pillIcon = isOverdue
+              ? "🔴"
+              : item.days_until_due <= 7
+                ? "🟡"
+                : "🟢";
+            return `<div class="my-week-item">
+  <span class="pill ${pillCls}">${pillIcon} ${esc(relLabel)}</span>
+  <div class="my-week-item-main">
+    <strong>${esc(item.label)}</strong>
+    <div class="my-week-item-event">${esc(item.event_name)}</div>
+  </div>
+  <div class="my-week-item-due">Fällig: ${esc(dueLabel)}</div>
+  <button class="btn btn-secondary" type="button" onclick="openEventFromMyWeek('${esc(item.event_id)}')">Event öffnen →</button>
+</div>`;
+          })
+          .join("");
+      }
+      function openEventFromMyWeek(eventId) {
+        selectEvent(eventId); // already routes to showPage("dashboard") internally
+      }
+
       async function selectEvent(id) {
         currentEventId = id;
         const r = await fetch(
