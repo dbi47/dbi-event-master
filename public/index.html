@@ -1578,6 +1578,60 @@
       .events-search-input:focus {
         border-color: var(--accent);
       }
+      .events-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 16px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+        padding: 12px 14px;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .events-filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .events-filter-field label {
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--mid);
+      }
+      .events-filter-field input,
+      .events-filter-field select {
+        border: 1px solid var(--line);
+        background: var(--yell);
+        padding: 8px 10px;
+        font-family: "Instrument Sans", sans-serif;
+        font-size: 0.82rem;
+        border-radius: 4px;
+        min-height: 38px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .events-filter-field input:focus,
+      .events-filter-field select:focus {
+        border-color: var(--accent);
+        background: white;
+      }
+      .events-filter-reset {
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--mid);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 38px;
+      }
+      .events-filter-reset:hover {
+        background: var(--cream);
+      }
       .events-empty {
         color: var(--mid);
         font-size: 0.85rem;
@@ -2521,7 +2575,7 @@
               type="text"
               id="events-search"
               class="events-search-input"
-              placeholder="🔍 Nach Name oder Hub/Abteilung suchen…"
+              placeholder="🔍 Nach Eventname suchen…"
               oninput="renderEventGrid()"
             />
             <button
@@ -2538,6 +2592,58 @@
               onclick="exportEventsCSV()"
             >
               📊 CSV exportieren
+            </button>
+          </div>
+          <div class="events-filters">
+            <div class="events-filter-field">
+              <label for="events-filter-date-from">Datum von</label>
+              <input
+                type="date"
+                id="events-filter-date-from"
+                onchange="renderEventGrid()"
+              />
+            </div>
+            <div class="events-filter-field">
+              <label for="events-filter-date-to">Datum bis</label>
+              <input
+                type="date"
+                id="events-filter-date-to"
+                onchange="renderEventGrid()"
+              />
+            </div>
+            <div class="events-filter-field">
+              <label for="events-filter-owner">Hub/Abteilung</label>
+              <select id="events-filter-owner" onchange="renderEventGrid()">
+                <option value="">Alle</option>
+              </select>
+            </div>
+            <div class="events-filter-field">
+              <label for="events-filter-status">Status</label>
+              <select id="events-filter-status" onchange="renderEventGrid()">
+                <option value="">Alle</option>
+                <option value="red">🔴 Kritisch / überschritten</option>
+                <option value="amb">🟡 Wird knapp</option>
+                <option value="grn">🟢 Im Zeitplan</option>
+                <option value="grey">⬜ Kein Datum / noch nicht fällig</option>
+              </select>
+            </div>
+            <div class="events-filter-field">
+              <label for="events-sort">Sortieren nach</label>
+              <select id="events-sort" onchange="renderEventGrid()">
+                <option value="date-asc">Datum (aufsteigend)</option>
+                <option value="date-desc">Datum (absteigend)</option>
+                <option value="name-asc">Name (A–Z)</option>
+                <option value="name-desc">Name (Z–A)</option>
+                <option value="progress-desc">Fortschritt (hoch → niedrig)</option>
+                <option value="progress-asc">Fortschritt (niedrig → hoch)</option>
+              </select>
+            </div>
+            <button
+              class="events-filter-reset"
+              type="button"
+              onclick="resetEventFilters()"
+            >
+              ✖ Filter zurücksetzen
             </button>
           </div>
           <div id="events-loading" class="loading">
@@ -4283,11 +4389,95 @@
         document.getElementById("nav-" + id)?.classList.add("active");
       }
 
-      // ══ EVENT GRID ══
-      function eventMatchesSearch(ev, term) {
-        if (!term) return true;
-        const haystack = `${ev.name || ""} ${ev.owner || ""}`.toLowerCase();
-        return haystack.includes(term);
+      // ══ EVENT GRID — SEARCH / FILTER / SORT ══
+      // Pure: takes the already-loaded events array (allEvents or
+      // archivedEvents — whichever list is active) plus the current filter
+      // values and sort key, and returns the filtered+sorted subset. No
+      // backend calls — everything needed is already loaded client-side.
+      function filterAndSortEvents(events, filters, sortBy) {
+        const {
+          search = "",
+          dateFrom = "",
+          dateTo = "",
+          owner = "",
+          status = "",
+        } = filters || {};
+        const term = search.trim().toLowerCase();
+        const filtered = events.filter((ev) => {
+          if (term && !(ev.name || "").toLowerCase().includes(term))
+            return false;
+          if (owner && (ev.owner || "") !== owner) return false;
+          if (dateFrom && (!ev.event_date || ev.event_date < dateFrom))
+            return false;
+          if (dateTo && (!ev.event_date || ev.event_date > dateTo))
+            return false;
+          if (status) {
+            const st = getStatus(parseISO(ev.event_date), null);
+            if (st.cls !== status) return false;
+          }
+          return true;
+        });
+
+        const compareDates = (a, b) => {
+          const aDate = a.event_date || "";
+          const bDate = b.event_date || "";
+          if (!aDate && !bDate) return 0;
+          if (!aDate) return 1; // no-date events sort last either direction
+          if (!bDate) return -1;
+          return aDate.localeCompare(bDate);
+        };
+        const compareProgress = (a, b) => {
+          const aPct = Number.isFinite(a.progress_pct) ? a.progress_pct : -1;
+          const bPct = Number.isFinite(b.progress_pct) ? b.progress_pct : -1;
+          return aPct - bPct;
+        };
+        const sorters = {
+          "date-asc": compareDates,
+          "date-desc": (a, b) => -compareDates(a, b),
+          "name-asc": (a, b) =>
+            (a.name || "").localeCompare(b.name || "", "de"),
+          "name-desc": (a, b) =>
+            (b.name || "").localeCompare(a.name || "", "de"),
+          "progress-asc": compareProgress,
+          "progress-desc": (a, b) => -compareProgress(a, b),
+        };
+        const sorter = sorters[sortBy] || sorters["date-asc"];
+        return [...filtered].sort(sorter);
+      }
+      // Rebuilds the Hub/Abteilung filter dropdown from whichever event list
+      // is currently active, so it always reflects real data instead of a
+      // hardcoded department list. Preserves the current selection if it's
+      // still a valid option after rebuilding.
+      function populateEventOwnerFilterOptions(events) {
+        const select = document.getElementById("events-filter-owner");
+        if (!select) return;
+        const current = select.value;
+        const owners = [
+          ...new Set(
+            events.map((ev) => (ev.owner || "").trim()).filter(Boolean),
+          ),
+        ].sort((a, b) => a.localeCompare(b, "de"));
+        select.innerHTML =
+          '<option value="">Alle</option>' +
+          owners
+            .map((o) => `<option value="${esc(o)}">${esc(o)}</option>`)
+            .join("");
+        if (owners.includes(current)) select.value = current;
+      }
+      function resetEventFilters() {
+        [
+          "events-search",
+          "events-filter-date-from",
+          "events-filter-date-to",
+          "events-filter-owner",
+          "events-filter-status",
+        ].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
+        const sortSelect = document.getElementById("events-sort");
+        if (sortSelect) sortSelect.value = "date-asc";
+        renderEventGrid();
       }
       function renderEventGrid() {
         const grid = document.getElementById("event-grid");
@@ -4295,15 +4485,28 @@
         loading.style.display = "none";
         grid.style.display = "grid";
         grid.innerHTML = "";
-        const searchTerm = (
-          document.getElementById("events-search")?.value || ""
-        )
-          .trim()
-          .toLowerCase();
         const source = showArchivedEvents ? archivedEvents : allEvents;
-        const events = source.filter((ev) =>
-          eventMatchesSearch(ev, searchTerm),
+        populateEventOwnerFilterOptions(source);
+        const filters = {
+          search: document.getElementById("events-search")?.value || "",
+          dateFrom:
+            document.getElementById("events-filter-date-from")?.value || "",
+          dateTo:
+            document.getElementById("events-filter-date-to")?.value || "",
+          owner: document.getElementById("events-filter-owner")?.value || "",
+          status:
+            document.getElementById("events-filter-status")?.value || "",
+        };
+        const sortBy =
+          document.getElementById("events-sort")?.value || "date-asc";
+        const hasActiveFilters = Boolean(
+          filters.search ||
+            filters.dateFrom ||
+            filters.dateTo ||
+            filters.owner ||
+            filters.status,
         );
+        const events = filterAndSortEvents(source, filters, sortBy);
         events.forEach((ev) => {
           const card = document.createElement("div");
           card.className =
@@ -4347,7 +4550,7 @@
         if (!events.length) {
           const empty = document.createElement("div");
           empty.className = "events-empty";
-          empty.textContent = searchTerm
+          empty.textContent = hasActiveFilters
             ? "Keine Events gefunden."
             : showArchivedEvents
               ? "Keine archivierten Events vorhanden."
