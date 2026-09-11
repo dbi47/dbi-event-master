@@ -2661,6 +2661,15 @@
         <div class="page" id="page-dashboard">
           <div class="page-title">Dashboard</div>
           <div class="page-sub" id="dash-sub"></div>
+          <div class="btn-row" style="margin-bottom: 20px">
+            <button
+              class="btn-secondary"
+              type="button"
+              onclick="exportEventGanttCSV()"
+            >
+              📅 Gantt exportieren
+            </button>
+          </div>
           <div id="dash-alert-red" class="alert alert-red"></div>
           <div id="dash-alert-amb" class="alert alert-amb"></div>
           <div class="dash-grid">
@@ -4663,6 +4672,172 @@
         const a = document.createElement("a");
         a.href = url;
         a.download = `DBI-Events-${showArchivedEvents ? "archiviert" : "aktiv"}-${TODAY().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // ══ GANTT EXPORT — SINGLE EVENT (dev-task-list.md item 3, Version A) ══
+      // Pure function: turns one already-loaded event's milestone/workflow
+      // data into Gantt-chart-ready rows. Milestones render as PHASE BARS
+      // (startDate = the previous milestone's own date, endDate = this
+      // milestone's date) since a milestone represents a stretch of work,
+      // not an instant. Individual workflow tasks (ag1, ei3, lo1, etc.)
+      // render as zero-duration POINT markers (startDate = endDate = their
+      // own due date), since each is a single deliverable with one deadline.
+      // Reuses MILESTONES/getMilestoneDate/getStatus (the same source
+      // renderDashboard() already uses) instead of recomputing dates itself.
+      function buildGanttRows(eventDetail) {
+        const rows = [];
+        const ev = eventDetail?.event;
+        const eventDate = ev ? parseISO(ev.event_date) : null;
+        if (!eventDate) return rows; // nothing to schedule without an event date
+        const sizeWeeks = parseInt(ev.size) || 12;
+        const milestoneDone = Object.fromEntries(
+          (eventDetail.milestones || []).map((m) => [m.ms_key, m.done_date]),
+        );
+        const wfRows = eventDetail.workflow_rows || [];
+        const getWfRowDoneDate = (workflowId, rowKey) => {
+          const match = wfRows.find(
+            (r) => r.workflow_id === workflowId && r.row_key === rowKey,
+          );
+          return match?.done_date || "";
+        };
+
+        // ── Milestones as phase bars ──
+        let prevDate = null;
+        MILESTONES.forEach((ms) => {
+          const fd = getMilestoneDate(ms, eventDate, sizeWeeks);
+          if (!fd) return;
+          const done = parseISO(milestoneDone[ms.key] || "");
+          const st = getStatus(fd, done);
+          // The very first milestone (the lead-time "Vorlaufstart" anchor)
+          // has no predecessor to span from — it's a zero-duration anchor
+          // point rather than a bar.
+          const startDate = prevDate || fd;
+          rows.push({
+            taskName: ms.label,
+            startDate,
+            endDate: fd,
+            durationDays: Math.round((fd - startDate) / 86400000),
+            pctComplete: done ? 100 : 0,
+            category: "Meilenstein",
+            status: st.label,
+          });
+          prevDate = fd;
+        });
+
+        // ── Individual workflow tasks as zero-duration point markers ──
+        // Walks every row that carries its own `offset` (i.e. has its own
+        // due date) across all three workflow tabs plus PROJ_SECTIONS (the
+        // PM "Meine Aufgaben" view). PROJ_SECTIONS rows are saved under
+        // workflow_id "pflicht" just like WORKFLOWS.pflicht's own rows, so
+        // a `seen` set dedupes any row_key that appears in both (currently
+        // just "ag1") — otherwise the same backend field would be plotted
+        // twice.
+        const seen = new Set();
+        const addTaskPoint = (workflowId, category, rowKey, label, offset) => {
+          const dedupeKey = `${workflowId}:${rowKey}`;
+          if (seen.has(dedupeKey)) return;
+          seen.add(dedupeKey);
+          const dueDate = addDays(eventDate, offset);
+          const doneRaw = getWfRowDoneDate(workflowId, rowKey);
+          const done = parseISO(doneRaw);
+          const st = getStatus(dueDate, done);
+          rows.push({
+            taskName: label,
+            startDate: dueDate,
+            endDate: dueDate,
+            durationDays: 0,
+            pctComplete: doneRaw ? 100 : 0,
+            category,
+            status: st.label,
+          });
+        };
+        const walkSections = (workflowId, sections, category) => {
+          (sections || []).forEach((sec) => {
+            if (sec.type === "speakers" || sec.type === "agenda") return; // composite widgets have no single due date to plot
+            (sec.rows || []).forEach((row) => {
+              if (typeof row.offset !== "number") return;
+              const isDatePair = row.type === "date_pair" && row.pairKey;
+              addTaskPoint(
+                workflowId,
+                category,
+                row.key,
+                isDatePair ? row.primaryLabel || row.label : row.label,
+                row.offset,
+              );
+              if (isDatePair) {
+                addTaskPoint(
+                  workflowId,
+                  category,
+                  row.pairKey,
+                  row.pairLabel || row.label,
+                  row.offset,
+                );
+              }
+            });
+          });
+        };
+        walkSections(
+          "pflicht",
+          WORKFLOWS.pflicht.sections,
+          WORKFLOWS.pflicht.title,
+        );
+        walkSections("social", WORKFLOWS.social.sections, WORKFLOWS.social.title);
+        walkSections("pixlip", WORKFLOWS.pixlip.sections, WORKFLOWS.pixlip.title);
+        walkSections("pflicht", PROJ_SECTIONS, WORKFLOWS.pflicht.title);
+
+        return rows;
+      }
+      function exportEventGanttCSV() {
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        if (!source?.event) {
+          showToast("⚠️ Bitte zuerst ein Event öffnen");
+          return;
+        }
+        const rows = buildGanttRows(source);
+        if (!rows.length) {
+          showToast(
+            "⚠️ Kein Eventdatum vorhanden – Gantt kann nicht erstellt werden",
+          );
+          return;
+        }
+        const headers = [
+          "Task Name",
+          "Start Date",
+          "End Date",
+          "Duration (Days)",
+          "% Complete",
+          "Category",
+          "Status",
+        ];
+        const toDateStr = (d) => (d ? d.toISOString().slice(0, 10) : "");
+        const csvRows = rows.map((r) => [
+          r.taskName,
+          toDateStr(r.startDate),
+          toDateStr(r.endDate),
+          r.durationDays,
+          r.pctComplete,
+          r.category,
+          r.status,
+        ]);
+        const csvEscape = (val) => {
+          const str = String(val ?? "");
+          return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+        const csv = [headers, ...csvRows]
+          .map((row) => row.map(csvEscape).join(","))
+          .join("\r\n");
+        // Leading BOM so Excel opens the UTF-8 file (umlauts etc.) correctly.
+        const blob = new Blob(["﻿" + csv], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `DBI-Gantt-${(source.event.name || "Event").replace(/[^\w-]+/g, "_")}-${TODAY().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
