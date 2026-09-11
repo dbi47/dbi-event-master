@@ -2634,8 +2634,12 @@
                 <option value="date-desc">Datum (absteigend)</option>
                 <option value="name-asc">Name (A–Z)</option>
                 <option value="name-desc">Name (Z–A)</option>
-                <option value="progress-desc">Fortschritt (hoch → niedrig)</option>
-                <option value="progress-asc">Fortschritt (niedrig → hoch)</option>
+                <option value="progress-desc">
+                  Fortschritt (hoch → niedrig)
+                </option>
+                <option value="progress-asc">
+                  Fortschritt (niedrig → hoch)
+                </option>
               </select>
             </div>
             <button
@@ -4491,20 +4495,18 @@
           search: document.getElementById("events-search")?.value || "",
           dateFrom:
             document.getElementById("events-filter-date-from")?.value || "",
-          dateTo:
-            document.getElementById("events-filter-date-to")?.value || "",
+          dateTo: document.getElementById("events-filter-date-to")?.value || "",
           owner: document.getElementById("events-filter-owner")?.value || "",
-          status:
-            document.getElementById("events-filter-status")?.value || "",
+          status: document.getElementById("events-filter-status")?.value || "",
         };
         const sortBy =
           document.getElementById("events-sort")?.value || "date-asc";
         const hasActiveFilters = Boolean(
           filters.search ||
-            filters.dateFrom ||
-            filters.dateTo ||
-            filters.owner ||
-            filters.status,
+          filters.dateFrom ||
+          filters.dateTo ||
+          filters.owner ||
+          filters.status,
         );
         const events = filterAndSortEvents(source, filters, sortBy);
         events.forEach((ev) => {
@@ -6945,6 +6947,41 @@
       }
 
       // ══ WORKFLOWS DATA ══
+      // ── SAVE-BEHAVIOR CONVENTION (applies to every row defined below,
+      //    and to PROJ_SECTIONS further down) ──
+      // Two save patterns exist in this app, by design — pick the one that
+      // matches what you're adding, don't invent a third:
+      //
+      //   1. AUTOSAVE (the default — use this unless you're building
+      //      something like Agenda/Service Providers): a single-value field
+      //      — plain text/textarea, a Ja/Nein select, a date picker, an
+      //      "Erledigt am" done-date — saves itself immediately, no button.
+      //      Text fields wire `onchange` (fires on blur once the value
+      //      actually changed) to setWorkflowInput(); Ja/Nein rows
+      //      (type: "yesno_reason") wire `onchange` to
+      //      setWorkflowYesNoReason(), which saves via setWorkflowInput()
+      //      under the hood; done-date columns wire `onchange` to
+      //      setWorkflowDone(). All three POST to /workflow on every call —
+      //      there is no local draft, so there's nothing to lose on reload.
+      //
+      //   2. EXPLICIT SAVE (reserved for composite, multi-field widgets —
+      //      currently only Agenda `type: "agenda"` and Service Providers
+      //      `type: "speakers"`): edits only mutate an in-memory draft
+      //      (agendaDrafts/speakerDrafts) and mark it dirty; nothing reaches
+      //      the backend until the person clicks the widget's own
+      //      "💾 Änderungen speichern" button (saveAgendaDraft() /
+      //      saveSpeakerDraft()). This exists because these widgets have
+      //      several interdependent fields per item (time+title+people, or
+      //      category+company+contact) where saving after every keystroke
+      //      would fire constant network calls and risks a rebuild
+      //      interrupting mid-type. Don't add a third save style for a new
+      //      composite widget — reuse this draft+Save pattern.
+      //
+      // If you're adding a new plain row to any section here, just give it
+      // a `type` (or none, for a plain textarea) from the existing set —
+      // autosave wiring is automatic in renderWorkflow()/
+      // renderProjTodosFromPMData(). You do NOT need to touch this
+      // save-behavior logic itself.
       const WORKFLOWS = {
         pflicht: {
           title: "Pflichtinhalte",
@@ -7380,6 +7417,9 @@
         },
       };
 
+      // Same save-behavior convention as WORKFLOWS above (autosave for
+      // plain/Ja-Nein/date rows, explicit Save only for the Agenda/Service
+      // Providers composite widgets) — see the comment block there.
       const PROJ_SECTIONS = [
         {
           title: "INHALT & AGENDA",
