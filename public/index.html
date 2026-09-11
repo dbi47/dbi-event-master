@@ -4553,6 +4553,7 @@
 <div class="event-card-actions">
   <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
   <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" onclick="copyICSLink('${ev.id}')">📅 ICS</button>
+  <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem" title="Event duplizieren" onclick="event.stopPropagation();duplicateEvent('${ev.id}','${esc(ev.name)}')">📄</button>
   ${archiveOrRestoreBtn}
   <button class="btn btn-secondary" style="padding:8px 12px;font-size:.78rem;color:var(--red-fg);border-color:var(--red-fg)" onclick="event.stopPropagation();deleteEvent('${ev.id}','${esc(ev.name)}')">🗑</button>
 </div>`;
@@ -4881,6 +4882,52 @@
         renderEventGrid();
         await selectEvent(d.event.id);
         showPage("eventdaten");
+      }
+
+      // Duplicates an event via /event/duplicate (Service Providers copied,
+      // Agenda left blank, all workflow completion reset — see the backend
+      // comment on that endpoint for the full rule), then immediately
+      // renames the copy to whatever the person entered — the endpoint
+      // itself doesn't take a name override, so this is a plain follow-up
+      // PATCH-style call to the existing /event save path, same as any
+      // other Eventdaten edit.
+      async function duplicateEvent(eventId, eventName) {
+        const suggestedName = `Kopie von ${eventName}`;
+        const newName = prompt("Name für das neue Event:", suggestedName);
+        if (newName === null) return; // cancelled
+        const trimmedName = newName.trim() || suggestedName;
+        try {
+          const r = await fetch(`${API}/event/duplicate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: hubPassword, event_id: eventId }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            showToast("❌ " + (d.error || "Fehler beim Duplizieren"));
+            return;
+          }
+          let newEvent = d.event;
+          if (trimmedName !== newEvent.name) {
+            const renameR = await fetch(`${API}/event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                password: hubPassword,
+                event: { id: newEvent.id, name: trimmedName },
+              }),
+            });
+            const renameD = await renameR.json().catch(() => ({}));
+            if (renameR.ok) newEvent = renameD.event;
+          }
+          allEvents.push(newEvent);
+          renderEventGrid();
+          showToast(`✅ "${newEvent.name}" dupliziert`);
+          await selectEvent(newEvent.id);
+          showPage("eventdaten");
+        } catch {
+          showToast("❌ Verbindungsfehler beim Duplizieren");
+        }
       }
 
       // ══ SAVE EVENT ══
