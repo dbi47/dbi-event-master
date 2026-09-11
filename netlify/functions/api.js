@@ -86,6 +86,76 @@ function sanitizeEventUpdateFields(cleanFields, hasId) {
   return rest;
 }
 
+// ── "MEINE WOCHE" — cross-event due/overdue items (dev-task-list.md item 6) ──
+// Mirrors reminders.js's WORKFLOW_TASKS/MILESTONE_OFFSETS lists and its
+// computeDueTasks() <= comparison — kept as this function's own copy rather
+// than a shared import, consistent with this codebase's existing pattern of
+// each Netlify function keeping its own copy of these lists (see ics.js too).
+// If this list changes, update reminders.js's copy as well.
+const WEEKLY_MILESTONE_OFFSETS = [
+  { key: "m10w", label: "−10W: Anfragen", offset: -70 },
+  { key: "m8w", label: "−8W: Pflichtunterlagen", offset: -56 },
+  { key: "m7w", label: "−7W: Bestätigungen", offset: -49 },
+  { key: "m6w", label: "−6W: Einladungsversand", offset: -42 },
+  { key: "m4w", label: "−4W: Reminder", offset: -28 },
+  { key: "m3w", label: "−3W: Bestätigung I", offset: -21 },
+  { key: "m2w", label: "−2W: Bestätigung II", offset: -14 },
+  { key: "m1w", label: "−1W: Catering", offset: -7 },
+  { key: "m1d", label: "−1T: Letzter Check", offset: -1 },
+];
+const WEEKLY_WORKFLOW_TASKS = [
+  { id: "pflicht", key: "ag1", label: "Agenda vollständig", offset: -56 },
+  { id: "pflicht", key: "ei3", label: "Datum/Ort/Zeit angeben", offset: -56 },
+  { id: "pflicht", key: "ei4", label: "Anmeldelink live", offset: -49 },
+  { id: "pflicht", key: "ko3", label: "Fotograf:in angefragt", offset: -70 },
+  { id: "pflicht", key: "lo1", label: "Raum bestätigt", offset: -49 },
+  { id: "pflicht", key: "lo2", label: "Catering beauftragt", offset: -49 },
+  { id: "social", key: "sa4", label: "Social-Ankündigung live", offset: -42 },
+  { id: "social", key: "sr3", label: "Social-Reminder live", offset: -14 },
+  { id: "pixlip", key: "px6", label: "Pixlip Anfrage", offset: -70 },
+  { id: "pixlip", key: "pv2", label: "Pixlip Druckdaten", offset: -28 },
+];
+const WEEKLY_HORIZON_DAYS = 14;
+
+function addDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+// Pure: given one event's date and what's already marked done, returns every
+// still-open milestone/workflow task due on or before `horizonStr` — same
+// "<=, not exact-date" rule as reminders.js's computeDueTasks() (a missed
+// check shouldn't make an overdue item silently disappear), but returns full
+// item details (due date + signed day-offset from today) instead of just a
+// dedup key, since My Week needs to sort and display these, not just email
+// them once.
+function computeWeeklyDueItems(evDate, msDone, wfDone, horizonStr, today) {
+  const items = [];
+  const addItem = (type, key, label, offsetDays) => {
+    const dueDateObj = addDays(evDate, offsetDays);
+    const dueStr = dueDateObj.toISOString().split("T")[0];
+    if (dueStr > horizonStr) return;
+    const daysUntilDue = Math.round((dueDateObj - today) / 86400000);
+    items.push({
+      type,
+      key,
+      label,
+      due_date: dueStr,
+      days_until_due: daysUntilDue,
+    });
+  };
+  WEEKLY_MILESTONE_OFFSETS.forEach((m) => {
+    if (msDone.has(m.key)) return;
+    addItem("milestone", m.key, m.label, m.offset);
+  });
+  WEEKLY_WORKFLOW_TASKS.forEach((t) => {
+    if (wfDone.has(t.id + "_" + t.key)) return;
+    addItem("workflow", `${t.id}_${t.key}`, t.label, t.offset);
+  });
+  return items;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -179,6 +249,66 @@ exports.handler = async (event) => {
       const eventsWithProgress = await attachMilestoneProgress(events || []);
       return json(200, { role: "hub", events: eventsWithProgress });
     }
+
+    // ── GET /my-week — cross-event due/overdue items (hub only) ──
+    // For every active (non-archived) event, returns every still-open
+    // milestone/workflow task due within WEEKLY_HORIZON_DAYS days or already
+    // overdue — same underlying rule as reminders.js's computeDueTasks(),
+    // just returning full item details instead of firing emails. Sorted
+    // most-overdue-first (most negative days_until_due), then soonest-due.
+    if (path === "/my-week" && method === "GET") {
+      if (event.queryStringParameters?.password !== HUB_PW)
+        return json(401, { error: "Unauthorized" });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const horizon = new Date(today);
+      horizon.setDate(horizon.getDate() + WEEKLY_HORIZON_DAYS);
+      const horizonStr = horizon.toISOString().split("T")[0];
+
+      const { data: activeEvents } = await supabase
+        .from("events")
+        .select("id, name, event_date")
+        .eq("archived", false);
+      const datedEvents = (activeEvents || []).filter((ev) => ev.event_date);
+      if (!datedEvents.length)
+        return json(200, { items: [], horizon_days: WEEKLY_HORIZON_DAYS });
+
+      const eventIds = datedEvents.map((ev) => ev.id);
+      const [{ data: msRows }, { data: wfRows }] = await Promise.all([
+        supabase
+          .from("milestones")
+          .select("event_id, ms_key, done_date")
+          .in("event_id", eventIds),
+        supabase
+          .from("workflow_rows")
+          .select("event_id, workflow_id, row_key, done_date")
+          .in("event_id", eventIds),
+      ]);
+
+      const items = [];
+      datedEvents.forEach((ev) => {
+        const evDate = new Date(ev.event_date + "T12:00:00");
+        const msDone = new Set(
+          (msRows || [])
+            .filter((r) => r.event_id === ev.id && r.done_date)
+            .map((r) => r.ms_key),
+        );
+        const wfDone = new Set(
+          (wfRows || [])
+            .filter((r) => r.event_id === ev.id && r.done_date)
+            .map((r) => r.workflow_id + "_" + r.row_key),
+        );
+        computeWeeklyDueItems(evDate, msDone, wfDone, horizonStr, today).forEach(
+          (item) =>
+            items.push({ event_id: ev.id, event_name: ev.name, ...item }),
+        );
+      });
+      items.sort((a, b) => a.days_until_due - b.days_until_due);
+
+      return json(200, { items, horizon_days: WEEKLY_HORIZON_DAYS });
+    }
+    // ── END /my-week ─────────────────────────────────────────────────────
 
     // GET /event?id=X — full event detail (hub only)
     if (path === "/event" && method === "GET") {
@@ -728,6 +858,10 @@ exports.checkHubOnlyEventFields = checkHubOnlyEventFields;
 exports.HUB_ONLY_EVENT_FIELDS = HUB_ONLY_EVENT_FIELDS;
 exports.checkEventCanBeArchived = checkEventCanBeArchived;
 exports.sanitizeEventUpdateFields = sanitizeEventUpdateFields;
+exports.computeWeeklyDueItems = computeWeeklyDueItems;
+exports.WEEKLY_MILESTONE_OFFSETS = WEEKLY_MILESTONE_OFFSETS;
+exports.WEEKLY_WORKFLOW_TASKS = WEEKLY_WORKFLOW_TASKS;
+exports.WEEKLY_HORIZON_DAYS = WEEKLY_HORIZON_DAYS;
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
