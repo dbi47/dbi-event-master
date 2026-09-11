@@ -286,6 +286,72 @@ exports.handler = async (event) => {
     }
     // ── END DELETE ──────────────────────────────────────────────────────
 
+    // ── POST /event/duplicate — copy an event as a fresh starting point ──
+    // Client-decided scope: copy Service Providers ("sp-data") since
+    // providers often repeat across events; leave Agenda ("ag-data") blank
+    // since agenda content is event-specific. Every other workflow_row is
+    // copied but with done_date stripped, so the new event starts fully
+    // unchecked. Milestones and pm_tokens are intentionally NOT copied — the
+    // new event needs its own untouched milestone tracking and its own PM
+    // invite links, not the old event's.
+    if (path === "/event/duplicate" && method === "POST") {
+      if (!isHub(body)) return json(401, { error: "Unauthorized" });
+      const { event_id } = body;
+      if (!event_id) return json(400, { error: "Missing event_id" });
+
+      const { data: sourceEvent, error: fetchError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", event_id)
+        .single();
+      if (fetchError || !sourceEvent)
+        return json(404, { error: "Event nicht gefunden" });
+
+      // Drop id (new one generated on insert), event_date (the new event
+      // has no date yet — the person sets it themselves), archived (always
+      // starts false), and created_at (the copy gets its own timestamp).
+      const {
+        id: _id,
+        event_date: _eventDate,
+        archived: _archived,
+        created_at: _createdAt,
+        ...copyFields
+      } = sourceEvent;
+      const { data: newEvent, error: insertError } = await supabase
+        .from("events")
+        .insert({ ...copyFields, event_date: null, archived: false })
+        .select()
+        .single();
+      if (insertError) return json(500, { error: insertError.message });
+
+      const { data: sourceRows, error: rowsFetchError } = await supabase
+        .from("workflow_rows")
+        .select("workflow_id, row_key, input_value")
+        .eq("event_id", event_id);
+      if (rowsFetchError) return json(500, { error: rowsFetchError.message });
+      const rowsToCopy = (sourceRows || []).filter(
+        (r) => r.row_key !== "ag-data",
+      );
+      if (rowsToCopy.length) {
+        const { error: rowsInsertError } = await supabase
+          .from("workflow_rows")
+          .insert(
+            rowsToCopy.map((r) => ({
+              event_id: newEvent.id,
+              workflow_id: r.workflow_id,
+              row_key: r.row_key,
+              input_value: r.input_value,
+              done_date: null,
+            })),
+          );
+        if (rowsInsertError)
+          return json(500, { error: rowsInsertError.message });
+      }
+
+      return json(200, { event: newEvent });
+    }
+    // ── END /event/duplicate ─────────────────────────────────────────────
+
     // POST /milestone — set done date
     if (path === "/milestone" && method === "POST") {
       const { event_id, ms_key, done_date, token, password } = body;
