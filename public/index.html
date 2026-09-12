@@ -1505,7 +1505,7 @@
         color: var(--ink);
       }
 
-      /* ── ACTIVITY LOG (Dashboard, below the milestone table) ──
+      /* ── ACTIVITY LOG (own "Aktivität" tab) ──
          Milestone check/uncheck history only — see dev-task-list.md item 8's
          client-decided scope (no other field edits are logged). */
       .activity-log-wrap {
@@ -1515,7 +1515,7 @@
         box-shadow: var(--shadow);
         padding: 4px 16px;
         margin-bottom: 28px;
-        max-height: 320px;
+        max-height: 70vh;
         overflow-y: auto;
       }
       .activity-log-item {
@@ -2704,6 +2704,17 @@
           ><span class="nav-label">Zusammenfassung</span>
         </div>
         <div
+          class="nav-item workflow-item"
+          onclick="
+            showPage('activity');
+            loadActivityLog(getActiveEvent()?.id);
+          "
+          id="nav-activity"
+        >
+          <span class="nav-icon">🕒</span
+          ><span class="nav-label">Aktivität</span>
+        </div>
+        <div
           class="nav-item hub-only"
           onclick="
             showPage('my-week');
@@ -2888,8 +2899,6 @@
               <tbody id="dash-milestones"></tbody>
             </table>
           </div>
-          <div class="section-title">Aktivität</div>
-          <div class="activity-log-wrap" id="activity-log-list"></div>
         </div>
 
         <!-- EVENTDATEN -->
@@ -3712,6 +3721,15 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- AKTIVITÄT -->
+        <div class="page" id="page-activity">
+          <div class="page-title">Aktivität</div>
+          <div class="page-sub">
+            Verlauf aller Meilenstein-Änderungen für dieses Event.
+          </div>
+          <div class="activity-log-wrap" id="activity-log-list"></div>
         </div>
 
         <!-- MEINE WOCHE (hub only) -->
@@ -6421,11 +6439,14 @@
         track.innerHTML = `<div class="ms-tl-axis"></div>${milestoneMarkers}${todayMarker}${eventMarker}`;
       }
 
-      // ── ACTIVITY LOG — milestone check/uncheck history (Dashboard) ──
+      // ── ACTIVITY LOG — milestone check/uncheck history (own "Aktivität" tab) ──
       // Fetches GET /activity-log, which only ever contains rows written by
       // the /milestone endpoint (see api.js) — plain workflow-field edits
       // and Eventdaten saves never appear here, by design (client-decided
-      // narrower scope, dev-task-list.md item 8).
+      // narrower scope, dev-task-list.md item 8). Loaded eagerly from
+      // renderDashboard() (so the tab is already populated the moment an
+      // event is opened) and again on nav click in case the active event
+      // changed without a full dashboard re-render.
       async function loadActivityLog(eventId) {
         const listEl = document.getElementById("activity-log-list");
         if (!listEl || !eventId) return;
