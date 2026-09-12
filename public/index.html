@@ -1277,6 +1277,12 @@
       .btn-secondary:hover {
         background: var(--cream);
       }
+      .btn[disabled],
+      .btn-secondary[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
       .btn-row {
         display: flex;
         gap: 10px;
@@ -1760,6 +1766,20 @@
         color: var(--mid);
         font-size: 0.85rem;
         padding: 24px 4px;
+      }
+
+      /* ── PAGINATION — shared by Meine Woche / Aktivität list pages ── */
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin: 16px 0 28px;
+      }
+      .pagination-info {
+        font-family: "DM Mono", monospace;
+        font-size: 0.76rem;
+        color: var(--mid);
       }
 
       /* ── MEINE WOCHE — cross-event due/overdue list ── */
@@ -3729,7 +3749,17 @@
           <div class="page-sub">
             Verlauf aller Meilenstein-Änderungen für dieses Event.
           </div>
+          <div class="events-toolbar">
+            <input
+              type="text"
+              id="activity-search"
+              class="events-search-input"
+              placeholder="🔍 Nach Person oder Meilenstein suchen…"
+              oninput="onActivityFilterChange()"
+            />
+          </div>
           <div class="activity-log-wrap" id="activity-log-list"></div>
+          <div id="activity-pagination"></div>
         </div>
 
         <!-- MEINE WOCHE (hub only) -->
@@ -3743,7 +3773,27 @@
             <div class="spinner"></div>
             <div class="loading-text">Lade Meine Woche…</div>
           </div>
+          <div class="events-toolbar">
+            <input
+              type="text"
+              id="my-week-search"
+              class="events-search-input"
+              placeholder="🔍 Nach Meilenstein, Aufgabe oder Event suchen…"
+              oninput="onMyWeekFilterChange()"
+            />
+            <select
+              id="my-week-filter-urgency"
+              style="max-width: 230px"
+              onchange="onMyWeekFilterChange()"
+            >
+              <option value="">Alle</option>
+              <option value="overdue">🔴 Überfällig</option>
+              <option value="soon">🟡 Bald fällig (≤ 7 Tage)</option>
+              <option value="upcoming">🟢 Später</option>
+            </select>
+          </div>
           <div id="my-week-list"></div>
+          <div id="my-week-pagination"></div>
         </div>
 
         <!-- WORKFLOW PAGES -->
@@ -3854,6 +3904,13 @@
       // ══ ARCHIVED EVENTS VIEW ══
       let showArchivedEvents = false;
       let archivedEvents = [];
+
+      // ══ LIST PAGINATION (Meine Woche, Aktivität) ══
+      const LIST_PAGE_SIZE = 10;
+      let myWeekItems = [];
+      let myWeekPage = 1;
+      let activityEntries = [];
+      let activityPage = 1;
 
       // Per-milestone todo check state (kept in sync with the backend)
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
@@ -4663,6 +4720,72 @@
         const sorter = sorters[sortBy] || sorters["date-asc"];
         return [...filtered].sort(sorter);
       }
+
+      // ══ LIST PAGINATION — shared by "Meine Woche" and "Aktivität" ══
+      // Pure: slices an already-filtered array into one page. Clamps the
+      // requested page into [1, totalPages] so a stale page number (e.g.
+      // after a search narrows the result set) never renders an empty page.
+      function paginateItems(items, page, pageSize) {
+        const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+        const clampedPage = Math.min(Math.max(1, page || 1), totalPages);
+        const start = (clampedPage - 1) * pageSize;
+        return {
+          pageItems: items.slice(start, start + pageSize),
+          totalPages,
+          page: clampedPage,
+        };
+      }
+      // Builds Prev/Next pagination controls. `gotoFnName` is always one of
+      // our own hardcoded function names below (never user input), so
+      // interpolating it into the onclick string is safe.
+      function buildPaginationControlsHtml(page, totalPages, gotoFnName) {
+        if (totalPages <= 1) return "";
+        return `<div class="pagination">
+  <button class="btn btn-secondary" type="button" ${page <= 1 ? "disabled" : ""} onclick="${gotoFnName}(${page - 1})">← Zurück</button>
+  <span class="pagination-info">Seite ${page} von ${totalPages}</span>
+  <button class="btn btn-secondary" type="button" ${page >= totalPages ? "disabled" : ""} onclick="${gotoFnName}(${page + 1})">Weiter →</button>
+</div>`;
+      }
+      // Pure: text search across an item's milestone/task label and its
+      // event name, plus an optional urgency bucket filter.
+      function filterMyWeekItems(items, search, urgency) {
+        const term = (search || "").trim().toLowerCase();
+        return items.filter((item) => {
+          if (
+            term &&
+            !(item.label || "").toLowerCase().includes(term) &&
+            !(item.event_name || "").toLowerCase().includes(term)
+          )
+            return false;
+          if (urgency === "overdue" && !(item.days_until_due < 0))
+            return false;
+          if (
+            urgency === "soon" &&
+            !(item.days_until_due >= 0 && item.days_until_due <= 7)
+          )
+            return false;
+          if (urgency === "upcoming" && !(item.days_until_due > 7))
+            return false;
+          return true;
+        });
+      }
+      // Pure: text search across an activity entry's actor and milestone
+      // label (resolved via MILESTONES, same as renderActivityLog does).
+      function filterActivityEntries(entries, search) {
+        const term = (search || "").trim().toLowerCase();
+        if (!term) return entries;
+        return entries.filter((e) => {
+          const msLabel =
+            MILESTONES.find((m) => m.key === e.milestone_key)?.label ||
+            e.milestone_key ||
+            "";
+          return (
+            (e.actor || "").toLowerCase().includes(term) ||
+            msLabel.toLowerCase().includes(term)
+          );
+        });
+      }
+
       // Rebuilds the Hub/Abteilung filter dropdown from whichever event list
       // is currently active, so it always reflects real data instead of a
       // hardcoded department list. Preserves the current selection if it's
@@ -5074,28 +5197,62 @@
             listEl.innerHTML = `<div class="events-empty">❌ ${esc(d.error || "Fehler beim Laden")}</div>`;
             return;
           }
-          renderMyWeekList(d.items || []);
+          myWeekItems = d.items || [];
+          myWeekPage = 1;
+          renderMyWeekList();
         } catch {
           loadingEl.style.display = "none";
           listEl.innerHTML =
             '<div class="events-empty">❌ Verbindungsfehler beim Laden</div>';
         }
       }
-      function renderMyWeekList(items) {
+      // Search/urgency filter changed — jump back to page 1, since staying
+      // on e.g. page 3 of a now much-shorter filtered list would be empty.
+      function onMyWeekFilterChange() {
+        myWeekPage = 1;
+        renderMyWeekList();
+      }
+      function gotoMyWeekPage(page) {
+        myWeekPage = page;
+        renderMyWeekList();
+      }
+      function renderMyWeekList() {
         const listEl = document.getElementById("my-week-list");
+        const paginationEl = document.getElementById("my-week-pagination");
         if (!listEl) return;
         const badge = document.getElementById("badge-my-week");
         if (badge) {
-          const overdueCount = items.filter((i) => i.days_until_due < 0).length;
+          // Badge always reflects the full unfiltered set — it's a
+          // cross-page-navigation signal, not tied to the current search.
+          const overdueCount = myWeekItems.filter(
+            (i) => i.days_until_due < 0,
+          ).length;
           badge.textContent = overdueCount > 99 ? "99+" : overdueCount;
           badge.classList.toggle("show", overdueCount > 0);
         }
-        if (!items.length) {
+        if (!myWeekItems.length) {
           listEl.innerHTML =
             '<div class="events-empty">🎉 Nichts fällig oder überfällig – alles im Zeitplan.</div>';
+          if (paginationEl) paginationEl.innerHTML = "";
           return;
         }
-        listEl.innerHTML = items
+        const search = document.getElementById("my-week-search")?.value || "";
+        const urgency =
+          document.getElementById("my-week-filter-urgency")?.value || "";
+        const filtered = filterMyWeekItems(myWeekItems, search, urgency);
+        if (!filtered.length) {
+          listEl.innerHTML =
+            '<div class="events-empty">Keine Treffer für diese Suche/diesen Filter.</div>';
+          if (paginationEl) paginationEl.innerHTML = "";
+          return;
+        }
+        const { pageItems, totalPages, page } = paginateItems(
+          filtered,
+          myWeekPage,
+          LIST_PAGE_SIZE,
+        );
+        myWeekPage = page;
+        listEl.innerHTML = pageItems
           .map((item) => {
             const isOverdue = item.days_until_due < 0;
             const dueDateObj = parseISO(item.due_date);
@@ -5128,6 +5285,12 @@
 </div>`;
           })
           .join("");
+        if (paginationEl)
+          paginationEl.innerHTML = buildPaginationControlsHtml(
+            page,
+            totalPages,
+            "gotoMyWeekPage",
+          );
       }
       function openEventFromMyWeek(eventId) {
         selectEvent(eventId); // already routes to showPage("dashboard") internally
@@ -6460,20 +6623,47 @@
           );
           if (!r.ok) return;
           const d = await r.json();
-          renderActivityLog(d.activity || []);
+          activityEntries = d.activity || [];
+          activityPage = 1;
+          renderActivityLog();
         } catch {
           // Non-blocking — the rest of the dashboard already loaded fine.
         }
       }
-      function renderActivityLog(entries) {
+      // Search box changed — jump back to page 1 (see onMyWeekFilterChange).
+      function onActivityFilterChange() {
+        activityPage = 1;
+        renderActivityLog();
+      }
+      function gotoActivityPage(page) {
+        activityPage = page;
+        renderActivityLog();
+      }
+      function renderActivityLog() {
         const listEl = document.getElementById("activity-log-list");
+        const paginationEl = document.getElementById("activity-pagination");
         if (!listEl) return;
-        if (!entries.length) {
+        if (!activityEntries.length) {
           listEl.innerHTML =
             '<div class="events-empty">Noch keine Aktivität protokolliert.</div>';
+          if (paginationEl) paginationEl.innerHTML = "";
           return;
         }
-        listEl.innerHTML = entries
+        const search = document.getElementById("activity-search")?.value || "";
+        const filtered = filterActivityEntries(activityEntries, search);
+        if (!filtered.length) {
+          listEl.innerHTML =
+            '<div class="events-empty">Keine Treffer für diese Suche.</div>';
+          if (paginationEl) paginationEl.innerHTML = "";
+          return;
+        }
+        const { pageItems, totalPages, page } = paginateItems(
+          filtered,
+          activityPage,
+          LIST_PAGE_SIZE,
+        );
+        activityPage = page;
+        listEl.innerHTML = pageItems
           .map((e) => {
             const msLabel =
               MILESTONES.find((m) => m.key === e.milestone_key)?.label ||
@@ -6487,6 +6677,12 @@
 </div>`;
           })
           .join("");
+        if (paginationEl)
+          paginationEl.innerHTML = buildPaginationControlsHtml(
+            page,
+            totalPages,
+            "gotoActivityPage",
+          );
       }
 
       function renderDashboard() {
