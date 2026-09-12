@@ -2249,25 +2249,31 @@
       #page-eventdaten {
         max-width: 1180px;
       }
-      .evd-topbar {
+      /* Floating action bar — sticks to the bottom of the scrollable .main
+         area (position: sticky is scoped to the nearest scrolling ancestor,
+         so this never overlaps the sidebar). */
+      .evd-bottombar {
         position: sticky;
-        top: 0;
+        bottom: 0;
         z-index: 30;
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 16px;
-        background: var(--paper);
-        padding-top: 2px;
-        padding-bottom: 18px;
-        margin-bottom: 26px;
-        border-bottom: 1px solid var(--line);
-      }
-      .evd-topbar-actions {
-        display: flex;
+        justify-content: flex-end;
         gap: 10px;
-        flex-shrink: 0;
-        padding-bottom: 2px;
+        background: var(--paper);
+        padding: 14px 0 2px;
+        margin-top: 26px;
+        border-top: 1px solid var(--line);
+        box-shadow: 0 -6px 18px rgba(20, 15, 45, 0.06);
+      }
+      .char-counter {
+        font-size: 0.68rem;
+        color: var(--mid);
+        text-align: right;
+        margin-top: 2px;
+      }
+      #page-eventdaten .field-invalid {
+        border-color: var(--red-fg) !important;
+        box-shadow: 0 0 0 3px rgba(176, 23, 90, 0.14) !important;
       }
       .evd-layout {
         display: grid;
@@ -2515,16 +2521,11 @@
         #page-eventdaten .form-grid {
           grid-template-columns: 1fr;
         }
-        .evd-topbar {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 10px;
+        .evd-bottombar {
+          gap: 8px;
         }
-        .evd-topbar-actions {
-          width: 100%;
-        }
-        .evd-topbar-actions .btn,
-        .evd-topbar-actions .btn-secondary {
+        .evd-bottombar .btn,
+        .evd-bottombar .btn-secondary {
           flex: 1;
         }
       }
@@ -2923,33 +2924,10 @@
 
         <!-- EVENTDATEN -->
         <div class="page" id="page-eventdaten">
-          <div class="evd-topbar">
-            <div>
-              <div class="page-title" style="margin-bottom: 2px">
-                Eventdaten
-              </div>
-              <div class="page-sub" style="margin-bottom: 0">
-                Nur dieses Tab ausfüllen – alle Fristen berechnen sich
-                automatisch.
-              </div>
-            </div>
-            <div class="evd-topbar-actions">
-              <button
-                class="btn-secondary"
-                style="
-                  padding: 10px 18px;
-                  border-radius: 4px;
-                  font-family: inherit;
-                  font-size: 0.85rem;
-                  font-weight: 600;
-                  cursor: pointer;
-                "
-                onclick="showPage('dashboard')"
-              >
-                → Dashboard
-              </button>
-              <button class="btn" onclick="saveEventNow()">💾 Speichern</button>
-            </div>
+          <div class="page-title" style="margin-bottom: 2px">Eventdaten</div>
+          <div class="page-sub">
+            Nur dieses Tab ausfüllen – alle Fristen berechnen sich
+            automatisch.
           </div>
           <div id="event-details-note" class="field-note"></div>
           <div id="ev-saving" class="alert alert-blu" style="display: none">
@@ -3036,7 +3014,9 @@
                     />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Veranstaltungsort / Raum</label>
+                    <label class="form-label"
+                      >Veranstaltungsort / Raum <span class="req">*</span></label
+                    >
                     <div class="csel-wrap" id="csel-wrap-ev-room-type">
                       <div
                         class="csel-trigger"
@@ -3257,7 +3237,8 @@
                     <input type="hidden" id="ev-room-value" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Startdatum</label
+                    <label class="form-label"
+                      >Startdatum <span class="req">*</span></label
                     ><input
                       type="date"
                       id="ev-start-date"
@@ -3345,11 +3326,17 @@
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Thema</label
+                    <label class="form-label"
+                      >Thema <span class="req">*</span></label
                     ><textarea
                       id="ev-topic"
+                      maxlength="200"
+                      oninput="updateTopicCounter()"
                       onblur="saveEventNow(this)"
                     ></textarea>
+                    <div class="char-counter" id="ev-topic-counter">
+                      0 / 200
+                    </div>
                   </div>
                   <div class="form-group">
                     <label class="form-label"
@@ -3402,7 +3389,9 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Name der Hub-Ansprechperson</label
+                    <label class="form-label"
+                      >Name der Hub-Ansprechperson
+                      <span class="req">*</span></label
                     ><textarea
                       id="ev-hub-contact-name"
                       onblur="saveEventNow(this)"
@@ -3410,7 +3399,8 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label"
-                      >E-Mail der Hub-Ansprechperson</label
+                      >E-Mail der Hub-Ansprechperson
+                      <span class="req">*</span></label
                     ><input
                       type="email"
                       id="ev-hub-email"
@@ -3419,7 +3409,8 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label"
-                      >Ansprechperson Kommunikation</label
+                      >Ansprechperson Kommunikation
+                      <span class="req">*</span></label
                     ><input
                       type="text"
                       id="ev-marketing-contact-person"
@@ -3436,7 +3427,9 @@
                 </div>
                 <div class="form-grid">
                   <div class="form-group">
-                    <label class="form-label">Catering</label>
+                    <label class="form-label"
+                      >Catering <span class="req">*</span></label
+                    >
                     <div class="csel-wrap" id="csel-wrap-ev-catering">
                       <div
                         class="csel-trigger"
@@ -3506,7 +3499,8 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label"
-                      >Catering Ansprechpartner / Details</label
+                      >Catering Ansprechpartner / Details
+                      <span class="req">*</span></label
                     ><textarea
                       id="ev-catering-contact"
                       placeholder="Name, Telefon, E-Mail"
@@ -3515,7 +3509,8 @@
                   </div>
                   <div class="form-group full">
                     <label class="form-label"
-                      >Externer Raum – Rasmus abgestimmt?</label
+                      >Externer Raum – Rasmus abgestimmt?
+                      <span class="req">*</span></label
                     >
                     <select
                       id="ev-rasmus-select"
@@ -3550,7 +3545,9 @@
                 </div>
                 <div class="form-grid">
                   <div class="form-group">
-                    <label class="form-label">Teams-Chat</label>
+                    <label class="form-label"
+                      >Teams-Chat <span class="req">*</span></label
+                    >
                     <div class="csel-wrap" id="csel-wrap-ev-teams">
                       <div
                         class="csel-trigger"
@@ -3607,7 +3604,9 @@
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Dateien gesichert?</label>
+                    <label class="form-label"
+                      >Dateien gesichert? <span class="req">*</span></label
+                    >
                     <div class="csel-wrap" id="csel-wrap-ev-ablage">
                       <div
                         class="csel-trigger"
@@ -3664,7 +3663,8 @@
                     </div>
                   </div>
                   <div class="form-group full">
-                    <label class="form-label">Ablageort / Pfad</label
+                    <label class="form-label"
+                      >Ablageort / Pfad <span class="req">*</span></label
                     ><input
                       type="text"
                       id="ev-path"
@@ -3675,6 +3675,25 @@
                 </div>
               </div>
             </div>
+          </div>
+          <div class="evd-bottombar">
+            <button
+              class="btn-secondary"
+              style="
+                padding: 10px 18px;
+                border-radius: 4px;
+                font-family: inherit;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+              "
+              onclick="showPage('dashboard')"
+            >
+              → Dashboard
+            </button>
+            <button class="btn" onclick="saveEventFormValidated()">
+              💾 Speichern
+            </button>
           </div>
         </div>
 
@@ -5883,30 +5902,179 @@
               : sizeLabel;
         }
 
+        updateTopicCounter();
         updateEventChecklist();
+      }
+
+      function updateTopicCounter() {
+        const el = document.getElementById("ev-topic");
+        const counterEl = document.getElementById("ev-topic-counter");
+        if (!el || !counterEl) return;
+        counterEl.textContent = `${el.value.length} / 200`;
+        if (el.value.trim()) el.classList.remove("field-invalid");
+      }
+
+      // ══ EVENTDATEN — REQUIRED FIELDS (sidebar checklist + save gate) ══
+      // Single source of truth for which Eventdaten fields are mandatory.
+      // getValue() mirrors how readEventForm() reads that same field;
+      // highlightEl() resolves to whichever *visible* control should get
+      // the red "missing" outline — custom "csel" selects store their value
+      // in a hidden input, so highlighting targets the visible csel-trigger
+      // instead, and the room field's visible control depends on which
+      // room-type (internal/external/online) is currently active.
+      function getRoomHighlightEl() {
+        const type = document.getElementById("ev-room-type")?.value;
+        if (type === "external") return document.getElementById("ev-room-manual");
+        if (type === "online")
+          return document.getElementById("ev-room-online-url");
+        return document.getElementById("csel-trigger-ev-room");
+      }
+      const EVD_REQUIRED_FIELDS = [
+        {
+          label: "Eventname",
+          getValue: () =>
+            (document.getElementById("ev-name")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-name"),
+        },
+        {
+          label: "Eventdatum",
+          getValue: () => document.getElementById("ev-date")?.value || "",
+          highlightEl: () => document.getElementById("ev-date"),
+        },
+        {
+          label: "Veranstaltungsort / Raum",
+          getValue: () =>
+            (document.getElementById("ev-room-value")?.value || "").trim(),
+          highlightEl: getRoomHighlightEl,
+        },
+        {
+          label: "Startdatum",
+          getValue: () =>
+            document.getElementById("ev-start-date")?.value || "",
+          highlightEl: () => document.getElementById("ev-start-date"),
+        },
+        {
+          label: "Größe",
+          getValue: () => document.getElementById("ev-size")?.value || "",
+          highlightEl: () => document.getElementById("csel-trigger-ev-size"),
+        },
+        {
+          label: "Thema",
+          getValue: () =>
+            (document.getElementById("ev-topic")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-topic"),
+        },
+        {
+          label: "Hub/Abteilung",
+          getValue: () =>
+            (document.getElementById("ev-owner")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-owner"),
+        },
+        {
+          label: "Name der Hub-Ansprechperson",
+          getValue: () =>
+            (document.getElementById("ev-hub-contact-name")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-hub-contact-name"),
+        },
+        {
+          label: "E-Mail der Hub-Ansprechperson",
+          getValue: () =>
+            (document.getElementById("ev-hub-email")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-hub-email"),
+        },
+        {
+          label: "Ansprechperson Kommunikation",
+          getValue: () =>
+            (
+              document.getElementById("ev-marketing-contact-person")?.value ||
+              ""
+            ).trim(),
+          highlightEl: () =>
+            document.getElementById("ev-marketing-contact-person"),
+        },
+        {
+          label: "Catering",
+          getValue: () => document.getElementById("ev-catering")?.value || "",
+          highlightEl: () => document.getElementById("csel-trigger-ev-catering"),
+        },
+        {
+          label: "Catering Ansprechpartner / Details",
+          getValue: () =>
+            (document.getElementById("ev-catering-contact")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-catering-contact"),
+        },
+        {
+          label: "Externer Raum – Rasmus abgestimmt?",
+          getValue: () =>
+            (document.getElementById("ev-rasmus")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-rasmus-select"),
+        },
+        {
+          label: "Teams-Chat",
+          getValue: () => document.getElementById("ev-teams")?.value || "",
+          highlightEl: () => document.getElementById("csel-trigger-ev-teams"),
+        },
+        {
+          label: "Dateien gesichert?",
+          getValue: () => document.getElementById("ev-ablage")?.value || "",
+          highlightEl: () => document.getElementById("csel-trigger-ev-ablage"),
+        },
+        {
+          label: "Ablageort / Pfad",
+          getValue: () =>
+            (document.getElementById("ev-path")?.value || "").trim(),
+          highlightEl: () => document.getElementById("ev-path"),
+        },
+      ];
+
+      function clearFieldInvalidHighlights() {
+        document
+          .querySelectorAll("#page-eventdaten .field-invalid")
+          .forEach((el) => el.classList.remove("field-invalid"));
+      }
+
+      // Highlights every currently-empty required field and returns the
+      // list that's missing (empty array = form is valid). Called at the
+      // start of every save attempt via saveEventFormValidated().
+      function validateEventRequiredFields() {
+        clearFieldInvalidHighlights();
+        const missing = EVD_REQUIRED_FIELDS.filter((f) => !f.getValue());
+        missing.forEach((f) => {
+          const el = f.highlightEl();
+          if (el) el.classList.add("field-invalid");
+        });
+        return missing;
+      }
+
+      // Bound to the Eventdaten "Speichern" button. The per-field autosave
+      // (onblur="saveEventNow(this)" on every input) is intentionally left
+      // ungated so filling the form out gradually never blocks or loses an
+      // in-progress edit — this button is the one deliberate "are you done"
+      // gate that refuses to save while required fields are still empty.
+      function saveEventFormValidated() {
+        const missing = validateEventRequiredFields();
+        if (missing.length) {
+          showToast(
+            `⚠️ Bitte fülle alle Pflichtfelder aus (${missing.length} fehlen)`,
+          );
+          missing[0]
+            .highlightEl()
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        saveEventNow();
       }
 
       function updateEventChecklist() {
         const list = document.getElementById("evd-checklist");
         if (!list) return;
-        const checks = [
-          {
-            label: "Eventname",
-            ok: !!(document.getElementById("ev-name")?.value || "").trim(),
-          },
-          {
-            label: "Eventdatum",
-            ok: !!document.getElementById("ev-date")?.value,
-          },
-          {
-            label: "Größe",
-            ok: !!document.getElementById("ev-size")?.value,
-          },
-          {
-            label: "Hub/Abteilung",
-            ok: !!(document.getElementById("ev-owner")?.value || "").trim(),
-          },
-        ];
+        const checks = EVD_REQUIRED_FIELDS.map((f) => {
+          const ok = !!f.getValue();
+          // Self-heals: once a field gets a value, drop any invalid
+          // highlight left over from a previous failed save attempt.
+          if (ok) f.highlightEl()?.classList.remove("field-invalid");
+          return { label: f.label, ok };
+        });
         const doneCount = checks.filter((c) => c.ok).length;
         const countEl = document.getElementById("evd-checklist-count");
         if (countEl) {
