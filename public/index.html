@@ -622,7 +622,7 @@
       }
       .agenda-item-toprow {
         display: grid;
-        grid-template-columns: 110px 1fr;
+        grid-template-columns: 130px 1fr;
         gap: 10px;
       }
       .agenda-people-list {
@@ -719,7 +719,7 @@
         font-size: 0.83rem;
       }
       .agenda-item-toprow {
-        grid-template-columns: 84px 1fr;
+        grid-template-columns: 108px 1fr;
         gap: 7px;
       }
       .agenda-item-card .speaker-field {
@@ -7579,6 +7579,18 @@
         showToast("💾 Agenda gespeichert");
         refreshAgendaSectionDOM(workflowId);
       }
+      // Agenda's stored/display time format is "HH.MM" (dot-separated — the
+      // client's documented required format, shown verbatim in the
+      // .agenda-info-example block and emitted as-is by
+      // buildAgendaCopyText()). A native <input type="time"> only speaks
+      // "HH:MM" (colon), so these two convert at that one boundary — the
+      // draft data and copy-text output never see a colon.
+      function dotTimeToInputTime(t) {
+        return (t || "").replace(".", ":");
+      }
+      function inputTimeToDotTime(t) {
+        return (t || "").replace(":", ".");
+      }
       // Builds the exact plain-text block the admin copies into reports:
       // "HH.MM Title" on its own line, then each person as an indented
       // "  - Person, Position, Institution" line directly beneath it.
@@ -7649,7 +7661,7 @@
     <button class="speaker-remove-btn" type="button" onclick="removeAgendaItem('${workflowId}', ${index})" ${items.length <= 1 ? "disabled" : ""}>− Entfernen</button>
   </div>
   <div class="agenda-item-toprow">
-    <div class="speaker-field"><label>Zeit</label><input type="text" value="${esc(item.time)}" placeholder="09.00" onchange="setAgendaItemField('${workflowId}', ${index}, 'time', this.value)" /></div>
+    <div class="speaker-field"><label>Zeit</label><input type="time" value="${esc(dotTimeToInputTime(item.time))}" onchange="setAgendaItemField('${workflowId}', ${index}, 'time', inputTimeToDotTime(this.value))" /></div>
     <div class="speaker-field"><label>Titel</label><input type="text" value="${esc(item.title)}" placeholder="z. B. Reception &amp; Registration oder Lecture: 'Titel'" onchange="setAgendaItemField('${workflowId}', ${index}, 'title', this.value)" /></div>
   </div>
   <div class="speaker-field"><label>Personen (optional — Person, Position, Institution)</label>
