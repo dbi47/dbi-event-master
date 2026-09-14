@@ -2926,8 +2926,7 @@
         <div class="page" id="page-eventdaten">
           <div class="page-title" style="margin-bottom: 2px">Eventdaten</div>
           <div class="page-sub">
-            Nur dieses Tab ausfüllen – alle Fristen berechnen sich
-            automatisch.
+            Nur dieses Tab ausfüllen – alle Fristen berechnen sich automatisch.
           </div>
           <div id="event-details-note" class="field-note"></div>
           <div id="ev-saving" class="alert alert-blu" style="display: none">
@@ -3015,7 +3014,8 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label"
-                      >Veranstaltungsort / Raum <span class="req">*</span></label
+                      >Veranstaltungsort / Raum
+                      <span class="req">*</span></label
                     >
                     <div class="csel-wrap" id="csel-wrap-ev-room-type">
                       <div
@@ -4699,7 +4699,7 @@
         const filtered = events.filter((ev) => {
           if (term && !(ev.name || "").toLowerCase().includes(term))
             return false;
-          if (owner && (ev.owner || "") !== owner) return false;
+          if (owner && translateLegacyOwner(ev.owner) !== owner) return false;
           if (dateFrom && (!ev.event_date || ev.event_date < dateFrom))
             return false;
           if (dateTo && (!ev.event_date || ev.event_date > dateTo))
@@ -4774,8 +4774,7 @@
             !(item.event_name || "").toLowerCase().includes(term)
           )
             return false;
-          if (urgency === "overdue" && !(item.days_until_due < 0))
-            return false;
+          if (urgency === "overdue" && !(item.days_until_due < 0)) return false;
           if (
             urgency === "soon" &&
             !(item.days_until_due >= 0 && item.days_until_due <= 7)
@@ -4803,6 +4802,35 @@
         });
       }
 
+      // Legacy inference — the Hub/Abteilung dropdown's department names used
+      // to be in English; events saved before the German translation still
+      // carry the old English string in their stored `owner` field. Rather
+      // than requiring a database migration, this translates known old
+      // values to their new German equivalent wherever `owner` is displayed
+      // or compared — any value not in this map (already German, or a
+      // custom/free value) passes through unchanged. Same pattern as
+      // inferLegacyRoomType() below for the room field.
+      const LEGACY_OWNER_TRANSLATIONS = {
+        "Corporate Communications & Events and Marketing":
+          "Unternehmenskommunikation, Veranstaltungen & Marketing",
+        "Business Services": "Unternehmensservice",
+        "Internalization and Business relocation Partnerships":
+          "Internationalisierung & Ansiedlungspartnerschaften",
+        "City Management & Neighborhood Development":
+          "Stadtmanagement & Quartiersentwicklung",
+        "Skilled workers & regional cooperation":
+          "Fachkräfte & regionale Kooperation",
+        "Hydrogen & Sustainability": "Wasserstoff & Nachhaltigkeit",
+        "Investor and Start Ups Collaboration":
+          "Investoren- & Start-up-Kooperation",
+        "Project Development & Europe": "Projektentwicklung & Europa",
+        "Investment Services": "Investitionsservice",
+      };
+      function translateLegacyOwner(owner) {
+        const trimmed = (owner || "").trim();
+        return LEGACY_OWNER_TRANSLATIONS[trimmed] || trimmed;
+      }
+
       // Rebuilds the Hub/Abteilung filter dropdown from whichever event list
       // is currently active, so it always reflects real data instead of a
       // hardcoded department list. Preserves the current selection if it's
@@ -4812,10 +4840,10 @@
         if (!select) return;
         const current = select.value;
         const owners = [
-          ...new Set(
-            events.map((ev) => (ev.owner || "").trim()).filter(Boolean),
-          ),
-        ].sort((a, b) => a.localeCompare(b, "de"));
+          ...new Set(events.map((ev) => translateLegacyOwner(ev.owner))),
+        ]
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b, "de"));
         select.innerHTML =
           '<option value="">Alle</option>' +
           owners
@@ -4893,7 +4921,7 @@
 <div class="event-card-date">${evDate ? fmtDE(evDate) : "– kein Datum –"} · ${diffStr}</div>
 <div class="event-card-badges">
   <span class="pill pill-${evDate && diff < 0 ? "red" : diff <= 14 ? "amb" : "grn"}">${ev.size === "12" ? "Klein" : ev.size === "18" ? "Mittel" : ev.size === "24" ? "Groß" : "–"}</span>
-  ${ev.owner ? `<span class="pill pill-blu">${esc(ev.owner)}</span>` : ""}
+  ${ev.owner ? `<span class="pill pill-blu">${esc(translateLegacyOwner(ev.owner))}</span>` : ""}
 </div>
 <div class="todo-progress" title="${pct}% der Meilensteine erledigt"><div class="todo-progress-bar"><span style="width:${pct}%"></span></div><span>${pct}%</span></div>
 <div class="event-card-actions">
@@ -5000,7 +5028,7 @@
           ev.name || "",
           ev.event_date || "",
           sizeLabel(ev.size),
-          ev.owner || "",
+          translateLegacyOwner(ev.owner),
           Number.isFinite(ev.progress_pct) ? ev.progress_pct : "",
           showArchivedEvents ? "Ja" : "Nein",
         ]);
@@ -5132,8 +5160,16 @@
           WORKFLOWS.pflicht.sections,
           WORKFLOWS.pflicht.title,
         );
-        walkSections("social", WORKFLOWS.social.sections, WORKFLOWS.social.title);
-        walkSections("pixlip", WORKFLOWS.pixlip.sections, WORKFLOWS.pixlip.title);
+        walkSections(
+          "social",
+          WORKFLOWS.social.sections,
+          WORKFLOWS.social.title,
+        );
+        walkSections(
+          "pixlip",
+          WORKFLOWS.pixlip.sections,
+          WORKFLOWS.pixlip.title,
+        );
         walkSections("pflicht", PROJ_SECTIONS, WORKFLOWS.pflicht.title);
 
         return rows;
@@ -5771,7 +5807,7 @@
           "ev-date": ev.event_date || "",
           "ev-start-date": ev.start_date || "",
           "ev-topic": ev.topic || "",
-          "ev-owner": ev.owner || "",
+          "ev-owner": translateLegacyOwner(ev.owner),
           "ev-hub-email": ev.owner_email || "",
           "ev-hub-contact-name": ev.hub_contact || "",
           "ev-marketing-contact-person": ev.marketing_contact_person || "",
@@ -5922,7 +5958,8 @@
       // room-type (internal/external/online) is currently active.
       function getRoomHighlightEl() {
         const type = document.getElementById("ev-room-type")?.value;
-        if (type === "external") return document.getElementById("ev-room-manual");
+        if (type === "external")
+          return document.getElementById("ev-room-manual");
         if (type === "online")
           return document.getElementById("ev-room-online-url");
         return document.getElementById("csel-trigger-ev-room");
@@ -5947,8 +5984,7 @@
         },
         {
           label: "Startdatum",
-          getValue: () =>
-            document.getElementById("ev-start-date")?.value || "",
+          getValue: () => document.getElementById("ev-start-date")?.value || "",
           highlightEl: () => document.getElementById("ev-start-date"),
         },
         {
@@ -5971,7 +6007,9 @@
         {
           label: "Name der Hub-Ansprechperson",
           getValue: () =>
-            (document.getElementById("ev-hub-contact-name")?.value || "").trim(),
+            (
+              document.getElementById("ev-hub-contact-name")?.value || ""
+            ).trim(),
           highlightEl: () => document.getElementById("ev-hub-contact-name"),
         },
         {
@@ -5993,12 +6031,15 @@
         {
           label: "Catering",
           getValue: () => document.getElementById("ev-catering")?.value || "",
-          highlightEl: () => document.getElementById("csel-trigger-ev-catering"),
+          highlightEl: () =>
+            document.getElementById("csel-trigger-ev-catering"),
         },
         {
           label: "Catering Ansprechpartner / Details",
           getValue: () =>
-            (document.getElementById("ev-catering-contact")?.value || "").trim(),
+            (
+              document.getElementById("ev-catering-contact")?.value || ""
+            ).trim(),
           highlightEl: () => document.getElementById("ev-catering-contact"),
         },
         {
@@ -6987,7 +7028,7 @@
               <div class="summary-hero-main">
                 <div class="summary-kicker">Event-Übersicht</div>
                 <h3>${esc(ev.name || "Event")}</h3>
-                <p>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"} · ${esc(sizeLabel)} · ${esc(ev.owner || "–")}</p>
+                <p>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"} · ${esc(sizeLabel)} · ${esc(translateLegacyOwner(ev.owner) || "–")}</p>
                 <div class="summary-inline-list">
                   <span class="summary-pill">📍 ${isOnlineRoom(ev.room) ? "Online" : esc(roomLabel)}</span>
                   <span class="summary-pill">🍽 ${esc(cateringLabel)}</span>
@@ -7006,7 +7047,7 @@
                 <div class="summary-list-item"><strong>Datum</strong><div>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"}</div></div>
                 <div class="summary-list-item"><strong>Start</strong><div>${ev.start_date ? fmtDE(parseISO(ev.start_date)) : ev.created_at ? fmtDE(parseISO(ev.created_at)) : "–"}</div></div>
                 <div class="summary-list-item"><strong>Ort</strong><div>${roomSummary}</div></div>
-                <div class="summary-list-item"><strong>Hub/Abteilung</strong><div>${esc(ev.owner || "–")}</div></div>
+                <div class="summary-list-item"><strong>Hub/Abteilung</strong><div>${esc(translateLegacyOwner(ev.owner) || "–")}</div></div>
                 <div class="summary-list-item"><strong>Kontakt</strong><div>${esc(ev.owner_email || ev.contact_email || "–")}</div></div>
               </div>
               <div class="summary-card">
@@ -7071,7 +7112,7 @@
           return cl[ev.catering] || ev.catering || "";
         }
         if (workflowId === "pflicht" && rowKey === "vt4") {
-          let val = ev.owner || "";
+          let val = translateLegacyOwner(ev.owner);
           if (ev.owner_email)
             val += val ? ` (${ev.owner_email})` : ev.owner_email;
           return val;
