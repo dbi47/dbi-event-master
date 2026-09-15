@@ -4670,7 +4670,31 @@
       }
 
       // ══ NAVIGATION ══
+      // Pages that only make sense once an event is loaded — "Alle Events",
+      // "Meine Woche" (cross-event) and "PM-Zugänge" (per-event but has its
+      // own empty-state) are deliberately NOT in this list.
+      const EVENT_SCOPED_PAGE_IDS = [
+        "dashboard",
+        "eventdaten",
+        "pflicht",
+        "social",
+        "pixlip",
+        "summary",
+        "activity",
+      ];
       function showPage(id) {
+        // A PM's token always carries exactly one event, so this gate only
+        // ever applies to the Hub, who can browse the sidebar before ever
+        // opening one.
+        if (
+          currentRole === "hub" &&
+          !currentEventId &&
+          EVENT_SCOPED_PAGE_IDS.includes(id)
+        ) {
+          showToast("⚠️ Bitte zuerst ein Event auswählen");
+          showPage("hub-events");
+          return;
+        }
         document
           .querySelectorAll(".page")
           .forEach((p) => p.classList.remove("active"));
