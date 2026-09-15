@@ -5731,6 +5731,32 @@
         const match = HUB_CONTACTS.find((c) => c.name === name);
         emailEl.value = match ? match.email : "";
       }
+      // Selects the stored hub_contact value in the dropdown. A plain
+      // `select.value = name` silently shows "– bitte wählen –" whenever
+      // the stored name isn't an exact match in HUB_CONTACTS (data saved
+      // before this list existed, a typo, or someone not added yet) — the
+      // value is still there in the database, but the field LOOKS empty
+      // and the required-field check would wrongly treat it as unanswered.
+      // So: reset to the canonical list first (never accumulate stale
+      // injected options across event switches), then inject the stored
+      // name as its own option if nothing matches, same as the legacy-value
+      // fallbacks used elsewhere (translateLegacyOwner, inferLegacyRoomType).
+      function setHubContactSelectValue(name) {
+        const select = document.getElementById("ev-hub-contact-name");
+        if (!select || document.activeElement === select) return;
+        populateHubContactOptions();
+        const trimmed = (name || "").trim();
+        if (
+          trimmed &&
+          ![...select.options].some((o) => o.value === trimmed)
+        ) {
+          const opt = document.createElement("option");
+          opt.value = trimmed;
+          opt.textContent = `${trimmed} (nicht in der Liste)`;
+          select.appendChild(opt);
+        }
+        select.value = trimmed;
+      }
 
       function getRoomLabel(roomValue) {
         const value = (roomValue || "").trim();
@@ -5937,7 +5963,6 @@
           "ev-topic": ev.topic || "",
           "ev-owner": translateLegacyOwner(ev.owner),
           "ev-hub-email": ev.owner_email || "",
-          "ev-hub-contact-name": ev.hub_contact || "",
           "ev-marketing-contact-person": ev.marketing_contact_person || "",
           "ev-room-value": ev.room || "",
           "ev-catering-contact": ev.catering_contact || "",
@@ -5948,6 +5973,7 @@
           const el = document.getElementById(id);
           if (el && document.activeElement !== el) el.value = val;
         });
+        setHubContactSelectValue(ev.hub_contact);
         // Custom selects
         const SZ = {
           "": "– bitte wählen –",
