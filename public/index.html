@@ -3435,11 +3435,18 @@
                     <label class="form-label"
                       >Ansprechperson Kommunikation
                       <span class="req">*</span></label
-                    ><input
-                      type="text"
+                    >
+                    <select
                       id="ev-marketing-contact-person"
-                      onblur="saveEventNow(this)"
-                    />
+                      onchange="
+                        updateEventPreview();
+                        saveEventNow(this);
+                      "
+                    >
+                      <option value="">– bitte wählen –</option>
+                      <option value="Annika Schröder">Annika Schröder</option>
+                      <option value="Aline Mescher">Aline Mescher</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -5757,6 +5764,31 @@
         }
         select.value = trimmed;
       }
+      // Same fallback as setHubContactSelectValue() above, for the
+      // "Ansprechperson Kommunikation" dropdown (only Annika Schröder /
+      // Aline Mescher are valid choices, but this options list has no JS
+      // regeneration step to reset first — its two real options are
+      // static HTML — so any previously-injected extra option is removed
+      // by its own marker attribute instead).
+      function setMarketingContactSelectValue(name) {
+        const select = document.getElementById("ev-marketing-contact-person");
+        if (!select || document.activeElement === select) return;
+        select
+          .querySelectorAll("option[data-injected]")
+          .forEach((o) => o.remove());
+        const trimmed = (name || "").trim();
+        if (
+          trimmed &&
+          ![...select.options].some((o) => o.value === trimmed)
+        ) {
+          const opt = document.createElement("option");
+          opt.value = trimmed;
+          opt.textContent = `${trimmed} (nicht in der Liste)`;
+          opt.dataset.injected = "true";
+          select.appendChild(opt);
+        }
+        select.value = trimmed;
+      }
 
       function getRoomLabel(roomValue) {
         const value = (roomValue || "").trim();
@@ -5963,7 +5995,6 @@
           "ev-topic": ev.topic || "",
           "ev-owner": translateLegacyOwner(ev.owner),
           "ev-hub-email": ev.owner_email || "",
-          "ev-marketing-contact-person": ev.marketing_contact_person || "",
           "ev-room-value": ev.room || "",
           "ev-catering-contact": ev.catering_contact || "",
           "ev-rasmus": ev.rasmus || "",
@@ -5974,6 +6005,7 @@
           if (el && document.activeElement !== el) el.value = val;
         });
         setHubContactSelectValue(ev.hub_contact);
+        setMarketingContactSelectValue(ev.marketing_contact_person);
         // Custom selects
         const SZ = {
           "": "– bitte wählen –",
