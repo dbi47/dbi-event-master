@@ -1080,6 +1080,12 @@
       tr.status-blu {
         background: #eceef8 !important;
       }
+      /* Pixlip tab rows once "Pixlip erforderlich" (pflicht/lo4) = Nein —
+         see renderWorkflow()'s pixlipGatedOff. Their status is genuinely
+         "Erledigt" (a real done_date), this just visually dims the row. */
+      tr.row-disabled {
+        opacity: 0.55;
+      }
 
       /* ── EXPANDABLE TODOS ── */
       .ms-expand-btn {
@@ -6305,6 +6311,67 @@
         }
         return { value: String(raw), reason: "" };
       }
+      // Rows in WORKFLOWS.pixlip — mirrors PIXLIP_ROW_KEYS in api.js. Used
+      // only to patch local state right after /workflow/pixlip-gate
+      // succeeds, so the Pixlip tab already shows the gated state the next
+      // time it's opened, without a full event refetch.
+      const PIXLIP_ROW_KEYS = [
+        "px1",
+        "px2",
+        "px3",
+        "px4",
+        "px5",
+        "px6",
+        "px7",
+        "pv1",
+        "pv2",
+        "pv3",
+        "pv4",
+        "pr1",
+        "pr2",
+        "pr3",
+      ];
+      // Bulk-closes ("Nein") or reopens ("Ja") every Pixlip task in one
+      // backend call, triggered by pflicht's "lo4" ("Pixlip erforderlich")
+      // Ja/Nein answer — see POST /workflow/pixlip-gate in api.js for why
+      // this writes a REAL done_date rather than just a UI flag (so
+      // reminders/"Meine Woche"/the digest all just work with no
+      // special-casing). Always re-renders the Pixlip tab itself (even if
+      // it's not the one currently on screen) since its data genuinely
+      // changed — unlike the "don't disturb the other tabs" rule elsewhere,
+      // there's no risk of interrupting someone typing in a hidden tab.
+      async function applyPixlipGate(value) {
+        const ev = eventDetail?.event || pmData?.event;
+        if (!ev) return;
+        const reqBody = { event_id: ev.id, gate: value };
+        if (currentRole === "hub") reqBody.password = hubPassword;
+        else reqBody.token = pmToken;
+        try {
+          const r = await fetch(`${API}/workflow/pixlip-gate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(reqBody),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            showToast(
+              "❌ " + (d.error || "Fehler beim Aktualisieren der Pixlip-Aufgaben"),
+            );
+            return;
+          }
+          PIXLIP_ROW_KEYS.forEach((rk) =>
+            updateLocalWorkflow("pixlip", rk, { done_date: d.done_date ?? null }),
+          );
+          renderWorkflow("pixlip");
+          showToast(
+            value === "Nein"
+              ? "✅ Pixlip als nicht benötigt markiert – Aufgaben automatisch erledigt"
+              : "🔓 Pixlip wieder benötigt – Aufgaben erneut offen",
+          );
+        } catch {
+          showToast("❌ Verbindungsfehler beim Aktualisieren der Pixlip-Aufgaben");
+        }
+      }
       async function setWorkflowYesNoReason(workflowId, rowKey, patch) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
@@ -6320,6 +6387,12 @@
         const merged = { ...current, ...patch };
         if (merged.value !== "Nein") merged.reason = ""; // clear stale reason once answer isn't "Nein" anymore
         await setWorkflowInput(workflowId, rowKey, JSON.stringify(merged));
+        // The "Pixlip erforderlich" answer gates the entire Pixlip tab —
+        // only fires when the Ja/Nein answer itself changed (patch.value),
+        // not when just the "Warum nicht?" reason text is edited.
+        if (workflowId === "pflicht" && rowKey === "lo4" && patch.value) {
+          await applyPixlipGate(patch.value);
+        }
         // Re-render so the "Warum nicht?" field appears/disappears immediately.
         // Deferred for the same reason as setWorkflowDone: let the browser
         // finish the change event before the DOM is rebuilt. Scoped to just
@@ -7789,8 +7862,21 @@
         const eventDate = parseISO(ev?.event_date);
         const getRow = (wid, rkey) =>
           wfRows.find((r) => r.workflow_id === wid && r.row_key === rkey) || {};
+        // "Pixlip erforderlich" (pflicht/lo4) gates the WHOLE Pixlip tab —
+        // once answered "Nein", every Pixlip row renders as a grayed,
+        // read-only "Nicht benötigt" line instead of its normal input. The
+        // done_date driving the ✅ "Erledigt" status pill is a REAL value
+        // written server-side (see applyPixlipGate() / POST
+        // /workflow/pixlip-gate in api.js) — this flag only controls the
+        // read-only visual treatment here, it doesn't fake the status.
+        const pixlipGatedOff =
+          id === "pixlip" &&
+          parseYesNoReason(getRow("pflicht", "lo4").input_value).value ===
+            "Nein";
         let html = `<div class="page-title">${def.title}${ev?.name ? " — " + esc(ev.name) : ""}</div>
 <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>`;
+        if (pixlipGatedOff)
+          html += `<div class="alert alert-blu show" style="margin-bottom:20px">ℹ️ Pixlip wurde unter Pflichtinhalte → Logistik als „nicht erforderlich“ markiert. Alle Aufgaben unten sind automatisch erledigt und gesperrt.</div>`;
         if (currentRole === "proj")
           html += `<div class="alert alert-blu show" style="margin-bottom:20px">📌 Du siehst diese Ansicht als <strong>${pmData?.pm_name || "Projektverantwortliche:r"}</strong>${ev?.name ? " — Event: <strong>" + esc(ev.name) + "</strong>" : ""}. Deine Änderungen werden direkt gespeichert.</div>`;
         html += `<div class="table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
@@ -7841,7 +7927,9 @@
               ? pairStored.input_value || getFallbackValue(id, row.pairKey, ev)
               : null;
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
-            const inputCell = isAutoStatus
+            const inputCell = pixlipGatedOff
+              ? `<div style="font-size:.82rem;color:var(--mid);font-style:italic">Nicht benötigt</div>`
+              : isAutoStatus
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
               : isSourceField
                 ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
@@ -7859,12 +7947,14 @@
                         : isDateType
                           ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
                           : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
-            const doneCell = isAutoStatus
+            const doneCell = pixlipGatedOff
+              ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">✅ ${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "Nicht benötigt"}</div>`
+              : isAutoStatus
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
               : isHubOnlyLocked
                 ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
                 : `<input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
-            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
+            html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
           });
         });
         html += "</tbody></table></div>";
@@ -8209,7 +8299,7 @@
                 },
                 {
                   key: "lo4",
-                  label: "Pixlip angefragt",
+                  label: "Pixlip erforderlich",
                   hint: "Tab Pixlip",
                   offset: -70,
                   type: "yesno_reason",

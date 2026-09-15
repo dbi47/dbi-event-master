@@ -18,10 +18,22 @@ const {
   computeWeeklyDueItems,
   WEEKLY_MILESTONE_OFFSETS,
   WEEKLY_WORKFLOW_TASKS,
+  PIXLIP_ROW_KEYS,
 } = require("../netlify/functions/api.js");
 
 test("HUB_ONLY_EVENT_FIELDS locks exactly name and event_date", () => {
   assert.deepEqual([...HUB_ONLY_EVENT_FIELDS].sort(), ["event_date", "name"]);
+});
+
+test("PIXLIP_ROW_KEYS covers every row in WORKFLOWS.pixlip (index.html), including px2's date-pair partner px3", () => {
+  assert.deepEqual(
+    [...PIXLIP_ROW_KEYS].sort(),
+    [
+      "px1", "px2", "px3", "px4", "px5", "px6", "px7",
+      "pv1", "pv2", "pv3", "pv4",
+      "pr1", "pr2", "pr3",
+    ].sort(),
+  );
 });
 
 test("PM (token) allowed event fields exclude name and event_date", () => {

@@ -117,6 +117,27 @@ const WEEKLY_WORKFLOW_TASKS = [
 ];
 const WEEKLY_HORIZON_DAYS = 14;
 
+// Every row_key that lives under the "pixlip" workflow_id (including px2's
+// date-pair partner, px3) — the full set that /workflow/pixlip-gate
+// bulk-closes or reopens together. Mirrors WORKFLOWS.pixlip's rows in
+// index.html; if a row is added/removed there, update this list too.
+const PIXLIP_ROW_KEYS = [
+  "px1",
+  "px2",
+  "px3",
+  "px4",
+  "px5",
+  "px6",
+  "px7",
+  "pv1",
+  "pv2",
+  "pv3",
+  "pv4",
+  "pr1",
+  "pr2",
+  "pr3",
+];
+
 function addDays(d, n) {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
@@ -706,7 +727,48 @@ exports.handler = async (event) => {
             "“ aktualisiert.",
         );
       return json(200, { ok: true });
-      return json(200, { ok: true });
+    }
+
+    // POST /workflow/pixlip-gate — bulk-closes (or reopens) every Pixlip
+    // task at once, driven by the pflicht "lo4" ("Pixlip erforderlich")
+    // Ja/Nein answer. "Nein" writes today's date as a REAL done_date on
+    // every Pixlip row — not just a UI flag — so the existing due-date
+    // logic everywhere else (reminders.js, computeWeeklyDueItems/"Meine
+    // Woche", the digest email) automatically stops treating them as
+    // outstanding, with no special-casing needed there. "Ja" clears
+    // done_date back to null on every row, reopening them as genuinely
+    // required again.
+    if (path === "/workflow/pixlip-gate" && method === "POST") {
+      const { event_id, gate, token, password } = body;
+      if (!event_id || !["Ja", "Nein"].includes(gate))
+        return json(400, { error: "Missing or invalid fields" });
+      let pm = null;
+      if (token) {
+        pm = await getPMToken(token);
+        if (!pm || pm.event_id !== event_id)
+          return json(403, { error: "Forbidden" });
+      } else if (password !== HUB_PW) {
+        return json(401, { error: "Unauthorized" });
+      }
+      const doneDate =
+        gate === "Nein" ? new Date().toISOString().slice(0, 10) : null;
+      const rows = PIXLIP_ROW_KEYS.map((row_key) => ({
+        event_id,
+        workflow_id: "pixlip",
+        row_key,
+        done_date: doneDate,
+      }));
+      const { error } = await supabase
+        .from("workflow_rows")
+        .upsert(rows, { onConflict: "event_id,workflow_id,row_key" });
+      if (error) return json(500, { error: error.message });
+      const action =
+        gate === "Nein"
+          ? "hat Pixlip als nicht benötigt markiert – alle Pixlip-Aufgaben wurden automatisch als erledigt markiert."
+          : "hat Pixlip wieder als benötigt markiert – alle Pixlip-Aufgaben sind erneut offen.";
+      if (token) await notifyHub(event_id, pm, action);
+      else await notifyPMs(event_id, "Event-HUB " + action);
+      return json(200, { ok: true, done_date: doneDate });
     }
 
     // GET /notifications — inbox for the authenticated hub or PM
@@ -915,6 +977,7 @@ exports.computeWeeklyDueItems = computeWeeklyDueItems;
 exports.WEEKLY_MILESTONE_OFFSETS = WEEKLY_MILESTONE_OFFSETS;
 exports.WEEKLY_WORKFLOW_TASKS = WEEKLY_WORKFLOW_TASKS;
 exports.WEEKLY_HORIZON_DAYS = WEEKLY_HORIZON_DAYS;
+exports.PIXLIP_ROW_KEYS = PIXLIP_ROW_KEYS;
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =
