@@ -3411,10 +3411,15 @@
                     <label class="form-label"
                       >Name der Hub-Ansprechperson
                       <span class="req">*</span></label
-                    ><textarea
+                    >
+                    <select
                       id="ev-hub-contact-name"
-                      onblur="saveEventNow(this)"
-                    ></textarea>
+                      onchange="
+                        applyHubContactEmail(this.value);
+                        updateEventPreview();
+                        saveEventNow(this);
+                      "
+                    ></select>
                   </div>
                   <div class="form-group">
                     <label class="form-label"
@@ -5647,6 +5652,84 @@
       function formatRoomOptionLabel(roomName) {
         const cap = ROOM_CAPACITY[roomName];
         return cap ? `${roomName} · 👤 ${cap}` : roomName;
+      }
+
+      // ══ HUB-ANSPRECHPERSON — hardcoded staff directory ══
+      // A static name→email list (same pattern as the Hub/Abteilung
+      // dropdown) rather than a database-backed contacts tab — this list is
+      // small and changes rarely, so a code edit + deploy is cheaper than
+      // building/maintaining a whole CRUD page for it. Update this array
+      // directly when someone joins/leaves or an email changes.
+      const HUB_CONTACTS = [
+        { name: "Ömür Hafizoğlu", email: "hafizoglu@duisburg.business" },
+        { name: "Stephany Achieng", email: "achieng@duisburg.business" },
+        { name: "Filiz Kuru", email: "kuru@duisburg.business" },
+        { name: "Klaus Wulfert", email: "wulfert@duisburg.business" },
+        { name: "Niklas Becker", email: "becker@duisburg.business" },
+        { name: "Vanessa Josten", email: "josten@duisburg.business" },
+        { name: "Marvin Hodde", email: "hodde@duisburg.business" },
+        { name: "Dr. Anna Pröpper", email: "proepper@duisburg.business" },
+        { name: "Tatenda Kondo", email: "kondo@duisburg.business" },
+        { name: "Dominik Bartz", email: "bartz@duisburg.business" },
+        { name: "Annika Schröder", email: "schroeder@duisburg.business" },
+        { name: "Marc Oliver Hänig", email: "haenig@duisburg.business" },
+        { name: "Aline Mescher", email: "mescher@duisburg.business" },
+        { name: "Sarah Müller", email: "s.mueller@duisburg.business" },
+        { name: "Tim Gosewinkel", email: "gosewinkel@duisburg.business" },
+        { name: "Jane Ondigi", email: "ondigi@duisburg.business" },
+        { name: "Leonie Fleskes", email: "fleskes@duisburg.business" },
+        { name: "Ann-Sophie Ewald", email: "ewald@duisburg.business" },
+        { name: "Pooja Surase", email: "surase@duisburg.business" },
+        { name: "Moritz Schepers", email: "schepers@duisburg.business" },
+        { name: "Helen Dutzi", email: "dutzi@duisburg.business" },
+        { name: "Jan Tiemann", email: "tiemann@duisburg.business" },
+        { name: "Birgit Lippmann", email: "lippmann@duisburg.business" },
+        { name: "Laura Emmy Bieder", email: "bieder@duisburg.business" },
+        { name: "Dr. Friederike Seifert", email: "seifert@duisburg.business" },
+        { name: "Mohamad Alrihawi", email: "alrihawi@duisburg.business" },
+        { name: "Sabrina Hölscher", email: "hoelscher@duisburg.business" },
+        { name: "Andree Schäfer", email: "schaefer@duisburg.business" },
+        { name: "Marco Peters", email: "peters@duisburg.business" },
+        { name: "Gianna Reich", email: "reich@duisburg.business" },
+        { name: "Dominik Hausmann", email: "hausmann@duisburg.business" },
+        { name: "Joshua Krause", email: "krause@duisburg.business" },
+        { name: "Armağan Doll", email: "doll@duisburg.business" },
+        { name: "Börje Wichert", email: "wichert@duisburg.business" },
+        { name: "Francesco Mannarino", email: "mannarino@duisburg.business" },
+        {
+          name: "Matthew Federico Becker",
+          email: "m.becker@duisburg.business",
+        },
+        { name: "Lisa Kranhold", email: "kranhold@duisburg.business" },
+        { name: "Jessica Diegmann", email: "diegmann@duisburg.business" },
+        { name: "Mehmet Erdoğan", email: "erdogan@duisburg.business" },
+        { name: "Marie Meinhardt", email: "meinhardt@duisburg.business" },
+        { name: "Christopher Olvis", email: "olvis@duisburg.business" },
+      ];
+      // Builds the "Name der Hub-Ansprechperson" dropdown's options, sorted
+      // for scannability (the array above stays in whatever order it was
+      // pasted in, so this is the only place ordering matters). Called once
+      // at page load — the list itself never changes per-event.
+      function populateHubContactOptions() {
+        const select = document.getElementById("ev-hub-contact-name");
+        if (!select) return;
+        const sorted = [...HUB_CONTACTS].sort((a, b) =>
+          a.name.localeCompare(b.name, "de"),
+        );
+        select.innerHTML =
+          '<option value="">– bitte wählen –</option>' +
+          sorted
+            .map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`)
+            .join("");
+      }
+      // Auto-fills the email field from the selected name. Left editable
+      // afterward (not readonly/disabled) so a genuine correction or a
+      // person missing from HUB_CONTACTS can still be typed in manually.
+      function applyHubContactEmail(name) {
+        const emailEl = document.getElementById("ev-hub-email");
+        if (!emailEl) return;
+        const match = HUB_CONTACTS.find((c) => c.name === name);
+        emailEl.value = match ? match.email : "";
       }
 
       function getRoomLabel(roomValue) {
@@ -8706,6 +8789,7 @@
           opt.classList.contains("selected") ? "true" : "false",
         );
       });
+      populateHubContactOptions();
 
       document.addEventListener("DOMContentLoaded", () => {
         const token = new URLSearchParams(window.location.search).get("token");
