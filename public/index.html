@@ -2254,20 +2254,26 @@
          ══════════════════════════════════════════════════════════ */
       #page-eventdaten {
         max-width: 1180px;
+        /* Room at the end of the page so the fixed bottom bar never covers
+           the last form section. */
+        padding-bottom: 90px;
       }
-      /* Floating action bar — sticks to the bottom of the scrollable .main
-         area (position: sticky is scoped to the nearest scrolling ancestor,
-         so this never overlaps the sidebar). */
+      /* Permanent action bar — position: fixed pins it to the viewport
+         itself (not the scrolling .main area), so it never scrolls with
+         the page. left is offset past the sidebar so it doesn't cover it;
+         the 600px breakpoint below resets that to 0 once the sidebar
+         itself is hidden. */
       .evd-bottombar {
-        position: sticky;
+        position: fixed;
+        left: var(--sidebar-w);
+        right: 0;
         bottom: 0;
-        z-index: 30;
+        z-index: 250;
         display: flex;
         justify-content: flex-end;
         gap: 10px;
         background: var(--paper);
-        padding: 14px 0 2px;
-        margin-top: 26px;
+        padding: 14px 36px;
         border-top: 1px solid var(--line);
         box-shadow: 0 -6px 18px rgba(20, 15, 45, 0.06);
       }
@@ -2533,6 +2539,15 @@
         .evd-bottombar .btn,
         .evd-bottombar .btn-secondary {
           flex: 1;
+        }
+      }
+      /* Same breakpoint as .sidebar's own display:none above — once the
+         sidebar is gone, the fixed bar should span the full width instead
+         of leaving a var(--sidebar-w) gap on the left. */
+      @media (max-width: 600px) {
+        .evd-bottombar {
+          left: 0;
+          padding: 12px 14px;
         }
       }
     </style>
