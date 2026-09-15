@@ -2507,6 +2507,15 @@
         box-shadow: 0 0 0 3px rgba(194, 24, 91, 0.12);
         outline: none;
       }
+      /* Without this, the page's own higher-specificity input styling above
+         would cancel the global input[disabled] gray-out (same background/
+         color properties, but this page's rule wins on specificity alone). */
+      #page-eventdaten .form-group input[disabled] {
+        background: #f6f7fc;
+        color: var(--mid);
+        border-color: #c8c9d8;
+        cursor: not-allowed;
+      }
       #page-eventdaten .csel-trigger {
         border-radius: 8px;
         background: var(--paper);
@@ -3428,7 +3437,8 @@
                     ><input
                       type="email"
                       id="ev-hub-email"
-                      onblur="saveEventNow(this)"
+                      placeholder="Wird automatisch ausgefüllt"
+                      disabled
                     />
                   </div>
                   <div class="form-group">
@@ -3740,18 +3750,19 @@
               <div class="form-group">
                 <label class="form-label"
                   >Name PM <span class="req">*</span></label
-                ><input
-                  type="text"
+                >
+                <select
                   id="pm-name-input"
-                  placeholder="z. B. Anna Müller"
-                />
+                  onchange="applyPMContactEmail(this.value)"
+                ></select>
               </div>
               <div class="form-group">
                 <label class="form-label">E-Mail PM (für Reminder)</label
                 ><input
                   type="email"
                   id="pm-email-input"
-                  placeholder="anna@beispiel.de"
+                  placeholder="Wird automatisch ausgefüllt"
+                  disabled
                 />
               </div>
             </div>
@@ -5713,30 +5724,48 @@
         { name: "Marie Meinhardt", email: "meinhardt@duisburg.business" },
         { name: "Christopher Olvis", email: "olvis@duisburg.business" },
       ];
-      // Builds the "Name der Hub-Ansprechperson" dropdown's options, sorted
-      // for scannability (the array above stays in whatever order it was
-      // pasted in, so this is the only place ordering matters). Called once
-      // at page load — the list itself never changes per-event.
-      function populateHubContactOptions() {
-        const select = document.getElementById("ev-hub-contact-name");
-        if (!select) return;
+      // Shared <option> markup for every dropdown sourced from HUB_CONTACTS
+      // (Eventdaten's "Name der Hub-Ansprechperson" and PM-Zugänge's "Name
+      // PM") — sorted for scannability (the array above stays in whatever
+      // order it was pasted in, so this is the only place ordering matters).
+      function buildHubContactOptionsHtml() {
         const sorted = [...HUB_CONTACTS].sort((a, b) =>
           a.name.localeCompare(b.name, "de"),
         );
-        select.innerHTML =
+        return (
           '<option value="">– bitte wählen –</option>' +
           sorted
             .map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`)
-            .join("");
+            .join("")
+        );
       }
-      // Auto-fills the email field from the selected name. Left editable
-      // afterward (not readonly/disabled) so a genuine correction or a
-      // person missing from HUB_CONTACTS can still be typed in manually.
+      // Populates every HUB_CONTACTS-backed dropdown. Called once at page
+      // load — the list itself never changes per-event, and PM-Zugänge's
+      // "Name PM" is always a fresh "create new" field with nothing to
+      // preserve, so there's no per-event repopulation needed for either.
+      function populateHubContactOptions() {
+        const options = buildHubContactOptionsHtml();
+        const evSelect = document.getElementById("ev-hub-contact-name");
+        if (evSelect) evSelect.innerHTML = options;
+        const pmSelect = document.getElementById("pm-name-input");
+        if (pmSelect) pmSelect.innerHTML = options;
+      }
+      function findHubContactEmail(name) {
+        const match = HUB_CONTACTS.find((c) => c.name === name);
+        return match ? match.email : "";
+      }
+      // Auto-fills Eventdaten's "E-Mail der Hub-Ansprechperson". That field
+      // is now `disabled` in the HTML (locked — no manual edits allowed),
+      // so this dropdown selection is the only way its value ever changes.
       function applyHubContactEmail(name) {
         const emailEl = document.getElementById("ev-hub-email");
-        if (!emailEl) return;
-        const match = HUB_CONTACTS.find((c) => c.name === name);
-        emailEl.value = match ? match.email : "";
+        if (emailEl) emailEl.value = findHubContactEmail(name);
+      }
+      // Same idea for PM-Zugänge's "E-Mail PM" — also `disabled` in the
+      // HTML for the same reason.
+      function applyPMContactEmail(name) {
+        const emailEl = document.getElementById("pm-email-input");
+        if (emailEl) emailEl.value = findHubContactEmail(name);
       }
       // Selects the stored hub_contact value in the dropdown. A plain
       // `select.value = name` silently shows "– bitte wählen –" whenever
