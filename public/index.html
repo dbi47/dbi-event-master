@@ -2686,15 +2686,6 @@
           Workflows
         </div>
         <div
-          class="nav-item proj-only"
-          onclick="showPage('proj-todos')"
-          id="nav-proj-todos"
-        >
-          <span class="nav-icon">✏️</span
-          ><span class="nav-label">Meine Aufgaben</span>
-          <span class="nav-badge" id="badge-proj-todos"></span>
-        </div>
-        <div
           class="nav-item workflow-item"
           onclick="showPage('pflicht')"
           id="nav-pflicht"
@@ -2719,6 +2710,15 @@
         >
           <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
           <span class="nav-badge" id="badge-pixlip"></span>
+        </div>
+        <div
+          class="nav-item proj-only"
+          onclick="showPage('proj-todos')"
+          id="nav-proj-todos"
+        >
+          <span class="nav-icon">✏️</span
+          ><span class="nav-label">Meine Aufgaben</span>
+          <span class="nav-badge" id="badge-proj-todos"></span>
         </div>
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
           <span class="nav-icon">🧾</span
@@ -7135,12 +7135,6 @@
           };
           return cl[ev.catering] || ev.catering || "";
         }
-        if (workflowId === "pflicht" && rowKey === "vt4") {
-          let val = translateLegacyOwner(ev.owner);
-          if (ev.owner_email)
-            val += val ? ` (${ev.owner_email})` : ev.owner_email;
-          return val;
-        }
         return "";
       }
 
@@ -8534,9 +8528,10 @@
             {
               key: "vt1",
               label: "Finaler Verteiler vollständig",
-              hint: "Als Liste vorhanden",
+              hint: "Ja / Nein",
               offset: -56,
               req: true,
+              type: "yesno_reason",
             },
             {
               key: "vt2",
@@ -8548,16 +8543,18 @@
             {
               key: "vt3",
               label: "Einladungstext geliefert",
-              hint: "Kein Platzhalter, kein tbc",
+              hint: "Ja / Nein",
               offset: -56,
               req: true,
+              type: "yesno_reason",
             },
             {
               key: "vt4",
               label: "Ansprechperson(en) benannt",
-              hint: "Name + E-Mail",
+              hint: "Ja / Nein",
               offset: -56,
               req: true,
+              type: "yesno_reason",
             },
           ],
         },
@@ -8568,9 +8565,10 @@
             {
               key: "fr1",
               label: "Relevante Freigaben eingeholt",
-              hint: "Alle Genehmigungen",
+              hint: "Ja / Nein",
               offset: -56,
               req: true,
+              type: "yesno_reason",
             },
             {
               key: "fr2",
