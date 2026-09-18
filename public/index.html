@@ -8285,13 +8285,22 @@
                     : "var(--mid)";
             const isYesNo = /^ja\s*\/\s*nein$/i.test((row.hint || "").trim());
             const isYesNoReason = row.type === "yesno_reason";
-            const rawVal =
-              stored.input_value || getFallbackValue("pflicht", row.key, ev);
+            // sourceField rows (mirrors renderWorkflow()'s WORKFLOWS.pixlip
+            // px1) don't store their own answer — they read-only display
+            // whatever another workflow's row already holds, so there's
+            // never a second, possibly disagreeing answer to the same
+            // question.
+            const isSourceField = !!row.sourceField;
+            const rawVal = isSourceField
+              ? resolveSourceFieldValue(row, ev, wfRows)
+              : stored.input_value || getFallbackValue("pflicht", row.key, ev);
             const ynr = isYesNoReason ? parseYesNoReason(rawVal) : null;
             // Same rule as renderWorkflow(): a yesno_reason row's done date
             // is meaningless (and disabled) until an answer exists.
             const yesNoReasonUnanswered = isYesNoReason && !ynr.value;
-            const inputCell = isYesNoReason
+            const inputCell = isSourceField
+              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(rawVal) || "–"}</div>`
+              : isYesNoReason
               ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
                 ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
@@ -8955,7 +8964,7 @@
               hint: "Ja / Nein",
               offset: -70,
               req: false,
-              type: "yesno_reason",
+              sourceField: { workflow: "pflicht", key: "lo4" },
             },
             {
               key: "fr3",
