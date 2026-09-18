@@ -5883,6 +5883,7 @@
           onlineUrlEl.style.display = "none";
         }
         updateRoomValue();
+        updateRasmusFieldAvailability();
       }
 
       // ══ RASMUS FIELD — YES/NO + REASON (event-level, not a workflow row) ══
@@ -5895,6 +5896,26 @@
         const reasonEl = document.getElementById("ev-rasmus-reason");
         if (!selectEl || !reasonEl) return;
         reasonEl.style.display = selectEl.value === "Nein" ? "block" : "none";
+      }
+      // Rasmus only makes sense for an externally-booked room — disable
+      // (never clear) the field whenever room type isn't "external". Reused
+      // from both a live room-type change (handleRoomTypeChange) and initial
+      // load (setRoomControlsFromValue, called from populateEventForm), so
+      // the disabled state always matches whatever room type is currently
+      // selected/saved. Never touches the underlying saved value (ev-rasmus)
+      // — an answer given while external stays intact if the room type is
+      // switched away and back again.
+      function updateRasmusFieldAvailability() {
+        const typeEl = document.getElementById("ev-room-type");
+        const selectEl = document.getElementById("ev-rasmus-select");
+        const reasonEl = document.getElementById("ev-rasmus-reason");
+        if (!typeEl || !selectEl || !reasonEl) return;
+        const isExternal = typeEl.value === "external";
+        selectEl.disabled = !isExternal;
+        reasonEl.disabled = !isExternal;
+        const title = isExternal ? "" : "Nur bei „Externer Raum“ erforderlich";
+        selectEl.title = title;
+        reasonEl.title = title;
       }
       function updateRasmusValue() {
         const selectEl = document.getElementById("ev-rasmus-select");
@@ -6010,6 +6031,7 @@
           manualEl.value = value;
         }
         hiddenEl.value = value;
+        updateRasmusFieldAvailability();
       }
 
       function populateEventForm(ev) {
@@ -6257,8 +6279,16 @@
         },
         {
           label: "Externer Raum – Rasmus abgestimmt?",
-          getValue: () =>
-            (document.getElementById("ev-rasmus")?.value || "").trim(),
+          // Only actually required (and only interactive — see
+          // updateRasmusFieldAvailability) when the room is external; for
+          // Internal/Online, treat it as always-satisfied so it can never
+          // block saving a field the person has no way to fill in.
+          getValue: () => {
+            const isExternal =
+              document.getElementById("ev-room-type")?.value === "external";
+            if (!isExternal) return "n/a";
+            return (document.getElementById("ev-rasmus")?.value || "").trim();
+          },
           highlightEl: () => document.getElementById("ev-rasmus-select"),
         },
         {
