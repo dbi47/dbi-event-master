@@ -6417,6 +6417,40 @@
         if (dateVal) showToast(`✅ "${label}" erledigt`);
         renderDashboard();
       }
+
+      // A milestone's done date is only ever allowed to be SET while every
+      // one of its to-dos is checked (see getMilestoneTodoState/
+      // handleMilestoneDateInteraction above). This is the mirror-image
+      // rule: if a to-do gets unchecked afterwards, the milestone is no
+      // longer actually complete, so its done date must revert to unset —
+      // both in the `milestones` table (the same endpoint setMilestoneDone
+      // uses) and in the caller's own in-memory eventDetail/pmData, so it's
+      // reflected immediately without a reload. Never re-sets a done date —
+      // only ever clears one. Returns true iff it actually cleared something.
+      async function clearMilestoneDoneIfIncomplete(msKey) {
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        const ev = source?.event;
+        if (!ev) return false;
+        const ms = (source.milestones || []).find((m) => m.ms_key === msKey);
+        if (!ms || !ms.done_date) return false; // nothing set — nothing to clear
+        if (getMilestoneTodoState(msKey).allComplete) return false;
+
+        const body = { event_id: ev.id, ms_key: msKey, done_date: null };
+        if (currentRole === "hub") body.password = hubPassword;
+        else body.token = pmToken;
+        try {
+          const r = await fetch(`${API}/milestone`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) return false;
+        } catch {
+          return false;
+        }
+        ms.done_date = null;
+        return true;
+      }
       async function setWorkflowDone(workflowId, rowKey, label, dateVal) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
@@ -6763,6 +6797,12 @@
           // changes aren't silently lost; they can retry by closing again.
           return;
         }
+        // Safety net: toggleTodo() already tries to clear a stale done date
+        // the moment an item is unchecked, but if that particular request
+        // failed (e.g. a network hiccup) the milestone could still show as
+        // done even though its to-dos no longer are. Re-check once more
+        // against the now-confirmed-saved todo state before rendering.
+        await clearMilestoneDoneIfIncomplete(msKey);
         // renderDashboard() rebuilds the whole milestone table (including a
         // fresh, closed drawer), so there's nothing further to toggle here —
         // the collapse happens as a side effect of the data being confirmed
@@ -6819,6 +6859,15 @@
           const key = `${row.ms_key}-${row.todo_index}`;
           todoChecked[key] = Boolean(row.checked);
         });
+        // Re-apply any checkbox edits the user has made but not yet flushed
+        // to the backend (staged on drawer-close, see toggleTodo/
+        // flushPendingTodoSaves). Without this, calling renderDashboard()
+        // mid-edit — e.g. as a side effect of the done-date auto-clear below —
+        // would silently revert unsaved checkbox clicks back to the
+        // last-persisted server state.
+        Object.keys(pendingTodoChanges).forEach((key) => {
+          todoChecked[key] = pendingTodoChanges[key];
+        });
       }
 
       function upsertTodoStateInSource(source, msKey, todoIndex, checked) {
@@ -6846,6 +6895,31 @@
         if (cb) cb.checked = nextChecked;
         if (item) item.classList.toggle("checked", nextChecked);
         updateTodoDrawerProgress(msKey); // live progress bar, no full re-render/collapse
+        // Unchecking can turn an already-"done" milestone incomplete again —
+        // clear its done date right away rather than waiting for the drawer
+        // to close, so nothing briefly shows as done when it no longer is.
+        // Checking an item can only ever increase completeness, never flip a
+        // done milestone to incomplete, so there's nothing to check there.
+        if (!nextChecked) {
+          clearMilestoneDoneIfIncomplete(msKey).then((cleared) => {
+            if (!cleared) return;
+            showToast("↩️ Erledigt-Datum zurückgesetzt – To-do wieder offen");
+            // renderDashboard() rebuilds the whole milestone table (see
+            // closeMsTodos), which would otherwise collapse the drawer the
+            // user is actively working in — reopen it right after so this
+            // stays a live, in-place update instead of an interruption.
+            const wasOpen = document
+              .getElementById("ms-drawer-" + msKey)
+              ?.classList.contains("open");
+            renderDashboard();
+            if (wasOpen) {
+              document
+                .getElementById("ms-drawer-" + msKey)
+                ?.classList.add("open");
+              document.getElementById("ms-btn-" + msKey)?.classList.add("open");
+            }
+          });
+        }
       }
 
       // Patches the drawer's own progress bar in place (no full re-render),
