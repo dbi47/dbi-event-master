@@ -3973,13 +3973,11 @@
       let activityEntries = [];
       let activityPage = 1;
 
-      // Per-milestone todo check state (kept in sync with the backend)
+      // Per-milestone todo check state (kept in sync with the backend).
+      // Each checkbox click autosaves immediately (see toggleTodo) — this is
+      // just the client-side mirror of what's already persisted, rebuilt
+      // from source.milestone_todos on every renderDashboard() call.
       const todoChecked = {}; // key: `${msKey}-${todoIdx}` → boolean
-      // Staged (unsaved) todo checkbox changes. Populated by toggleTodo()
-      // while a milestone drawer is open; flushed to the backend only when
-      // the user explicitly closes that drawer (see toggleMsTodos /
-      // flushPendingTodoSaves) — NOT on every individual click.
-      const pendingTodoChanges = {}; // key: `${msKey}-${todoIdx}` → boolean
 
       // ══ CUSTOM SELECT COMPONENT ══
       function cselClose(id) {
@@ -6772,80 +6770,17 @@
       }
 
       // ══ DASHBOARD ══
+      // Opening/closing the drawer is now a pure UI toggle — every checkbox
+      // inside it already autosaves the instant it's clicked (see
+      // toggleTodo), so there's nothing left to flush on close and no reason
+      // the drawer should ever close on its own.
       function toggleMsTodos(msKey) {
         const btn = document.getElementById("ms-btn-" + msKey);
         const drawer = document.getElementById("ms-drawer-" + msKey);
         if (!btn || !drawer) return;
         const isOpen = drawer.classList.contains("open");
-        if (isOpen) {
-          closeMsTodos(msKey, btn, drawer);
-          return;
-        }
-        // Opening has nothing to save — just reveal it.
-        drawer.classList.add("open");
-        btn.classList.add("open");
-      }
-
-      // Closing is the ONLY point where staged todo checkbox changes are
-      // actually sent to the backend. This is deliberately separate (and
-      // async) so toggleMsTodos can stay a simple, non-blocking onclick
-      // handler while this does the real work.
-      async function closeMsTodos(msKey, btn, drawer) {
-        const ok = await flushPendingTodoSaves(msKey);
-        if (!ok) {
-          // Save failed — keep the drawer open so the user's unsaved
-          // changes aren't silently lost; they can retry by closing again.
-          return;
-        }
-        // Safety net: toggleTodo() already tries to clear a stale done date
-        // the moment an item is unchecked, but if that particular request
-        // failed (e.g. a network hiccup) the milestone could still show as
-        // done even though its to-dos no longer are. Re-check once more
-        // against the now-confirmed-saved todo state before rendering.
-        await clearMilestoneDoneIfIncomplete(msKey);
-        // renderDashboard() rebuilds the whole milestone table (including a
-        // fresh, closed drawer), so there's nothing further to toggle here —
-        // the collapse happens as a side effect of the data being confirmed
-        // saved, which is exactly the "save/collapse only on explicit close"
-        // behavior we want.
-        renderDashboard();
-      }
-
-      async function flushPendingTodoSaves(msKey) {
-        const source = currentRole === "hub" ? eventDetail : pmData;
-        const ev = source?.event;
-        const keysToFlush = Object.keys(pendingTodoChanges).filter((k) =>
-          k.startsWith(`${msKey}-`),
-        );
-        if (!ev || !keysToFlush.length) return true; // nothing staged
-        try {
-          await Promise.all(
-            keysToFlush.map(async (ck) => {
-              const idx = Number(ck.slice(msKey.length + 1));
-              const checked = pendingTodoChanges[ck];
-              const body = {
-                event_id: ev.id,
-                ms_key: msKey,
-                todo_index: idx,
-                checked,
-              };
-              if (currentRole === "hub") body.password = hubPassword;
-              else body.token = pmToken;
-              const r = await fetch(`${API}/milestone-todo`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-              });
-              if (!r.ok) throw new Error("save failed");
-              upsertTodoStateInSource(source, msKey, idx, checked);
-            }),
-          );
-          keysToFlush.forEach((ck) => delete pendingTodoChanges[ck]);
-          return true;
-        } catch {
-          showToast("❌ Fehler beim Speichern – Häkchen bleiben offen");
-          return false;
-        }
+        drawer.classList.toggle("open", !isOpen);
+        btn.classList.toggle("open", !isOpen);
       }
 
       function hydrateTodoCheckedState(source) {
@@ -6858,15 +6793,6 @@
             return;
           const key = `${row.ms_key}-${row.todo_index}`;
           todoChecked[key] = Boolean(row.checked);
-        });
-        // Re-apply any checkbox edits the user has made but not yet flushed
-        // to the backend (staged on drawer-close, see toggleTodo/
-        // flushPendingTodoSaves). Without this, calling renderDashboard()
-        // mid-edit — e.g. as a side effect of the done-date auto-clear below —
-        // would silently revert unsaved checkbox clicks back to the
-        // last-persisted server state.
-        Object.keys(pendingTodoChanges).forEach((key) => {
-          todoChecked[key] = pendingTodoChanges[key];
         });
       }
 
@@ -6885,29 +6811,71 @@
         source.milestone_todos = rows;
       }
 
-      function toggleTodo(msKey, idx) {
+      // Autosaves the instant a checkbox is clicked — no staging, no
+      // separate save step. The drawer itself is untouched by any of this
+      // (see toggleMsTodos), so it only ever closes when the user clicks to
+      // close it, never as a side effect of checking an item.
+      async function toggleTodo(msKey, idx) {
         const ck = `${msKey}-${idx}`;
-        const nextChecked = !Boolean(todoChecked[ck]);
-        todoChecked[ck] = nextChecked;
-        pendingTodoChanges[ck] = nextChecked; // stage — saved on drawer close
+        const previousChecked = Boolean(todoChecked[ck]);
+        const nextChecked = !previousChecked;
         const cb = document.getElementById(`todo-cb-${msKey}-${idx}`);
         const item = document.getElementById(`todo-item-${msKey}-${idx}`);
+
+        // Optimistic UI update — instant feedback while the save is in flight.
+        todoChecked[ck] = nextChecked;
         if (cb) cb.checked = nextChecked;
         if (item) item.classList.toggle("checked", nextChecked);
-        updateTodoDrawerProgress(msKey); // live progress bar, no full re-render/collapse
+        updateTodoDrawerProgress(msKey);
+
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        const ev = source?.event;
+        if (!ev) return;
+        const body = {
+          event_id: ev.id,
+          ms_key: msKey,
+          todo_index: idx,
+          checked: nextChecked,
+        };
+        if (currentRole === "hub") body.password = hubPassword;
+        else body.token = pmToken;
+
+        let ok = false;
+        try {
+          const r = await fetch(`${API}/milestone-todo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          ok = r.ok;
+        } catch {
+          ok = false;
+        }
+
+        if (!ok) {
+          // Save failed — revert so the screen never shows a check that
+          // isn't actually persisted.
+          todoChecked[ck] = previousChecked;
+          if (cb) cb.checked = previousChecked;
+          if (item) item.classList.toggle("checked", previousChecked);
+          updateTodoDrawerProgress(msKey);
+          showToast("❌ Fehler beim Speichern – Häkchen zurückgesetzt");
+          return;
+        }
+        upsertTodoStateInSource(source, msKey, idx, nextChecked);
+
         // Unchecking can turn an already-"done" milestone incomplete again —
-        // clear its done date right away rather than waiting for the drawer
-        // to close, so nothing briefly shows as done when it no longer is.
-        // Checking an item can only ever increase completeness, never flip a
-        // done milestone to incomplete, so there's nothing to check there.
+        // clear its done date right away. Checking an item can only ever
+        // increase completeness, never flip a done milestone to incomplete,
+        // so there's nothing to check on that path.
         if (!nextChecked) {
-          clearMilestoneDoneIfIncomplete(msKey).then((cleared) => {
-            if (!cleared) return;
+          const cleared = await clearMilestoneDoneIfIncomplete(msKey);
+          if (cleared) {
             showToast("↩️ Erledigt-Datum zurückgesetzt – To-do wieder offen");
-            // renderDashboard() rebuilds the whole milestone table (see
-            // closeMsTodos), which would otherwise collapse the drawer the
-            // user is actively working in — reopen it right after so this
-            // stays a live, in-place update instead of an interruption.
+            // renderDashboard() rebuilds the whole milestone table, which
+            // would otherwise collapse the drawer the user is actively
+            // working in — reopen it right after so this stays a live,
+            // in-place update instead of an interruption.
             const wasOpen = document
               .getElementById("ms-drawer-" + msKey)
               ?.classList.contains("open");
@@ -6918,13 +6886,14 @@
                 ?.classList.add("open");
               document.getElementById("ms-btn-" + msKey)?.classList.add("open");
             }
-          });
+          }
         }
       }
 
-      // Patches the drawer's own progress bar in place (no full re-render),
-      // so the "N/M erledigt" indicator stays live while the user is still
-      // checking things off, without touching the rest of the dashboard.
+      // Patches the drawer's own progress bar AND the collapsed row's mini
+      // progress bar in place (no full re-render), so both stay live while
+      // the user is checking things off without touching the rest of the
+      // dashboard or risking the drawer being collapsed underneath them.
       function updateTodoDrawerProgress(msKey) {
         const todos = MILESTONE_TODOS[msKey];
         if (!todos || !todos.length) return;
@@ -6936,6 +6905,13 @@
         const pctLabel = document.getElementById(`todo-progress-pct-${msKey}`);
         if (bar) bar.style.width = pct + "%";
         if (pctLabel) pctLabel.textContent = pct + "%";
+        const miniBar = document.getElementById(`ms-mini-bar-${msKey}`);
+        const miniLabel = document.getElementById(`ms-mini-label-${msKey}`);
+        if (miniBar) {
+          miniBar.style.width = pct + "%";
+          miniBar.classList.toggle("partial", pct > 0 && pct < 100);
+        }
+        if (miniLabel) miniLabel.textContent = `${checkedCount}/${todos.length}`;
       }
 
       function buildTodoDrawer(msKey, colSpan) {
@@ -7324,7 +7300,7 @@
             const mpct = mt > 0 ? Math.round((mc / mt) * 100) : 0;
             const barCls =
               mpct > 0 && mpct < 100 ? "ms-mini-bar partial" : "ms-mini-bar";
-            miniProgress = `<div class="ms-mini-progress"><div class="ms-mini-bar-wrap"><div class="${barCls}" style="width:${mpct}%"></div></div><span class="ms-mini-label">${mc}/${mt}</span></div>`;
+            miniProgress = `<div class="ms-mini-progress"><div class="ms-mini-bar-wrap"><div class="${barCls}" id="ms-mini-bar-${ms.key}" style="width:${mpct}%"></div></div><span class="ms-mini-label" id="ms-mini-label-${ms.key}">${mc}/${mt}</span></div>`;
           }
 
           tbody.insertAdjacentHTML(
