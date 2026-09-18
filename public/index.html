@@ -7928,9 +7928,40 @@
         markAgendaDirty(workflowId);
         refreshAgendaSectionDOM(workflowId);
       }
-      function setAgendaItemField(workflowId, index, field, value) {
+      // Parses the "HH.MM" format Agenda times are stored/displayed in (see
+      // dotTimeToInputTime/inputTimeToDotTime) into minutes since midnight,
+      // for simple numeric comparison. Returns null — never throws — for
+      // anything that isn't a clean "HH.MM", so callers can just skip the
+      // comparison on malformed/empty input instead of blocking on it.
+      function parseDotTimeToMinutes(t) {
+        const match = /^(\d{1,2})\.(\d{2})$/.exec((t || "").trim());
+        if (!match) return null;
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+        return hours * 60 + minutes;
+      }
+      function setAgendaItemField(workflowId, index, field, value, inputEl) {
         const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         if (!data.items[index]) data.items[index] = getDefaultAgendaItem();
+        // A time can never be earlier than the item directly above it — only
+        // that one neighbor, not a full-list re-validation. Skips the check
+        // entirely (never blocks) whenever either side can't be parsed,
+        // e.g. the previous item's time is still blank.
+        if (field === "time" && index > 0) {
+          const prevMinutes = parseDotTimeToMinutes(data.items[index - 1]?.time);
+          const newMinutes = parseDotTimeToMinutes(value);
+          if (
+            prevMinutes !== null &&
+            newMinutes !== null &&
+            newMinutes < prevMinutes
+          ) {
+            showToast("⚠️ Zeit muss nach dem vorherigen Punkt liegen");
+            if (inputEl)
+              inputEl.value = dotTimeToInputTime(data.items[index].time || "");
+            return;
+          }
+        }
         data.items[index][field] = value;
         markAgendaDirty(workflowId);
         // Text field edits only patch the copy-preview + save button —
@@ -8073,7 +8104,7 @@
     <button class="speaker-remove-btn" type="button" onclick="removeAgendaItem('${workflowId}', ${index})" ${items.length <= 1 ? "disabled" : ""}>− Entfernen</button>
   </div>
   <div class="agenda-item-toprow">
-    <div class="speaker-field"><label>Zeit</label><input type="time" value="${esc(dotTimeToInputTime(item.time))}" onchange="setAgendaItemField('${workflowId}', ${index}, 'time', inputTimeToDotTime(this.value))" /></div>
+    <div class="speaker-field"><label>Zeit</label><input type="time" value="${esc(dotTimeToInputTime(item.time))}" onchange="setAgendaItemField('${workflowId}', ${index}, 'time', inputTimeToDotTime(this.value), this)" /></div>
     <div class="speaker-field"><label>Titel</label><input type="text" value="${esc(item.title)}" placeholder="z. B. Reception &amp; Registration oder Lecture: 'Titel'" onchange="setAgendaItemField('${workflowId}', ${index}, 'title', this.value)" /></div>
   </div>
   <div class="speaker-field"><label>Personen (optional — Person, Position, Institution)</label>
