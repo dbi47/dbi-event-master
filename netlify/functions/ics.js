@@ -19,7 +19,7 @@ const MILESTONE_OFFSETS = [
 
 const WORKFLOW_TASKS = [
   { id: "pflicht", key: "ag1", label: "Agenda vollständig", offset: -56 },
-  { id: "pflicht", key: "ei3", label: "Datum/Ort/Zeit angeben", offset: -56 },
+  { id: "pflicht", key: "ei3", label: "Datum/Ort angeben", offset: -56 },
   { id: "pflicht", key: "ei4", label: "Anmeldelink live", offset: -49 },
   { id: "pflicht", key: "ko3", label: "Fotograf:in angefragt", offset: -70 },
   { id: "pflicht", key: "lo1", label: "Raum bestätigt", offset: -49 },

@@ -7455,14 +7455,6 @@
           return ev.name || "";
         if (workflowId === "social" && rowKey === "sm2")
           return ev.event_date ? fmtDE(parseISO(ev.event_date)) : "";
-        if (workflowId === "pflicht" && rowKey === "ei3") {
-          let val = ev.event_date ? fmtDE(parseISO(ev.event_date)) : "";
-          if (ev.room) {
-            const rl = { dbi: "Eventraum DBI", extern: "Externer Raum" };
-            val += (val ? " · " : "") + (rl[ev.room] || ev.room);
-          }
-          return val;
-        }
         if (workflowId === "pflicht" && rowKey === "me4") {
           const sl = {
             12: "Klein (12W)",
@@ -7498,19 +7490,33 @@
       // they display data that's already captured elsewhere (a plain event
       // field, or another workflow's row) so PMs aren't re-typing the same
       // information into multiple tabs. sourceField can be either:
-      //   - a string like "event.name" / "event.event_date" (reads ev.*)
+      //   - a string like "event.name" / "event.event_date" / "event.room"
+      //     (reads ev.*)
       //   - an object { workflow: "pflicht", key: "lo4" } (reads another
       //     workflow's stored row, falling back the same way any other row
       //     would via getFallbackValue)
+      //   - an array of either of the above (e.g. ["event.event_date",
+      //     "event.room"]), each part resolved independently and joined
+      //     with " · ", skipping any part that's currently empty
       function resolveSourceFieldValue(row, ev, wfRows) {
         const sf = row.sourceField;
         if (!sf || !ev) return "";
+        if (Array.isArray(sf)) {
+          return sf
+            .map((part) =>
+              resolveSourceFieldValue({ sourceField: part }, ev, wfRows),
+            )
+            .filter(Boolean)
+            .join(" · ");
+        }
         if (typeof sf === "string") {
           const [scope, field] = sf.split(".");
           if (scope !== "event" || !field) return "";
           const raw = ev[field];
           if (!raw) return "";
-          return field === "event_date" ? fmtDE(parseISO(raw)) : String(raw);
+          if (field === "event_date") return fmtDE(parseISO(raw));
+          if (field === "room") return getRoomLabel(raw);
+          return String(raw);
         }
         if (sf.workflow && sf.key) {
           const stored =
@@ -8538,9 +8544,10 @@
                 },
                 {
                   key: "ei3",
-                  label: "Datum, Uhrzeit, Ort",
-                  hint: "TT.MM.JJJJ · HH:MM",
+                  label: "Datum, Ort",
+                  hint: "",
                   offset: -56,
+                  sourceField: ["event.event_date", "event.room"],
                 },
                 {
                   key: "ei4",
