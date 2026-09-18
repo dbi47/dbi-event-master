@@ -6589,7 +6589,7 @@
           showToast("❌ Verbindungsfehler beim Aktualisieren der Pixlip-Aufgaben");
         }
       }
-      async function setWorkflowYesNoReason(workflowId, rowKey, patch) {
+      async function setWorkflowYesNoReason(workflowId, rowKey, patch, label) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
         const wfRows =
@@ -6609,6 +6609,23 @@
         // not when just the "Warum nicht?" reason text is edited.
         if (workflowId === "pflicht" && rowKey === "lo4" && patch.value) {
           await applyPixlipGate(patch.value);
+        }
+        // Auto-fill "Erledigt am" with today's date the FIRST time an answer
+        // is chosen (the done-date input is disabled until then — see
+        // renderWorkflow/renderProjTodosFromPMData). Only fires on the
+        // unanswered→answered transition: switching an already-answered row
+        // between Ja/Nein again, or just editing the "Warum nicht?" reason
+        // (patch.value undefined here), must never overwrite a done date the
+        // person may have since corrected or backdated. Reuses
+        // setWorkflowDone — the same function/endpoint every other done-date
+        // write already goes through — rather than writing done_date here.
+        if (patch.value && !current.value && merged.value && !stored.done_date) {
+          await setWorkflowDone(
+            workflowId,
+            rowKey,
+            label || "",
+            TODAY().toISOString().slice(0, 10),
+          );
         }
         // Re-render so the "Warum nicht?" field appears/disappears immediately.
         // Deferred for the same reason as setWorkflowDone: let the browser
@@ -8162,6 +8179,10 @@
               ? pairStored.input_value || getFallbackValue(id, row.pairKey, ev)
               : null;
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
+            // A yesno_reason row's done date is meaningless until an answer
+            // exists — see the disabled done-date input below and
+            // setWorkflowYesNoReason's auto-fill-on-first-answer logic.
+            const yesNoReasonUnanswered = isYesNoReason && !ynr.value;
             const inputCell = pixlipGatedOff
               ? `<div style="font-size:.82rem;color:var(--mid);font-style:italic">Nicht benötigt</div>`
               : isAutoStatus
@@ -8171,7 +8192,7 @@
                 : isHubOnlyLocked
                   ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
                   : isYesNoReason
-                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value},'${row.label}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
                     : isYesNo
                       ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
                       : isDatePair
@@ -8188,7 +8209,7 @@
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
               : isHubOnlyLocked
                 ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
-                : `<input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
+                : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
             html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
           });
         });
@@ -8237,12 +8258,15 @@
             const rawVal =
               stored.input_value || getFallbackValue("pflicht", row.key, ev);
             const ynr = isYesNoReason ? parseYesNoReason(rawVal) : null;
+            // Same rule as renderWorkflow(): a yesno_reason row's done date
+            // is meaningless (and disabled) until an answer exists.
+            const yesNoReasonUnanswered = isYesNoReason && !ynr.value;
             const inputCell = isYesNoReason
-              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value})"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
                 ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
                 : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
-            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
+            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
           });
         });
         html += "</tbody></table></div>";
