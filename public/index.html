@@ -5752,6 +5752,30 @@
         const match = HUB_CONTACTS.find((c) => c.name === name);
         return match ? match.email : "";
       }
+      // Inline <option> list for a HUB_CONTACTS-backed <select> that's
+      // rendered as an HTML string (workflow table rows, rebuilt fresh on
+      // every render — unlike the Eventdaten/PM-Zugänge selects, which are
+      // real DOM nodes kept in sync via setHubContactSelectValue). Marks
+      // whichever name is currently stored as `selected`, and — same
+      // never-silently-hide-a-stored-value rule as that function — injects
+      // it as its own extra option if it doesn't match anyone in the list.
+      function buildContactSelectOptionsHtml(selectedValue) {
+        const sorted = [...HUB_CONTACTS].sort((a, b) =>
+          a.name.localeCompare(b.name, "de"),
+        );
+        const trimmed = (selectedValue || "").trim();
+        let html = `<option value="" ${!trimmed ? "selected" : ""}>– bitte wählen –</option>`;
+        html += sorted
+          .map(
+            (c) =>
+              `<option value="${esc(c.name)}" ${c.name === trimmed ? "selected" : ""}>${esc(c.name)}</option>`,
+          )
+          .join("");
+        if (trimmed && !sorted.some((c) => c.name === trimmed)) {
+          html += `<option value="${esc(trimmed)}" selected>${esc(trimmed)} (nicht in der Liste)</option>`;
+        }
+        return html;
+      }
       // Auto-fills Eventdaten's "E-Mail der Hub-Ansprechperson". That field
       // is now `disabled` in the HTML (locked — no manual edits allowed),
       // so this dropdown selection is the only way its value ever changes.
@@ -8253,6 +8277,7 @@
             const isYesNoReason = row.type === "yesno_reason";
             const isDateType = row.type === "date";
             const isDatePair = row.type === "date_pair";
+            const isContactSelect = row.type === "contact_select";
             const isSourceField = !!row.sourceField;
             const valToShow = isSourceField
               ? resolveSourceFieldValue(row, ev, wfRows)
@@ -8292,7 +8317,9 @@
 </div>`
                         : isDateType
                           ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
-                          : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
+                          : isContactSelect
+                            ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${buildContactSelectOptionsHtml(valToShow)}</select>`
+                            : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
             const doneCell = pixlipGatedOff
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">✅ ${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "Nicht benötigt"}</div>`
               : isAutoStatus
@@ -8875,6 +8902,7 @@
                   label: "Verantwortliche Person",
                   hint: "",
                   offset: -70,
+                  type: "contact_select",
                 },
                 {
                   key: "px5",
@@ -9006,7 +9034,7 @@
             },
             {
               key: "vt2",
-              label: "Anzahl Empfänger:innen",
+              label: "Anzahl bestätigter Empfänger:innen",
               hint: "Ungefähre Zahl",
               offset: -56,
               req: false,
