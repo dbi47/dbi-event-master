@@ -870,11 +870,69 @@ exports.handler = async (event) => {
         .single();
       if (error) return json(500, { error: error.message });
       const site = process.env.SITE_URL || "";
-      return json(200, {
-        token: data.token,
-        link: `${site}/?token=${data.token}`,
-        ics_link: `${site}/.netlify/functions/ics?token=${data.token}`,
+      const link = `${site}/?token=${data.token}`;
+      const ics_link = `${site}/.netlify/functions/ics?token=${data.token}`;
+
+      // Email the PM their link right away so the Hub doesn't have to copy
+      // and send it manually. This is a nice-to-have on top of an already-
+      // successful token creation, never a reason to fail the request —
+      // failures here (bad address, Resend hiccup, missing API key) are
+      // swallowed and just reported back via `email_sent` so the frontend
+      // can tell the Hub to share the link some other way instead.
+      let email_sent = false;
+      if (pm_email) {
+        try {
+          const { data: ev } = await supabase
+            .from("events")
+            .select("name")
+            .eq("id", event_id)
+            .single();
+          const eventName = ev?.name || "dein Event";
+          const subject = `🔑 Dein Zugang zum DBI Event Planner – ${eventName}`;
+          const html = `
+
+              Hallo ${pm_name || "liebe:r Projektverantwortliche:r"},
+              du hast Zugang zum DBI Event Planner für „${eventName}“ erhalten.
+              Dein persönlicher Link: ${link}
+
+              — DBI Event Planner
+            `;
+          await sendEmail(pm_email, subject, html);
+          email_sent = true;
+        } catch (emailError) {
+          console.error("Could not email PM their link:", emailError.message);
+        }
+      }
+
+      return json(200, { token: data.token, link, ics_link, email_sent });
+    }
+
+    // GET /pm-directory — every distinct PM name/email pair ever used
+    // across ALL events (hub only), not just the current one. Powers the
+    // "select an existing PM" autocomplete on PM-Zugänge's create-new-access
+    // form so the Hub isn't retyping (and risking a typo'd email for)
+    // someone who's already been a PM before — see index.html's
+    // loadPMContactDirectory().
+    if (path === "/pm-directory" && method === "GET") {
+      if (event.queryStringParameters?.password !== HUB_PW)
+        return json(401, { error: "Unauthorized" });
+      const { data, error } = await supabase
+        .from("pm_tokens")
+        .select("pm_name, pm_email");
+      if (error) return json(500, { error: error.message });
+      const seen = new Set();
+      const contacts = [];
+      (data || []).forEach((row) => {
+        const name = (row.pm_name || "").trim();
+        if (!name) return;
+        const email = (row.pm_email || "").trim();
+        const key = `${name}|${email}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        contacts.push({ pm_name: name, pm_email: email });
       });
+      contacts.sort((a, b) => a.pm_name.localeCompare(b.pm_name, "de"));
+      return json(200, { contacts });
     }
     // POST /assign-task — assign one specific task row to a PM (hub only)
     if (path === "/assign-task" && method === "POST") {
@@ -978,6 +1036,35 @@ exports.WEEKLY_MILESTONE_OFFSETS = WEEKLY_MILESTONE_OFFSETS;
 exports.WEEKLY_WORKFLOW_TASKS = WEEKLY_WORKFLOW_TASKS;
 exports.WEEKLY_HORIZON_DAYS = WEEKLY_HORIZON_DAYS;
 exports.PIXLIP_ROW_KEYS = PIXLIP_ROW_KEYS;
+
+// Mirrors reminders.js's/digest.js's own sendEmail() (same Resend endpoint,
+// same auth, same request shape) — kept as this file's own copy rather than
+// a shared import, consistent with how this codebase already duplicates
+// other small per-file constants (WORKFLOW_TASKS/MILESTONE_OFFSETS) instead
+// of factoring out a shared module. One deliberate difference: those two
+// are fire-and-forget scheduled jobs with no one watching for a failure, so
+// they never check `res.ok`. POST /pm-token's caller needs to actually know
+// whether the send worked (to set `email_sent` honestly) — fetch() doesn't
+// reject on a non-2xx response (e.g. a bad RESEND_API_KEY), so without this
+// check a failed send would silently look successful.
+async function sendEmail(to, subject, html) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "DBI Event Planner ",
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Resend request failed");
+  return data;
+}
 
 async function loadFullEvent(event_id) {
   const [{ data: ev }, { data: ms }, { data: wf }, { data: ta }, { data: mt }] =

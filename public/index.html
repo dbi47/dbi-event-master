@@ -3751,10 +3751,14 @@
                 <label class="form-label"
                   >Name PM <span class="req">*</span></label
                 >
-                <select
+                <input
+                  type="text"
                   id="pm-name-input"
-                  onchange="applyPMContactEmail(this.value)"
-                ></select>
+                  list="pm-name-datalist"
+                  placeholder="Name eingeben oder aus Liste wählen"
+                  oninput="applyPMContactMatch(this.value)"
+                />
+                <datalist id="pm-name-datalist"></datalist>
               </div>
               <div class="form-group">
                 <label class="form-label">E-Mail PM (für Reminder)</label
@@ -4690,6 +4694,7 @@
           showPage("hub-events");
           renderEventGrid();
           loadMyWeek();
+          loadPMContactDirectory();
         } else {
           badge.textContent =
             "🎯 " + (pmData?.pm_name || "Projektverantwortlich");
@@ -5738,15 +5743,13 @@
         );
       }
       // Populates every HUB_CONTACTS-backed dropdown. Called once at page
-      // load — the list itself never changes per-event, and PM-Zugänge's
-      // "Name PM" is always a fresh "create new" field with nothing to
-      // preserve, so there's no per-event repopulation needed for either.
+      // load — the list itself never changes per-event, so there's no
+      // per-event repopulation needed. (PM-Zugänge's "Name PM" used to be
+      // one of these too, but is now a free-text input with its own,
+      // broader autocomplete list — see loadPMContactDirectory().)
       function populateHubContactOptions() {
-        const options = buildHubContactOptionsHtml();
         const evSelect = document.getElementById("ev-hub-contact-name");
-        if (evSelect) evSelect.innerHTML = options;
-        const pmSelect = document.getElementById("pm-name-input");
-        if (pmSelect) pmSelect.innerHTML = options;
+        if (evSelect) evSelect.innerHTML = buildHubContactOptionsHtml();
       }
       function findHubContactEmail(name) {
         const match = HUB_CONTACTS.find((c) => c.name === name);
@@ -5783,11 +5786,67 @@
         const emailEl = document.getElementById("ev-hub-email");
         if (emailEl) emailEl.value = findHubContactEmail(name);
       }
-      // Same idea for PM-Zugänge's "E-Mail PM" — also `disabled` in the
-      // HTML for the same reason.
-      function applyPMContactEmail(name) {
+
+      // ══ PM-ZUGÄNGE "NAME PM" — AUTOCOMPLETE FROM PAST PMs + HUB DIRECTORY ══
+      // "Name PM" used to be a <select> locked to HUB_CONTACTS (like the
+      // Hub-Ansprechperson field above) — but that made it impossible to
+      // create an access for a genuinely new PM who isn't in that list.
+      // It's now a free-text <input> with a <datalist> of suggestions
+      // combining every name that's ever actually been given PM access
+      // (fetched from the backend, across ALL events — not just this one)
+      // with the existing HUB_CONTACTS directory. Typing/selecting a KNOWN
+      // name still auto-fills + locks the email exactly as before; typing
+      // anything that doesn't match either source leaves the email field
+      // open for a fresh address, since there's nothing to look up yet.
+      let pmContactDirectory = [];
+      async function loadPMContactDirectory() {
+        try {
+          const r = await fetch(
+            `${API}/pm-directory?password=${encodeURIComponent(hubPassword)}`,
+          );
+          const d = await r.json().catch(() => ({}));
+          const merged = (d.contacts || []).map((c) => ({
+            name: c.pm_name,
+            email: c.pm_email || "",
+          }));
+          HUB_CONTACTS.forEach((c) => {
+            if (!merged.some((m) => m.name === c.name))
+              merged.push({ name: c.name, email: c.email });
+          });
+          merged.sort((a, b) => a.name.localeCompare(b.name, "de"));
+          pmContactDirectory = merged;
+          populatePMNameDatalist();
+        } catch {
+          // Non-fatal — "Name PM" still works fine as a plain free-text
+          // field, it just won't offer suggestions this session.
+        }
+      }
+      function populatePMNameDatalist() {
+        const list = document.getElementById("pm-name-datalist");
+        if (!list) return;
+        list.innerHTML = pmContactDirectory
+          .map((c) => `<option value="${esc(c.name)}"></option>`)
+          .join("");
+      }
+      function applyPMContactMatch(name) {
         const emailEl = document.getElementById("pm-email-input");
-        if (emailEl) emailEl.value = findHubContactEmail(name);
+        if (!emailEl) return;
+        const trimmed = (name || "").trim();
+        const match = pmContactDirectory.find((c) => c.name === trimmed);
+        if (match) {
+          emailEl.value = match.email;
+          emailEl.disabled = true;
+          emailEl.placeholder = "Wird automatisch ausgefüllt";
+        } else if (emailEl.disabled) {
+          // Was showing an auto-filled email for a name that's since been
+          // changed to something unknown — clear the now-stale value so a
+          // fresh email can be typed for this (apparently new) PM.
+          emailEl.value = "";
+          emailEl.disabled = false;
+          emailEl.placeholder = "z. B. name@firma.de";
+        }
+        // else: already unlocked with no match either before or now — the
+        // person may be mid-typing their own email, so leave it untouched.
       }
       // Selects the stored hub_contact value in the dropdown. A plain
       // `select.value = name` silently shows "– bitte wählen –" whenever
@@ -6774,8 +6833,19 @@
           return;
         }
         document.getElementById("pm-name-input").value = "";
-        document.getElementById("pm-email-input").value = "";
-        copyText(d.link, `✅ Link für ${name} kopiert!`);
+        const emailEl = document.getElementById("pm-email-input");
+        emailEl.value = "";
+        emailEl.disabled = true;
+        emailEl.placeholder = "Wird automatisch ausgefüllt";
+        // The backend already emailed the PM their link directly (see POST
+        // /pm-token) — still copy it to the clipboard too as a convenient
+        // fallback, but the toast reflects whether that email actually went
+        // out rather than just "link copied", since that's the part the Hub
+        // needs to know about (and act on, if it failed).
+        const resultMsg = d.email_sent
+          ? `✅ Zugang erstellt und E-Mail an ${name} gesendet`
+          : "⚠️ Zugang erstellt, aber E-Mail konnte nicht gesendet werden – bitte Link manuell teilen";
+        copyText(d.link, resultMsg);
         loadPMTokens(currentEventId);
       }
       function copyText(text, msg) {
