@@ -6619,9 +6619,25 @@
           showToast("❌ Verbindungsfehler beim Aktualisieren der Pixlip-Aufgaben");
         }
       }
-      async function setWorkflowYesNoReason(workflowId, rowKey, patch, label) {
+      // reasonOnValue: which Ja/Nein answer reveals the follow-up
+      // reason/description box — defaults to "Nein" (the general "why
+      // didn't this happen" case every yesno_reason row originally had).
+      // A row can override this (see WORKFLOWS.pixlip's "pr3"/"Schäden",
+      // which reveals it on "Ja" instead, since a description only makes
+      // sense once damage is confirmed) via row.reasonOnValue — callers
+      // pass that same value through here so the stale-reason-clearing
+      // rule below stays consistent with whichever answer is actually
+      // showing the box for that specific row.
+      async function setWorkflowYesNoReason(
+        workflowId,
+        rowKey,
+        patch,
+        label,
+        reasonOnValue,
+      ) {
         const ev = eventDetail?.event || pmData?.event;
         if (!ev) return;
+        const revealValue = reasonOnValue || "Nein";
         const wfRows =
           currentRole === "hub"
             ? eventDetail?.workflow_rows || []
@@ -6632,7 +6648,7 @@
           ) || {};
         const current = parseYesNoReason(stored.input_value);
         const merged = { ...current, ...patch };
-        if (merged.value !== "Nein") merged.reason = ""; // clear stale reason once answer isn't "Nein" anymore
+        if (merged.value !== revealValue) merged.reason = ""; // clear stale reason once it's no longer the "explain" answer
         await setWorkflowInput(workflowId, rowKey, JSON.stringify(merged));
         // The "Pixlip erforderlich" answer gates the entire Pixlip tab —
         // only fires when the Ja/Nein answer itself changed (patch.value),
@@ -8246,6 +8262,13 @@
               ? pairStored.input_value || getFallbackValue(id, row.pairKey, ev)
               : null;
             const ynr = isYesNoReason ? parseYesNoReason(valToShow) : null;
+            // Which answer reveals the follow-up box, and what it prompts
+            // for — defaults match every yesno_reason row except pixlip's
+            // "Schäden" (pr3), which overrides both via row.reasonOnValue/
+            // row.reasonPlaceholder since "describe the damage" only makes
+            // sense once the answer is "Ja".
+            const reasonOnValue = row.reasonOnValue || "Nein";
+            const reasonPlaceholder = row.reasonPlaceholder || "Warum nicht?";
             // A yesno_reason row's done date is meaningless until an answer
             // exists — see the disabled done-date input below and
             // setWorkflowYesNoReason's auto-fill-on-first-answer logic.
@@ -8259,7 +8282,7 @@
                 : isHubOnlyLocked
                   ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
                   : isYesNoReason
-                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value},'${row.label}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
                     : isYesNo
                       ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
                       : isDatePair
@@ -8332,13 +8355,18 @@
               ? resolveSourceFieldValue(row, ev, wfRows)
               : stored.input_value || getFallbackValue("pflicht", row.key, ev);
             const ynr = isYesNoReason ? parseYesNoReason(rawVal) : null;
+            // Same rule as renderWorkflow(): which answer reveals the
+            // follow-up box, and what it prompts for — see that function's
+            // matching comment for why a row might override these.
+            const reasonOnValue = row.reasonOnValue || "Nein";
+            const reasonPlaceholder = row.reasonPlaceholder || "Warum nicht?";
             // Same rule as renderWorkflow(): a yesno_reason row's done date
             // is meaningless (and disabled) until an answer exists.
             const yesNoReasonUnanswered = isYesNoReason && !ynr.value;
             const inputCell = isSourceField
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(rawVal) || "–"}</div>`
               : isYesNoReason
-              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === "Nein" ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="Warum nicht?" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value})">${esc(ynr.reason)}</textarea>` : ""}</div>`
+              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
               : isYesNo
                 ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
                 : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
@@ -8928,6 +8956,10 @@
                   hint: "Ja / Nein / Beschreibung",
                   offset: 7,
                   type: "yesno_reason",
+                  // "Nein" needs no explanation here — the description only
+                  // makes sense once damage is actually confirmed ("Ja").
+                  reasonOnValue: "Ja",
+                  reasonPlaceholder: "Beschreibung des Schadens",
                 },
               ],
             },
