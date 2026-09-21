@@ -6612,6 +6612,11 @@
           return;
         }
         updateLocalWorkflow(workflowId, rowKey, { input_value: val });
+        // Keep the Summary tab's cards (e.g. the Links card) in sync — unlike
+        // setWorkflowDone() this previously never refreshed the dashboard, so
+        // a link typed here saved fine but stayed invisible on Summary until
+        // a full reload re-fetched the event.
+        renderDashboard();
       }
 
       // ══ YES/NO + REASON FIELD TYPE ══
@@ -7195,6 +7200,14 @@
       function buildSummaryLinksHtml(source) {
         const links = [
           {
+            label: "Excel-Sheet",
+            value: (getWorkflowRowValue(source, "pflicht", "ei8") || "").trim(),
+          },
+          {
+            label: "Verteilerliste",
+            value: (getWorkflowRowValue(source, "pflicht", "ei7") || "").trim(),
+          },
+          {
             label: "Anmeldelink",
             value: [
               getWorkflowRowValue(source, "pflicht", "ei4"),
@@ -7202,14 +7215,6 @@
             ]
               .map((value) => (value || "").trim())
               .find(Boolean),
-          },
-          {
-            label: "Verteilerliste",
-            value: (getWorkflowRowValue(source, "pflicht", "ei7") || "").trim(),
-          },
-          {
-            label: "Excel-Sheet",
-            value: (getWorkflowRowValue(source, "pflicht", "ei8") || "").trim(),
           },
         ].filter((link) => link.value);
         if (!links.length) {
@@ -7563,7 +7568,7 @@
                 ${buildSummarySpeakerHtml(source)}
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🔗</span>Links</div>
+                <div class="summary-card-title"><span class="summary-card-icon">🔗</span>Link</div>
                 ${buildSummaryLinksHtml(source)}
               </div>
             </div>`;
