@@ -7188,24 +7188,44 @@
           })
           .join("");
       }
-      function buildSummaryRegistrationHtml(source) {
-        const linkValue = [
-          getWorkflowRowValue(source, "pflicht", "ei4"),
-          getWorkflowRowValue(source, "social", "sm5"),
-        ]
-          .map((value) => (value || "").trim())
-          .find(Boolean);
-        if (!linkValue) {
-          return '<div class="summary-empty">Noch kein Anmeldelink hinterlegt.</div>';
+      function normalizeSummaryLinkHref(value) {
+        return /^mailto:/i.test(value)
+          ? value
+          : /^https?:\/\//i.test(value)
+            ? value
+            : /^www\./i.test(value)
+              ? `https://${value}`
+              : `https://${value}`;
+      }
+      function buildSummaryLinksHtml(source) {
+        const links = [
+          {
+            label: "Anmeldelink",
+            value: [
+              getWorkflowRowValue(source, "pflicht", "ei4"),
+              getWorkflowRowValue(source, "social", "sm5"),
+            ]
+              .map((value) => (value || "").trim())
+              .find(Boolean),
+          },
+          {
+            label: "Verteilerliste",
+            value: (getWorkflowRowValue(source, "pflicht", "ei7") || "").trim(),
+          },
+          {
+            label: "Excel-Sheet",
+            value: (getWorkflowRowValue(source, "pflicht", "ei8") || "").trim(),
+          },
+        ].filter((link) => link.value);
+        if (!links.length) {
+          return '<div class="summary-empty">Noch keine Links hinterlegt.</div>';
         }
-        const safeHref = /^mailto:/i.test(linkValue)
-          ? linkValue
-          : /^https?:\/\//i.test(linkValue)
-            ? linkValue
-            : /^www\./i.test(linkValue)
-              ? `https://${linkValue}`
-              : `https://${linkValue}`;
-        return `<div class="summary-list-item"><strong>Anmeldelink</strong><div><a class="summary-link" href="${esc(safeHref)}" target="_blank" rel="noopener">${esc(linkValue)}</a></div></div>`;
+        return links
+          .map((link) => {
+            const safeHref = normalizeSummaryLinkHref(link.value);
+            return `<div class="summary-list-item"><strong>${esc(link.label)}</strong><div><a class="summary-link" href="${esc(safeHref)}" target="_blank" rel="noopener">${esc(link.value)}</a></div></div>`;
+          })
+          .join("");
       }
       function buildSummaryRoomHtml(roomValue) {
         const onlineUrl = getOnlineRoomUrl(roomValue);
@@ -7548,8 +7568,8 @@
                 ${buildSummarySpeakerHtml(source)}
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🔗</span>Anmeldelink</div>
-                ${buildSummaryRegistrationHtml(source)}
+                <div class="summary-card-title"><span class="summary-card-icon">🔗</span>Links</div>
+                ${buildSummaryLinksHtml(source)}
               </div>
             </div>`;
         }
@@ -8690,6 +8710,18 @@
                   key: "ei6",
                   label: "Anzahl Empfänger:innen",
                   hint: "Ungefähre Zahl",
+                  offset: -56,
+                },
+                {
+                  key: "ei7",
+                  label: "Link zur finalen Verteilerliste",
+                  hint: "z. B. Google Sheets / SharePoint Link",
+                  offset: -56,
+                },
+                {
+                  key: "ei8",
+                  label: "Link zum Excel-Sheet",
+                  hint: "z. B. Google Sheets / SharePoint Link",
                   offset: -56,
                 },
               ],
