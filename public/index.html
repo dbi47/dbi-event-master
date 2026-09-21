@@ -8339,7 +8339,10 @@
             return;
           }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
-          sec.rows.forEach((row) => {
+          const sortedRows = [...sec.rows].sort(
+            (a, b) => (a.offset || 0) - (b.offset || 0),
+          );
+          sortedRows.forEach((row) => {
             const fd = eventDate ? addDays(eventDate, row.offset || 0) : null;
             const stored = getRow(id, row.key);
             const isAutoStatus = !!row.autoStatusField;
@@ -8444,7 +8447,10 @@
             return;
           }
           html += `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
-          sec.rows.forEach((row) => {
+          const sortedRows = [...sec.rows].sort(
+            (a, b) => (a.offset || 0) - (b.offset || 0),
+          );
+          sortedRows.forEach((row) => {
             const fd = eventDate ? addDays(eventDate, row.offset || 0) : null;
             const stored = getRow("pflicht", row.key);
             const done = parseISO(stored.done_date || "");
