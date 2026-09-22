@@ -2889,15 +2889,6 @@
         <div class="page" id="page-dashboard">
           <div class="page-title">Dashboard</div>
           <div class="page-sub" id="dash-sub"></div>
-          <div class="btn-row" style="margin-bottom: 20px">
-            <button
-              class="btn-secondary"
-              type="button"
-              onclick="exportEventGanttCSV()"
-            >
-              📅 Gantt exportieren
-            </button>
-          </div>
           <div id="dash-alert-red" class="alert alert-red"></div>
           <div id="dash-alert-amb" class="alert alert-amb"></div>
           <div class="dash-grid">
@@ -2929,7 +2920,22 @@
               </div>
             </div>
           </div>
-          <div class="section-title">Meilensteine</div>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <div class="section-title">Meilensteine</div>
+            <button
+              class="btn-secondary"
+              type="button"
+              onclick="exportEventGanttCSV()"
+            >
+              📅 Gantt exportieren
+            </button>
+          </div>
           <div class="ms-timeline-wrap" id="ms-timeline-wrap">
             <div class="ms-timeline" id="ms-timeline"></div>
             <div class="ms-tl-detail" id="ms-timeline-detail"></div>
