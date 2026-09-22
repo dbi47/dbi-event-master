@@ -838,8 +838,9 @@
         border-left-color: var(--accent);
       }
       .nav-icon {
-        font-size: 1.05rem;
         flex-shrink: 0;
+        width: 17px;
+        height: 17px;
       }
       .nav-label {
         flex: 1;
@@ -1069,6 +1070,33 @@
         background: var(--cream);
         color: var(--mid);
       }
+      /* Status pills (built by pillHTML()) — a solid dot instead of an
+         emoji, colored to match the pill's own status. Plain .pill usages
+         elsewhere (size/owner badges) never get this dot, since only
+         pillHTML() emits it. */
+      .status-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--mid);
+        flex-shrink: 0;
+      }
+      .status-dot-red {
+        background: var(--red-fg);
+      }
+      .status-dot-amb {
+        background: var(--amb-fg);
+      }
+      .status-dot-grn {
+        background: var(--grn-fg);
+      }
+      .status-dot-blu {
+        background: var(--blu-fg);
+      }
+      .status-dot-grey {
+        background: var(--mid);
+      }
       tr.status-red {
         background: #fce8f3 !important;
       }
@@ -1289,6 +1317,21 @@
         opacity: 0.45;
         cursor: not-allowed;
         transform: none;
+      }
+      /* Inline icon inside a .btn/.btn-secondary or event-card-menu item —
+         sized down from Lucide's 24px default and nudged onto the text
+         baseline, with its own right margin so callers don't need a
+         literal space character between the icon and the label. */
+      .btn-icon {
+        width: 15px;
+        height: 15px;
+        vertical-align: -3px;
+        margin-right: 6px;
+      }
+      .event-card-menu button svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
       }
       .btn-row {
         display: flex;
@@ -1721,12 +1764,26 @@
         align-items: center;
         margin-bottom: 20px;
       }
-      .events-search-input {
+      .events-search-wrap {
+        position: relative;
         flex: 1;
         min-width: 220px;
+        display: flex;
+        align-items: center;
+      }
+      .events-search-wrap svg {
+        position: absolute;
+        left: 14px;
+        width: 15px;
+        height: 15px;
+        color: var(--mid);
+        pointer-events: none;
+      }
+      .events-search-input {
+        flex: 1;
         border: 1px solid var(--line);
         background: white;
-        padding: 10px 14px;
+        padding: 10px 14px 10px 38px;
         font-family: "Instrument Sans", sans-serif;
         font-size: 0.85rem;
         border-radius: 999px;
@@ -2771,7 +2828,7 @@
           onclick="showPage('hub-events')"
           id="nav-hub-events"
         >
-          <span class="nav-icon">🗂</span
+          <i data-lucide="layout-grid" class="nav-icon"></i
           ><span class="nav-label">Alle Events</span>
           <span class="nav-badge" id="badge-hub-events"></span>
         </div>
@@ -2780,7 +2837,7 @@
           onclick="showPage('dashboard')"
           id="nav-dashboard"
         >
-          <span class="nav-icon">🚦</span
+          <i data-lucide="layout-dashboard" class="nav-icon"></i
           ><span class="nav-label">Dashboard</span>
         </div>
         <div
@@ -2788,7 +2845,7 @@
           onclick="showPage('eventdaten')"
           id="nav-eventdaten"
         >
-          <span class="nav-icon">🎯</span
+          <i data-lucide="target" class="nav-icon"></i
           ><span class="nav-label">Eventdaten</span>
         </div>
         <div class="sidebar-section workflow-item" style="display: none">
@@ -2799,7 +2856,7 @@
           onclick="showPage('pflicht')"
           id="nav-pflicht"
         >
-          <span class="nav-icon">📋</span
+          <i data-lucide="clipboard-list" class="nav-icon"></i
           ><span class="nav-label">Pflichtinhalte</span>
           <span class="nav-badge" id="badge-pflicht"></span>
         </div>
@@ -2808,7 +2865,7 @@
           onclick="showPage('social')"
           id="nav-social"
         >
-          <span class="nav-icon">📱</span
+          <i data-lucide="smartphone" class="nav-icon"></i
           ><span class="nav-label">Social Media</span>
           <span class="nav-badge" id="badge-social"></span>
         </div>
@@ -2817,7 +2874,7 @@
           onclick="showPage('proj-todos')"
           id="nav-proj-todos"
         >
-          <span class="nav-icon">✏️</span
+          <i data-lucide="pencil" class="nav-icon"></i
           ><span class="nav-label">Meine Aufgaben</span>
           <span class="nav-badge" id="badge-proj-todos"></span>
         </div>
@@ -2826,11 +2883,11 @@
           onclick="showPage('pixlip')"
           id="nav-pixlip"
         >
-          <span class="nav-icon">🖼</span><span class="nav-label">Pixlip</span>
+          <i data-lucide="image" class="nav-icon"></i><span class="nav-label">Pixlip</span>
           <span class="nav-badge" id="badge-pixlip"></span>
         </div>
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
-          <span class="nav-icon">🧾</span
+          <i data-lucide="receipt" class="nav-icon"></i
           ><span class="nav-label">Zusammenfassung</span>
         </div>
         <div
@@ -2862,11 +2919,11 @@
           onclick="showPage('pm-manager')"
           id="nav-pm-manager"
         >
-          <span class="nav-icon">👥</span
+          <i data-lucide="users" class="nav-icon"></i
           ><span class="nav-label">PM-Zugänge</span>
         </div>
         <div class="nav-item hub-only" onclick="exportICS()">
-          <span class="nav-icon">📅</span
+          <i data-lucide="calendar-plus" class="nav-icon"></i
           ><span class="nav-label">ICS-Feed kopieren</span>
         </div>
       </nav>
@@ -2880,19 +2937,22 @@
             Wähle ein Event zum Bearbeiten oder lege ein neues an.
           </div>
           <div class="events-toolbar">
-            <input
-              type="text"
-              id="events-search"
-              class="events-search-input"
-              placeholder="🔍 Nach Eventname suchen…"
-              oninput="renderEventGrid()"
-            />
+            <div class="events-search-wrap">
+              <i data-lucide="search"></i>
+              <input
+                type="text"
+                id="events-search"
+                class="events-search-input"
+                placeholder="Nach Eventname suchen…"
+                oninput="renderEventGrid()"
+              />
+            </div>
             <button
               class="btn-secondary"
               type="button"
               onclick="exportEventsCSV()"
             >
-              📊 CSV exportieren
+              <i data-lucide="file-spreadsheet" class="btn-icon"></i>CSV exportieren
             </button>
           </div>
           <div class="events-filters">
@@ -3017,7 +3077,7 @@
               type="button"
               onclick="exportEventGanttCSV()"
             >
-              📅 Gantt exportieren
+              <i data-lucide="chart-gantt" class="btn-icon"></i>Gantt exportieren
             </button>
           </div>
           <div class="ms-timeline-wrap" id="ms-timeline-wrap">
@@ -3817,7 +3877,7 @@
               → Dashboard
             </button>
             <button class="btn" onclick="saveEventFormValidated()">
-              💾 Speichern
+              <i data-lucide="save" class="btn-icon"></i>Speichern
             </button>
           </div>
         </div>
@@ -4032,6 +4092,10 @@
       </section>
     </div>
 
+    <!-- Icon system — see the .nav-icon/.btn-icon/data-lucide usages below.
+         Pinned to a specific version per Lucide's own recommendation (avoids
+         @latest silently changing icon shapes/names under us). -->
+    <script src="https://unpkg.com/lucide@1.47.0"></script>
     <script>
       // ══ CONFIG ══
       const API = "/.netlify/functions/api";
@@ -5071,8 +5135,8 @@
             ? "Event archivieren"
             : "Nur bereits vergangene Events können archiviert werden";
           const archiveOrRestoreMenuItem = showArchivedEvents
-            ? `<button type="button" onclick="event.stopPropagation();closeEventCardMenus();restoreEvent('${ev.id}','${esc(ev.name)}')">♻️ Wiederherstellen</button>`
-            : `<button type="button" title="${archiveTitle}" ${canArchive ? `onclick="event.stopPropagation();closeEventCardMenus();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}>📦 Archivieren</button>`;
+            ? `<button type="button" onclick="event.stopPropagation();closeEventCardMenus();restoreEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="archive-restore"></i>Wiederherstellen</button>`
+            : `<button type="button" title="${archiveTitle}" ${canArchive ? `onclick="event.stopPropagation();closeEventCardMenus();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}><i data-lucide="archive"></i>Archivieren</button>`;
           card.innerHTML = `<div class="event-card-name">${esc(ev.name)}</div>
 <div class="event-card-date">${evDate ? fmtDE(evDate) : "– kein Datum –"} · ${diffStr}</div>
 <div class="event-card-badges">
@@ -5085,10 +5149,10 @@
   <div class="event-card-menu-wrap">
     <button class="btn btn-secondary event-card-menu-btn" type="button" title="Weitere Aktionen" onclick="event.stopPropagation();toggleEventCardMenu('${ev.id}')">⋯</button>
     <div class="event-card-menu" id="event-card-menu-${ev.id}">
-      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();copyICSLink('${ev.id}')">📅 ICS-Link kopieren</button>
-      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();duplicateEvent('${ev.id}','${esc(ev.name)}')">📄 Duplizieren</button>
+      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();copyICSLink('${ev.id}')"><i data-lucide="calendar-plus"></i>ICS-Link kopieren</button>
+      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();duplicateEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="copy"></i>Duplizieren</button>
       ${archiveOrRestoreMenuItem}
-      <button type="button" class="event-card-menu-danger" onclick="event.stopPropagation();closeEventCardMenus();deleteEvent('${ev.id}','${esc(ev.name)}')">🗑 Löschen</button>
+      <button type="button" class="event-card-menu-danger" onclick="event.stopPropagation();closeEventCardMenus();deleteEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="trash-2"></i>Löschen</button>
     </div>
   </div>
 </div>`;
@@ -5111,6 +5175,7 @@
           newCard.onclick = createNewEvent;
           grid.appendChild(newCard);
         }
+        lucide.createIcons();
       }
       // ── EVENT CARD OVERFLOW MENU ──
       // The "⋯" button on each event card reveals ICS/Duplizieren/
@@ -6924,10 +6989,11 @@
 <td style="font-weight:600">${esc(t.pm_name)}</td>
 <td style="font-size:.75rem;color:var(--mid)">${esc(t.pm_email || "–")}</td>
 <td><button class="token-copy" onclick="copyText('${esc(t.link)}','PM-Link kopiert!')">🔗 Link kopieren</button></td>
-<td><button class="token-copy" onclick="copyText('${esc(t.ics_link)}','ICS-Link kopiert!')">📅 ICS kopieren</button></td>
+<td><button class="token-copy" onclick="copyText('${esc(t.ics_link)}','ICS-Link kopiert!')"><i data-lucide="calendar-plus" class="btn-icon"></i>ICS kopieren</button></td>
 </tr>`,
           )
           .join("")}</tbody></table></div>`;
+        lucide.createIcons();
       }
       async function generatePMToken() {
         if (!currentEventId) {
@@ -7983,8 +8049,10 @@
           `speaker-save-btn-${workflowId}`,
         );
         if (saveBtn) {
-          saveBtn.textContent = "💾 Änderungen speichern";
+          saveBtn.innerHTML =
+            '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern';
           saveBtn.classList.add("dirty");
+          lucide.createIcons();
         }
         const hint = document.getElementById(`speaker-save-hint-${workflowId}`);
         if (hint) hint.textContent = "Ungespeicherte Änderungen";
@@ -8036,7 +8104,7 @@
         html += `<div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addSpeakerRow('${workflowId}')">＋ Service Provider hinzufügen</button></div>`;
         html += `<div class="speaker-field"><label>Besondere Gäste / VIPs</label><textarea class="speaker-textarea" placeholder="Namen & Institutionen" onchange="setSpeakerGuests('${workflowId}', this.value)">${esc(data.guests || "")}</textarea></div>`;
         html += `<div class="agenda-save-row" style="margin-top:10px">
-    <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="speaker-save-btn-${workflowId}" onclick="saveSpeakerDraft('${workflowId}')">${dirty ? "💾 Änderungen speichern" : "✅ Gespeichert"}</button>
+    <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="speaker-save-btn-${workflowId}" onclick="saveSpeakerDraft('${workflowId}')">${dirty ? '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern' : "✅ Gespeichert"}</button>
     <span class="agenda-save-hint" id="speaker-save-hint-${workflowId}">${dirty ? "Ungespeicherte Änderungen" : ""}</span>
   </div>`;
         html += `</div>`;
@@ -8058,6 +8126,7 @@
           workflowId,
           currentWfRowsForRole(),
         );
+        lucide.createIcons();
       }
 
       // ══ AGENDA BUILDER DATA MODEL ══
@@ -8284,8 +8353,10 @@
           `agenda-save-btn-${workflowId}`,
         );
         if (saveBtn) {
-          saveBtn.textContent = "💾 Änderungen speichern";
+          saveBtn.innerHTML =
+            '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern';
           saveBtn.classList.add("dirty");
+          lucide.createIcons();
         }
         const hint = document.getElementById(`agenda-save-hint-${workflowId}`);
         if (hint) hint.textContent = "Ungespeicherte Änderungen";
@@ -8407,7 +8478,7 @@
       <textarea class="agenda-copy-preview" id="agenda-copy-preview-${workflowId}" readonly onclick="this.select()">${esc(copyText)}</textarea>
     </div>
     <div class="agenda-save-row">
-      <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="agenda-save-btn-${workflowId}" onclick="saveAgendaDraft('${workflowId}')">${dirty ? "💾 Änderungen speichern" : "✅ Gespeichert"}</button>
+      <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="agenda-save-btn-${workflowId}" onclick="saveAgendaDraft('${workflowId}')">${dirty ? '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern' : "✅ Gespeichert"}</button>
       <button class="speaker-add-btn" type="button" onclick="copyAgendaText('${workflowId}')">📋 Agenda kopieren</button>
       <span class="agenda-save-hint" id="agenda-save-hint-${workflowId}">${dirty ? "Ungespeicherte Änderungen" : ""}</span>
     </div>
@@ -8433,6 +8504,7 @@
           workflowId,
           currentWfRowsForRole(),
         );
+        lucide.createIcons();
       }
       function renderAgendaSection(sec, workflowId, wfRows) {
         let html = `<tr class="wf-section-header"><td colspan="6" style="background:${sec.color}">${sec.title}</td></tr>`;
@@ -8574,6 +8646,7 @@
         });
         html += "</tbody></table></div>";
         el.innerHTML = html;
+        lucide.createIcons();
       }
       function renderProjTodosFromPMData() {
         const el = document.getElementById("page-proj-todos");
@@ -8647,6 +8720,7 @@
         });
         html += "</tbody></table></div>";
         el.innerHTML = html;
+        lucide.createIcons();
       }
 
       // ══ ICS ══
@@ -8727,7 +8801,7 @@
         return { cls: "grey", icon: "⬜", label: "Noch nicht fällig" };
       }
       function pillHTML(s) {
-        return `<span class="pill pill-${s.cls}">${s.icon} ${s.label}</span>`;
+        return `<span class="pill pill-${s.cls}"><span class="status-dot status-dot-${s.cls}"></span>${s.label}</span>`;
       }
 
       // ══ MILESTONES ══
@@ -9360,6 +9434,12 @@
       populateHubContactOptions();
 
       document.addEventListener("DOMContentLoaded", () => {
+        // Converts every <i data-lucide="..."> present in the static markup
+        // (sidebar nav, search icon, Speichern/Gantt/CSV buttons, etc.) into
+        // real SVGs. Content generated later by render functions converts
+        // its own icons via their own lucide.createIcons() call — see e.g.
+        // renderEventGrid(), renderWorkflow(), loadPMTokens().
+        lucide.createIcons();
         const token = new URLSearchParams(window.location.search).get("token");
         if (token) {
           document.getElementById("pm-btn").style.borderColor = "#2d3a8c";
