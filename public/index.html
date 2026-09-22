@@ -2181,8 +2181,8 @@
       /* TOAST */
       .toast {
         position: fixed;
-        bottom: 24px;
-        right: 20px;
+        top: 24px;
+        left: 50%;
         background: linear-gradient(135deg, #1a1433 0%, #2d3a8c 100%);
         color: #f0eeff;
         padding: 12px 18px;
@@ -2190,7 +2190,10 @@
         font-size: 0.82rem;
         font-weight: 500;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
-        transform: translateY(80px);
+        /* Top-center, not top-right — the notification bell already lives
+           there, and a transient toast landing on it would visually
+           compete with a persistent UI element. */
+        transform: translate(-50%, -80px);
         opacity: 0;
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         z-index: 999;
@@ -2205,7 +2208,7 @@
         flex-shrink: 0;
       }
       .toast.show {
-        transform: translateY(0);
+        transform: translate(-50%, 0);
         opacity: 1;
       }
 
@@ -8849,8 +8852,30 @@
         warning: "triangle-alert",
         info: "info",
       };
+      // Longer-lived types carry text people actually need to read and
+      // sometimes act on, not just a quick "it worked" glance.
+      const TOAST_DURATIONS = {
+        success: 3000,
+        info: 3500,
+        warning: 5000,
+        error: 6000,
+      };
       let toastTimer;
+      let toastShowing = false;
+      let toastQueue = [];
+      // One toast on screen at a time. A call that arrives while one is
+      // already showing queues instead of overwriting it, so an error
+      // toast can never get silently replaced before anyone reads it —
+      // see displayToast() for how the queue drains.
       function showToast(msg, type = "info") {
+        if (toastShowing) {
+          toastQueue.push({ msg, type });
+          return;
+        }
+        displayToast(msg, type);
+      }
+      function displayToast(msg, type) {
+        toastShowing = true;
         const t = document.getElementById("toast");
         const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
         document.getElementById("toast-icon").innerHTML =
@@ -8859,7 +8884,18 @@
         lucide.createIcons();
         t.classList.add("show");
         clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
+        const duration = TOAST_DURATIONS[type] || TOAST_DURATIONS.info;
+        toastTimer = setTimeout(() => {
+          t.classList.remove("show");
+          toastShowing = false;
+          const next = toastQueue.shift();
+          if (next) {
+            // Let the hide transition (see .toast's 0.3s transition) finish
+            // before the next one starts sliding in, instead of yanking the
+            // content mid-animation.
+            setTimeout(() => displayToast(next.msg, next.type), 300);
+          }
+        }, duration);
       }
 
       // ══ DATE HELPERS ══
