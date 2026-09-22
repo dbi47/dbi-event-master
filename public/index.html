@@ -2809,14 +2809,6 @@
             <button
               class="btn-secondary"
               type="button"
-              id="events-archive-toggle"
-              onclick="toggleArchivedEventsView()"
-            >
-              📦 Archiv anzeigen
-            </button>
-            <button
-              class="btn-secondary"
-              type="button"
               onclick="exportEventsCSV()"
             >
               📊 CSV exportieren
@@ -2869,6 +2861,17 @@
                   Fortschritt (niedrig → hoch)
                 </option>
               </select>
+            </div>
+            <div class="events-filter-field">
+              <label for="events-archive-toggle">Ansicht</label>
+              <button
+                class="btn-secondary"
+                type="button"
+                id="events-archive-toggle"
+                onclick="toggleArchivedEventsView()"
+              >
+                📦 Archiv anzeigen
+              </button>
             </div>
             <button
               class="events-filter-reset"
