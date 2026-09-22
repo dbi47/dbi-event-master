@@ -101,11 +101,19 @@
         flex-shrink: 0;
       }
       .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         font-size: 0.65rem;
         font-weight: 700;
         padding: 3px 10px;
         border-radius: 20px;
         white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .role-badge-icon {
+        width: 12px;
+        height: 12px;
         flex-shrink: 0;
       }
       .role-badge-hub {
@@ -120,6 +128,9 @@
         position: relative;
         width: 34px;
         height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.08);
@@ -127,6 +138,10 @@
         cursor: pointer;
         font-size: 1rem;
         flex-shrink: 0;
+      }
+      .notification-btn svg {
+        width: 17px;
+        height: 17px;
       }
       .notification-btn:hover {
         background: rgba(255, 255, 255, 0.16);
@@ -409,6 +424,10 @@
         color: var(--accent);
         font-size: 0.9rem;
       }
+      .summary-card-icon svg {
+        width: 15px;
+        height: 15px;
+      }
       .summary-list-item {
         padding: 8px 0 9px;
         border-bottom: 1px dashed rgba(212, 208, 232, 0.7);
@@ -449,6 +468,12 @@
         text-decoration: none;
         font-weight: 600;
       }
+      .summary-link svg {
+        width: 14px;
+        height: 14px;
+        vertical-align: -2px;
+        margin-right: 4px;
+      }
       .summary-link:hover {
         text-decoration: underline;
       }
@@ -459,7 +484,9 @@
         margin-top: 6px;
       }
       .summary-pill {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         padding: 4px 9px;
         border-radius: 999px;
         background: linear-gradient(
@@ -471,6 +498,11 @@
         font-size: 0.75rem;
         font-weight: 600;
         border: 1px solid rgba(45, 58, 140, 0.08);
+      }
+      .summary-pill svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
       }
       .speaker-section {
         display: grid;
@@ -600,6 +632,12 @@
         font-weight: 700;
         font-size: 0.76rem;
         margin-top: 10px;
+      }
+      .agenda-info-warning svg {
+        width: 13px;
+        height: 13px;
+        vertical-align: -2px;
+        margin-right: 4px;
       }
       .agenda-editor {
         display: grid;
@@ -921,6 +959,9 @@
         text-transform: uppercase;
         color: var(--mid);
         margin-bottom: 6px;
+      }
+      .card-label .status-dot {
+        margin-right: 6px;
       }
       .card-value {
         font-family: "Fraunces", serif;
@@ -1370,6 +1411,13 @@
         background: var(--blu-bg);
         color: var(--blu-fg);
         border-left: 4px solid var(--blu-fg);
+      }
+      .alert-icon {
+        width: 15px;
+        height: 15px;
+        vertical-align: -3px;
+        margin-right: 6px;
+        flex-shrink: 0;
       }
       /* Dashboard's overdue/soon-due alert banners — clickable only when
          they actually have a count (see renderDashboard()), scrolling to
@@ -2141,6 +2189,14 @@
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         z-index: 999;
         max-width: 320px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      #toast-icon svg {
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
       }
       .toast.show {
         transform: translateY(0);
@@ -2252,7 +2308,8 @@
         background: #fce8f3;
       }
       .role-btn-icon {
-        font-size: 1.4rem;
+        width: 26px;
+        height: 26px;
         margin-bottom: 4px;
         display: block;
       }
@@ -2477,10 +2534,8 @@
       }
       .evd-preview-row-icon {
         width: 17px;
+        height: 17px;
         flex-shrink: 0;
-        text-align: center;
-        font-size: 0.85rem;
-        line-height: 1.5;
         opacity: 0.8;
       }
       .evd-preview-row-text {
@@ -2754,7 +2809,7 @@
           Bitte wähle deine Rolle für diese Sitzung
         </div>
         <button class="role-btn orga" onclick="showPWField()">
-          <span class="role-btn-icon">👑</span>
+          <i data-lucide="crown" class="role-btn-icon"></i>
           <span class="role-btn-title">Event-HUB / Kommunikation</span>
           <span class="role-btn-sub"
             >Vollzugriff · alle Events · Passwort erforderlich</span
@@ -2776,7 +2831,7 @@
           </button>
         </div>
         <button class="role-btn" onclick="checkPMToken()" id="pm-btn">
-          <span class="role-btn-icon">🎯</span>
+          <i data-lucide="user" class="role-btn-icon"></i>
           <span class="role-btn-title">Projektverantwortliche:r</span>
           <span class="role-btn-sub"
             >Meine Aufgaben über den mir zugesandten Link</span
@@ -2811,7 +2866,8 @@
         aria-label="Benachrichtigungen öffnen"
         title="Benachrichtigungen"
       >
-        🔔<span class="notification-count" id="notification-count">0</span>
+        <i data-lucide="bell"></i
+        ><span class="notification-count" id="notification-count">0</span>
       </button>
       <span class="role-badge" id="role-badge" style="display: none"></span>
       <div class="topbar-date" id="topbar-date"></div>
@@ -3037,22 +3093,22 @@
           <div id="dash-alert-amb" class="alert alert-amb"></div>
           <div class="dash-grid">
             <div class="dash-card card-red">
-              <div class="card-label">🔴 Überschritten</div>
+              <div class="card-label"><span class="status-dot status-dot-red"></span>Überschritten</div>
               <div class="card-value" id="cnt-red">–</div>
               <div class="card-sub">Fristen verpasst</div>
             </div>
             <div class="dash-card card-amb">
-              <div class="card-label">🟡 Wird knapp</div>
+              <div class="card-label"><span class="status-dot status-dot-amb"></span>Wird knapp</div>
               <div class="card-value" id="cnt-amb">–</div>
               <div class="card-sub">Weniger als 2 Wochen</div>
             </div>
             <div class="dash-card card-grn">
-              <div class="card-label">🟢 Im Zeitplan</div>
+              <div class="card-label"><span class="status-dot status-dot-grn"></span>Im Zeitplan</div>
               <div class="card-value" id="cnt-grn">–</div>
               <div class="card-sub">Im Plan</div>
             </div>
             <div class="dash-card card-ink">
-              <div class="card-label">✅ Erledigt</div>
+              <div class="card-label"><span class="status-dot status-dot-blu"></span>Erledigt</div>
               <div class="card-value" id="cnt-done">–</div>
               <div class="card-sub" id="progress-label">0% abgeschlossen</div>
               <div class="progress-bar-wrap">
@@ -3123,7 +3179,7 @@
                 </div>
                 <div class="evd-preview-body">
                   <div class="evd-preview-row">
-                    <span class="evd-preview-row-icon">📅</span>
+                    <i data-lucide="calendar-days" class="evd-preview-row-icon"></i>
                     <div class="evd-preview-row-text">
                       <div class="evd-preview-row-label">Datum</div>
                       <div class="evd-preview-row-value" id="evd-preview-date">
@@ -3132,7 +3188,7 @@
                     </div>
                   </div>
                   <div class="evd-preview-row">
-                    <span class="evd-preview-row-icon">📍</span>
+                    <i data-lucide="map-pin" class="evd-preview-row-icon"></i>
                     <div class="evd-preview-row-text">
                       <div class="evd-preview-row-label">Ort</div>
                       <div class="evd-preview-row-value" id="evd-preview-room">
@@ -3141,7 +3197,7 @@
                     </div>
                   </div>
                   <div class="evd-preview-row">
-                    <span class="evd-preview-row-icon">👥</span>
+                    <i data-lucide="users" class="evd-preview-row-icon"></i>
                     <div class="evd-preview-row-text">
                       <div class="evd-preview-row-label">Größe</div>
                       <div class="evd-preview-row-value" id="evd-preview-size">
@@ -3916,7 +3972,7 @@
             </div>
             <div class="btn-row">
               <button class="btn" onclick="generatePMToken()">
-                🔗 Link generieren
+                <i data-lucide="link" class="btn-icon"></i>Link generieren
               </button>
             </div>
           </div>
@@ -4023,7 +4079,9 @@
       </main>
     </div>
 
-    <div class="toast" id="toast"><span id="toast-msg"></span></div>
+    <div class="toast" id="toast">
+      <span id="toast-icon"></span><span id="toast-msg"></span>
+    </div>
     <div
       class="notification-overlay"
       id="notification-overlay"
@@ -4481,7 +4539,10 @@
         });
         if (!r.ok) {
           if (!silent)
-            showToast("❌ Benachrichtigung konnte nicht aktualisiert werden");
+            showToast(
+              "Benachrichtigung konnte nicht aktualisiert werden",
+              "error",
+            );
           return false;
         }
         if (!silent) await fetchNotifications();
@@ -4578,7 +4639,8 @@
         const failCount = results.filter((ok) => !ok).length;
         if (failCount) {
           showToast(
-            `⚠️ ${failCount} von ${ids.length} Aktionen fehlgeschlagen`,
+            `${failCount} von ${ids.length} Aktionen fehlgeschlagen`,
+            "warning",
           );
           return;
         }
@@ -4591,7 +4653,8 @@
                 : "archiviert"
               : "gelöscht";
         showToast(
-          `✅ ${ids.length} Benachrichtigung${ids.length > 1 ? "en" : ""} ${verb}`,
+          `${ids.length} Benachrichtigung${ids.length > 1 ? "en" : ""} ${verb}`,
+          "success",
         );
       }
 
@@ -4837,16 +4900,20 @@
         const badge = document.getElementById("role-badge");
         badge.style.display = "inline";
         if (role === "hub") {
-          badge.textContent = "👑 Event-HUB";
+          badge.innerHTML =
+            '<i data-lucide="crown" class="role-badge-icon"></i>Event-HUB';
           badge.className = "role-badge role-badge-hub";
+          lucide.createIcons();
           showPage("hub-events");
           renderEventGrid();
           loadMyWeek();
           loadPMContactDirectory();
         } else {
-          badge.textContent =
-            "🎯 " + (pmData?.pm_name || "Projektverantwortlich");
+          badge.innerHTML =
+            '<i data-lucide="user" class="role-badge-icon"></i>' +
+            esc(pmData?.pm_name || "Projektverantwortlich");
           badge.className = "role-badge role-badge-proj";
+          lucide.createIcons();
           document.getElementById("topbar-title").textContent =
             pmData?.event?.name || "Event";
           populateEventForm(pmData?.event);
@@ -4886,7 +4953,7 @@
           !currentEventId &&
           EVENT_SCOPED_PAGE_IDS.includes(id)
         ) {
-          showToast("⚠️ Bitte zuerst ein Event auswählen");
+          showToast("Bitte zuerst ein Event auswählen", "warning");
           showPage("hub-events");
           return;
         }
@@ -5215,9 +5282,9 @@
             );
             const d = await r.json();
             if (r.ok) archivedEvents = d.events || [];
-            else showToast("❌ " + (d.error || "Fehler beim Laden"));
+            else showToast(d.error || "Fehler beim Laden", "error");
           } catch {
-            showToast("❌ Verbindungsfehler beim Laden");
+            showToast("Verbindungsfehler beim Laden", "error");
           }
         }
         renderEventGrid();
@@ -5235,7 +5302,7 @@
           });
           const d = await r.json().catch(() => ({}));
           if (!r.ok) {
-            showToast("❌ " + (d.error || "Fehler beim Wiederherstellen"));
+            showToast(d.error || "Fehler beim Wiederherstellen", "error");
             return;
           }
           const restored = archivedEvents.find((e) => e.id === eventId);
@@ -5245,15 +5312,15 @@
           const toggleBtn = document.getElementById("events-archive-toggle");
           if (toggleBtn) toggleBtn.textContent = "📦 Archiv anzeigen";
           renderEventGrid();
-          showToast(`♻️ "${eventName}" wiederhergestellt`);
+          showToast(`"${eventName}" wiederhergestellt`, "success");
         } catch {
-          showToast("❌ Verbindungsfehler beim Wiederherstellen");
+          showToast("Verbindungsfehler beim Wiederherstellen", "error");
         }
       }
       function exportEventsCSV() {
         const source = showArchivedEvents ? archivedEvents : allEvents;
         if (!source.length) {
-          showToast("⚠️ Keine Events zum Exportieren");
+          showToast("Keine Events zum Exportieren", "warning");
           return;
         }
         const sizeLabel = (size) =>
@@ -5435,13 +5502,14 @@
       function exportEventGanttCSV() {
         const source = currentRole === "hub" ? eventDetail : pmData;
         if (!source?.event) {
-          showToast("⚠️ Bitte zuerst ein Event öffnen");
+          showToast("Bitte zuerst ein Event öffnen", "warning");
           return;
         }
         const rows = buildGanttRows(source);
         if (!rows.length) {
           showToast(
-            "⚠️ Kein Eventdatum vorhanden – Gantt kann nicht erstellt werden",
+            "Kein Eventdatum vorhanden – Gantt kann nicht erstellt werden",
+            "warning",
           );
           return;
         }
@@ -5505,7 +5573,8 @@
           const d = await r.json().catch(() => ({}));
           loadingEl.style.display = "none";
           if (!r.ok) {
-            listEl.innerHTML = `<div class="events-empty">❌ ${esc(d.error || "Fehler beim Laden")}</div>`;
+            listEl.innerHTML = `<div class="events-empty"><i data-lucide="circle-x" class="alert-icon"></i>${esc(d.error || "Fehler beim Laden")}</div>`;
+            lucide.createIcons();
             return;
           }
           myWeekItems = d.items || [];
@@ -5514,7 +5583,8 @@
         } catch {
           loadingEl.style.display = "none";
           listEl.innerHTML =
-            '<div class="events-empty">❌ Verbindungsfehler beim Laden</div>';
+            '<div class="events-empty"><i data-lucide="circle-x" class="alert-icon"></i>Verbindungsfehler beim Laden</div>';
+          lucide.createIcons();
         }
       }
       // Search/urgency filter changed — jump back to page 1, since staying
@@ -5543,7 +5613,8 @@
         }
         if (!myWeekItems.length) {
           listEl.innerHTML =
-            '<div class="events-empty">🎉 Nichts fällig oder überfällig – alles im Zeitplan.</div>';
+            '<div class="events-empty"><i data-lucide="circle-check" class="alert-icon"></i>Nichts fällig oder überfällig – alles im Zeitplan.</div>';
+          lucide.createIcons();
           if (paginationEl) paginationEl.innerHTML = "";
           return;
         }
@@ -5580,13 +5651,13 @@
                 : item.days_until_due <= 7
                   ? "pill-amb"
                   : "pill-grn";
-            const pillIcon = isOverdue
-              ? "🔴"
+            const pillDotCls = isOverdue
+              ? "red"
               : item.days_until_due <= 7
-                ? "🟡"
-                : "🟢";
+                ? "amb"
+                : "grn";
             return `<div class="my-week-item">
-  <span class="pill ${pillCls}">${pillIcon} ${esc(relLabel)}</span>
+  <span class="pill ${pillCls}"><span class="status-dot status-dot-${pillDotCls}"></span>${esc(relLabel)}</span>
   <div class="my-week-item-main">
     <strong>${esc(item.label)}</strong>
     <div class="my-week-item-event">${esc(item.event_name)}</div>
@@ -5613,7 +5684,7 @@
           `${API}/event?id=${id}&password=${encodeURIComponent(hubPassword)}`,
         );
         if (!r.ok) {
-          showToast("❌ Fehler beim Laden");
+          showToast("Fehler beim Laden", "error");
           return;
         }
         eventDetail = await r.json();
@@ -5638,7 +5709,7 @@
         });
         const d = await r.json();
         if (!r.ok) {
-          showToast("❌ Fehler: " + d.error);
+          showToast("Fehler: " + d.error, "error");
           return;
         }
         allEvents.push(d.event);
@@ -5667,7 +5738,7 @@
           });
           const d = await r.json().catch(() => ({}));
           if (!r.ok) {
-            showToast("❌ " + (d.error || "Fehler beim Duplizieren"));
+            showToast(d.error || "Fehler beim Duplizieren", "error");
             return;
           }
           let newEvent = d.event;
@@ -5685,11 +5756,11 @@
           }
           allEvents.push(newEvent);
           renderEventGrid();
-          showToast(`✅ "${newEvent.name}" dupliziert`);
+          showToast(`"${newEvent.name}" dupliziert`, "success");
           await selectEvent(newEvent.id);
           showPage("eventdaten");
         } catch {
-          showToast("❌ Verbindungsfehler beim Duplizieren");
+          showToast("Verbindungsfehler beim Duplizieren", "error");
         }
       }
 
@@ -5734,7 +5805,7 @@
         }
         if (!eventId) {
           if (spinnerTarget) hideFieldSpinner();
-          showToast("⚠️ Kein Event zum Speichern");
+          showToast("Kein Event zum Speichern", "warning");
           return;
         }
         if (!validateOnlineRoomUrl()) {
@@ -5766,10 +5837,10 @@
             renderDashboard();
             renderAllWorkflows();
             renderProjTodosFromPMData();
-            showToast("💾 Gespeichert");
-          } else showToast("❌ " + d.error);
+            showToast("Gespeichert", "success");
+          } else showToast(d.error, "error");
         } catch {
-          showToast("❌ Verbindungsfehler");
+          showToast("Verbindungsfehler", "error");
         } finally {
           indicator.style.display = "none";
           if (spinnerTarget) hideFieldSpinner();
@@ -6215,7 +6286,10 @@
         if (typeEl?.value !== "online") return true;
         const url = getOnlineRoomUrl(urlEl?.value);
         if (!url) {
-          showToast("⚠️ Bitte einen gültigen Online-Meeting-Link eingeben");
+          showToast(
+            "Bitte einen gültigen Online-Meeting-Link eingeben",
+            "warning",
+          );
           urlEl?.focus();
           return false;
         }
@@ -6603,7 +6677,8 @@
         const missing = validateEventRequiredFields();
         if (missing.length) {
           showToast(
-            `⚠️ Bitte fülle alle Pflichtfelder aus (${missing.length} fehlen)`,
+            `Bitte fülle alle Pflichtfelder aus (${missing.length} fehlen)`,
+            "warning",
           );
           missing[0]
             .highlightEl()
@@ -6666,7 +6741,7 @@
         if (!todoState.canSetDoneDate) {
           event?.preventDefault?.();
           event?.stopPropagation?.();
-          showToast("⚠️ Alle To-dos müssen abgeschlossen sein");
+          showToast("Alle To-dos müssen abgeschlossen sein", "warning");
           return false;
         }
         return true;
@@ -6677,7 +6752,7 @@
         if (!ev) return;
         const todoState = getMilestoneTodoState(key);
         if (dateVal && !todoState.canSetDoneDate) {
-          showToast("⚠️ Alle To-dos müssen abgeschlossen sein");
+          showToast("Alle To-dos müssen abgeschlossen sein", "warning");
           return;
         }
         const body = {
@@ -6693,7 +6768,7 @@
           body: JSON.stringify(body),
         });
         if (!r.ok) {
-          showToast("❌ Fehler beim Speichern");
+          showToast("Fehler beim Speichern", "error");
           return;
         }
         const target = currentRole === "hub" ? eventDetail : pmData;
@@ -6708,7 +6783,7 @@
             ms_key: key,
             done_date: dateVal || null,
           });
-        if (dateVal) showToast(`✅ "${label}" erledigt`);
+        if (dateVal) showToast(`"${label}" erledigt`, "success");
         renderDashboard();
       }
 
@@ -6763,11 +6838,11 @@
         });
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
-          showToast("❌ " + (d.error || "Fehler"));
+          showToast(d.error || "Fehler", "error");
           return;
         }
         updateLocalWorkflow(workflowId, rowKey, { done_date: dateVal || null });
-        if (dateVal) showToast(`✅ "${label}" erledigt`);
+        if (dateVal) showToast(`"${label}" erledigt`, "success");
         // Defer so the browser finishes the date-input change before the DOM
         // is rebuilt. Scoped to just the one workflow tab that changed (not
         // all three) so any typing in progress on another tab is untouched;
@@ -6796,7 +6871,7 @@
         });
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
-          showToast("❌ " + (d.error || "Fehler"));
+          showToast(d.error || "Fehler", "error");
           return;
         }
         updateLocalWorkflow(workflowId, rowKey, { input_value: val });
@@ -6873,7 +6948,8 @@
           const d = await r.json().catch(() => ({}));
           if (!r.ok) {
             showToast(
-              "❌ " + (d.error || "Fehler beim Aktualisieren der Pixlip-Aufgaben"),
+              d.error || "Fehler beim Aktualisieren der Pixlip-Aufgaben",
+              "error",
             );
             return;
           }
@@ -6883,11 +6959,15 @@
           renderWorkflow("pixlip");
           showToast(
             value === "Nein"
-              ? "✅ Pixlip als nicht benötigt markiert – Aufgaben automatisch erledigt"
-              : "🔓 Pixlip wieder benötigt – Aufgaben erneut offen",
+              ? "Pixlip als nicht benötigt markiert – Aufgaben automatisch erledigt"
+              : "Pixlip wieder benötigt – Aufgaben erneut offen",
+            value === "Nein" ? "success" : "info",
           );
         } catch {
-          showToast("❌ Verbindungsfehler beim Aktualisieren der Pixlip-Aufgaben");
+          showToast(
+            "Verbindungsfehler beim Aktualisieren der Pixlip-Aufgaben",
+            "error",
+          );
         }
       }
       // reasonOnValue: which Ja/Nein answer reveals the follow-up
@@ -6988,7 +7068,7 @@
             (t) => `<tr>
 <td style="font-weight:600">${esc(t.pm_name)}</td>
 <td style="font-size:.75rem;color:var(--mid)">${esc(t.pm_email || "–")}</td>
-<td><button class="token-copy" onclick="copyText('${esc(t.link)}','PM-Link kopiert!')">🔗 Link kopieren</button></td>
+<td><button class="token-copy" onclick="copyText('${esc(t.link)}','PM-Link kopiert!')"><i data-lucide="link" class="btn-icon"></i>Link kopieren</button></td>
 <td><button class="token-copy" onclick="copyText('${esc(t.ics_link)}','ICS-Link kopiert!')"><i data-lucide="calendar-plus" class="btn-icon"></i>ICS kopieren</button></td>
 </tr>`,
           )
@@ -6997,13 +7077,13 @@
       }
       async function generatePMToken() {
         if (!currentEventId) {
-          showToast("⚠️ Bitte zuerst ein Event öffnen");
+          showToast("Bitte zuerst ein Event öffnen", "warning");
           return;
         }
         const name = document.getElementById("pm-name-input").value.trim();
         const email = document.getElementById("pm-email-input").value.trim();
         if (!name) {
-          showToast("⚠️ Name erforderlich");
+          showToast("Name erforderlich", "warning");
           return;
         }
         const r = await fetch(`${API}/pm-token`, {
@@ -7018,7 +7098,7 @@
         });
         const d = await r.json();
         if (!r.ok) {
-          showToast("❌ " + d.error);
+          showToast(d.error, "error");
           return;
         }
         document.getElementById("pm-name-input").value = "";
@@ -7032,21 +7112,22 @@
         // out rather than just "link copied", since that's the part the Hub
         // needs to know about (and act on, if it failed).
         const resultMsg = d.email_sent
-          ? `✅ Zugang erstellt und E-Mail an ${name} gesendet`
-          : "⚠️ Zugang erstellt, aber E-Mail konnte nicht gesendet werden – bitte Link manuell teilen";
-        copyText(d.link, resultMsg);
+          ? `Zugang erstellt und E-Mail an ${name} gesendet`
+          : "Zugang erstellt, aber E-Mail konnte nicht gesendet werden – bitte Link manuell teilen";
+        const resultType = d.email_sent ? "success" : "warning";
+        copyText(d.link, resultMsg, resultType);
         loadPMTokens(currentEventId);
       }
-      function copyText(text, msg) {
+      function copyText(text, msg, type = "success") {
         navigator.clipboard
           .writeText(text)
-          .then(() => showToast(msg || "Kopiert!"))
+          .then(() => showToast(msg || "Kopiert!", type))
           .catch(() => prompt("Link manuell kopieren:", text));
       }
       function copyICSLink(eventId) {
         copyText(
           `${location.origin}${ICS}?event=${eventId}`,
-          "📅 ICS-Link kopiert!",
+          "ICS-Link kopiert!",
         );
       }
       async function deleteEvent(eventId, eventName) {
@@ -7064,7 +7145,7 @@
           });
           const d = await r.json();
           if (!r.ok) {
-            showToast("❌ " + (d.error || "Fehler beim Löschen"));
+            showToast(d.error || "Fehler beim Löschen", "error");
             return;
           }
           allEvents = allEvents.filter((e) => e.id !== eventId);
@@ -7074,9 +7155,9 @@
             eventDetail = null;
           }
           renderEventGrid();
-          showToast(`🗑 "${eventName}" gelöscht`);
+          showToast(`"${eventName}" gelöscht`, "success");
         } catch {
-          showToast("❌ Verbindungsfehler beim Löschen");
+          showToast("Verbindungsfehler beim Löschen", "error");
         }
       }
 
@@ -7100,7 +7181,7 @@
           });
           const d = await r.json().catch(() => ({}));
           if (!r.ok) {
-            showToast("❌ " + (d.error || "Fehler beim Archivieren"));
+            showToast(d.error || "Fehler beim Archivieren", "error");
             return;
           }
           allEvents = allEvents.filter((e) => e.id !== eventId);
@@ -7109,9 +7190,9 @@
             eventDetail = null;
           }
           renderEventGrid();
-          showToast(`📦 "${eventName}" archiviert`);
+          showToast(`"${eventName}" archiviert`, "success");
         } catch {
-          showToast("❌ Verbindungsfehler beim Archivieren");
+          showToast("Verbindungsfehler beim Archivieren", "error");
         }
       }
 
@@ -7205,7 +7286,7 @@
           if (cb) cb.checked = previousChecked;
           if (item) item.classList.toggle("checked", previousChecked);
           updateTodoDrawerProgress(msKey);
-          showToast("❌ Fehler beim Speichern – Häkchen zurückgesetzt");
+          showToast("Fehler beim Speichern – Häkchen zurückgesetzt", "error");
           return;
         }
         upsertTodoStateInSource(source, msKey, idx, nextChecked);
@@ -7217,7 +7298,7 @@
         if (!nextChecked) {
           const cleared = await clearMilestoneDoneIfIncomplete(msKey);
           if (cleared) {
-            showToast("↩️ Erledigt-Datum zurückgesetzt – To-do wieder offen");
+            showToast("Erledigt-Datum zurückgesetzt – To-do wieder offen", "info");
             // renderDashboard() rebuilds the whole milestone table, which
             // would otherwise collapse the drawer the user is actively
             // working in — reopen it right after so this stays a live,
@@ -7698,9 +7779,9 @@
           cntRed > 0
             ? "alert alert-red show alert-clickable"
             : "alert alert-red";
-        alertRed.textContent =
+        alertRed.innerHTML =
           cntRed > 0
-            ? `⚠️ ${cntRed} Frist${cntRed > 1 ? "en" : ""} überschritten – sofort handeln!`
+            ? `<i data-lucide="triangle-alert" class="alert-icon"></i>${cntRed} Frist${cntRed > 1 ? "en" : ""} überschritten – sofort handeln!`
             : "";
         alertRed.onclick =
           cntRed > 0 ? () => scrollToAndFlashStatusRows("red") : null;
@@ -7708,12 +7789,13 @@
           cntAmb > 0
             ? "alert alert-amb show alert-clickable"
             : "alert alert-amb";
-        alertAmb.textContent =
+        alertAmb.innerHTML =
           cntAmb > 0
-            ? `⚡ ${cntAmb} Meilenstein${cntAmb > 1 ? "e" : ""} werden knapp.`
+            ? `<i data-lucide="zap" class="alert-icon"></i>${cntAmb} Meilenstein${cntAmb > 1 ? "e" : ""} werden knapp.`
             : "";
         alertAmb.onclick =
           cntAmb > 0 ? () => scrollToAndFlashStatusRows("amb") : null;
+        lucide.createIcons();
         const summaryBox = document.getElementById("summary-box");
         if (summaryBox) {
           const sizeLabel = ev.size
@@ -7735,9 +7817,9 @@
                 <h3>${esc(ev.name || "Event")}</h3>
                 <p>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"} · ${esc(sizeLabel)} · ${esc(translateLegacyOwner(ev.owner) || "–")}</p>
                 <div class="summary-inline-list">
-                  <span class="summary-pill">📍 ${isOnlineRoom(ev.room) ? "Online" : esc(roomLabel)}</span>
-                  <span class="summary-pill">🍽 ${esc(cateringLabel)}</span>
-                  <span class="summary-pill">📈 ${pct}% abgeschlossen</span>
+                  <span class="summary-pill"><i data-lucide="map-pin"></i>${isOnlineRoom(ev.room) ? "Online" : esc(roomLabel)}</span>
+                  <span class="summary-pill"><i data-lucide="utensils"></i>${esc(cateringLabel)}</span>
+                  <span class="summary-pill"><i data-lucide="trending-up"></i>${pct}% abgeschlossen</span>
                 </div>
               </div>
               <div class="summary-progress">
@@ -7748,7 +7830,7 @@
             </div>
             <div class="summary-grid">
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">ℹ️</span>Eventdetails</div>
+                <div class="summary-card-title"><span class="summary-card-icon"><i data-lucide="info"></i></span>Eventdetails</div>
                 <div class="summary-list-item"><strong>Datum</strong><div>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"}</div></div>
                 <div class="summary-list-item"><strong>Start</strong><div>${ev.start_date ? fmtDE(parseISO(ev.start_date)) : ev.created_at ? fmtDE(parseISO(ev.created_at)) : "–"}</div></div>
                 <div class="summary-list-item"><strong>Ort</strong><div>${roomSummary}</div></div>
@@ -7756,15 +7838,15 @@
                 <div class="summary-list-item"><strong>Kontakt</strong><div>${esc(ev.owner_email || ev.contact_email || "–")}</div></div>
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🗓</span>Tagesordnung</div>
+                <div class="summary-card-title"><span class="summary-card-icon"><i data-lucide="calendar-days"></i></span>Tagesordnung</div>
                 ${buildSummaryAgendaHtml(source)}
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">👥</span>Ansprechpersonen</div>
+                <div class="summary-card-title"><span class="summary-card-icon"><i data-lucide="users"></i></span>Ansprechpersonen</div>
                 ${buildSummarySpeakerHtml(source)}
               </div>
               <div class="summary-card">
-                <div class="summary-card-title"><span class="summary-card-icon">🔗</span>Link</div>
+                <div class="summary-card-title"><span class="summary-card-icon"><i data-lucide="link"></i></span>Link</div>
                 ${buildSummaryLinksHtml(source)}
               </div>
             </div>`;
@@ -7972,7 +8054,7 @@
         });
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
-          showToast("❌ " + (d.error || "Fehler"));
+          showToast(d.error || "Fehler", "error");
           return false;
         }
         updateLocalWorkflow(workflowId, "sp-data", {
@@ -8071,7 +8153,7 @@
         if (!ok) return;
         delete speakerDirty[speakerDraftKey(workflowId)];
         delete speakerDrafts[speakerDraftKey(workflowId)];
-        showToast("💾 Service Provider gespeichert");
+        showToast("Service Provider gespeichert", "success");
         refreshSpeakerSectionDOM(workflowId);
       }
       function buildSpeakerSectionHtml(workflowId, wfRows) {
@@ -8081,7 +8163,7 @@
           : getDefaultSpeakerData().speakers;
         const dirty = isSpeakerDirty(workflowId);
         let html = `<div class="speaker-section" id="speaker-section-${workflowId}">`;
-        html += `<div class="speaker-field" style="margin-bottom:14px"><a class="summary-link" href="https://dynamic-trouble-ece.notion.site/d99ef7eee6e4442aab72689ab79d14e2?v=5e069b574b5746cd87823f3064ebbb1b" target="_blank" rel="noopener">📋 Dienstleisterliste ansehen ↗</a></div>`;
+        html += `<div class="speaker-field" style="margin-bottom:14px"><a class="summary-link" href="https://dynamic-trouble-ece.notion.site/d99ef7eee6e4442aab72689ab79d14e2?v=5e069b574b5746cd87823f3064ebbb1b" target="_blank" rel="noopener"><i data-lucide="list"></i>Dienstleisterliste ansehen ↗</a></div>`;
         speakers.forEach((speaker, index) => {
           const categoryOptions = CONTACT_CATEGORIES.map(
             (c) =>
@@ -8228,7 +8310,7 @@
         });
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
-          showToast("❌ " + (d.error || "Fehler"));
+          showToast(d.error || "Fehler", "error");
           return false;
         }
         updateLocalWorkflow(workflowId, "ag-data", {
@@ -8310,7 +8392,7 @@
             newMinutes !== null &&
             newMinutes < prevMinutes
           ) {
-            showToast("⚠️ Zeit muss nach dem vorherigen Punkt liegen");
+            showToast("Zeit muss nach dem vorherigen Punkt liegen", "warning");
             if (inputEl)
               inputEl.value = dotTimeToInputTime(data.items[index].time || "");
             return;
@@ -8375,7 +8457,7 @@
         if (!ok) return; // error toast already shown; keep the draft so nothing is lost
         delete agendaDirty[agendaDraftKey(workflowId)];
         delete agendaDrafts[agendaDraftKey(workflowId)];
-        showToast("💾 Agenda gespeichert");
+        showToast("Agenda gespeichert", "success");
         refreshAgendaSectionDOM(workflowId);
       }
       // Agenda's stored/display time format is "HH.MM" (dot-separated — the
@@ -8412,14 +8494,14 @@
         const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         const text = buildAgendaCopyText(data);
         if (!text) {
-          showToast("⚠️ Keine Agenda-Einträge vorhanden");
+          showToast("Keine Agenda-Einträge vorhanden", "warning");
           return;
         }
         try {
           await navigator.clipboard.writeText(text);
-          showToast("📋 Agenda in Zwischenablage kopiert");
+          showToast("Agenda in Zwischenablage kopiert", "success");
         } catch {
-          showToast("❌ Kopieren fehlgeschlagen – bitte manuell markieren");
+          showToast("Kopieren fehlgeschlagen – bitte manuell markieren", "error");
         }
       }
       function buildAgendaLayoutHtml(workflowId, wfRows) {
@@ -8444,7 +8526,7 @@
   - Person, Position, Institution
 11.30 Networking
 12.00 Ende der Veranstaltung</div>
-  <div class="agenda-info-warning">⚠️ Unvollständige Agenden können nicht verarbeitet werden.</div>
+  <div class="agenda-info-warning"><i data-lucide="triangle-alert"></i>Unvollständige Agenden können nicht verarbeitet werden.</div>
 </div>`;
         const itemCards = items
           .map((item, index) => {
@@ -8479,7 +8561,7 @@
     </div>
     <div class="agenda-save-row">
       <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="agenda-save-btn-${workflowId}" onclick="saveAgendaDraft('${workflowId}')">${dirty ? '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern' : "✅ Gespeichert"}</button>
-      <button class="speaker-add-btn" type="button" onclick="copyAgendaText('${workflowId}')">📋 Agenda kopieren</button>
+      <button class="speaker-add-btn" type="button" onclick="copyAgendaText('${workflowId}')"><i data-lucide="copy" class="btn-icon"></i>Agenda kopieren</button>
       <span class="agenda-save-hint" id="agenda-save-hint-${workflowId}">${dirty ? "Ungespeicherte Änderungen" : ""}</span>
     </div>
   </div>
@@ -8546,9 +8628,9 @@
         let html = `<div class="page-title">${def.title}${ev?.name ? " — " + esc(ev.name) : ""}</div>
 <div class="alert ${def.subCls} show" style="margin-bottom:20px">${def.sub}</div>`;
         if (pixlipGatedOff)
-          html += `<div class="alert alert-blu show" style="margin-bottom:20px">ℹ️ Pixlip wurde unter Pflichtinhalte → Logistik als „nicht erforderlich“ markiert. Alle Aufgaben unten sind automatisch erledigt und gesperrt.</div>`;
+          html += `<div class="alert alert-blu show" style="margin-bottom:20px"><i data-lucide="info" class="alert-icon"></i>Pixlip wurde unter Pflichtinhalte → Logistik als „nicht erforderlich“ markiert. Alle Aufgaben unten sind automatisch erledigt und gesperrt.</div>`;
         if (currentRole === "proj")
-          html += `<div class="alert alert-blu show" style="margin-bottom:20px">📌 Du siehst diese Ansicht als <strong>${pmData?.pm_name || "Projektverantwortliche:r"}</strong>${ev?.name ? " — Event: <strong>" + esc(ev.name) + "</strong>" : ""}. Deine Änderungen werden direkt gespeichert.</div>`;
+          html += `<div class="alert alert-blu show" style="margin-bottom:20px"><i data-lucide="pin" class="alert-icon"></i>Du siehst diese Ansicht als <strong>${pmData?.pm_name || "Projektverantwortliche:r"}</strong>${ev?.name ? " — Event: <strong>" + esc(ev.name) + "</strong>" : ""}. Deine Änderungen werden direkt gespeichert.</div>`;
         html += `<div class="table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
         def.sections.forEach((sec) => {
           if (sec.type === "speakers") {
@@ -8726,17 +8808,32 @@
       // ══ ICS ══
       function exportICS() {
         if (!currentEventId) {
-          showToast("⚠️ Bitte zuerst ein Event öffnen");
+          showToast("Bitte zuerst ein Event öffnen", "warning");
           return;
         }
         copyICSLink(currentEventId);
       }
 
       // ══ TOAST ══
+      // type picks one of a small FIXED set of pre-built Lucide icons —
+      // never derived from `message` itself. The message keeps rendering
+      // via textContent (never innerHTML), so arbitrary message text
+      // (event names, error strings from the backend, etc.) can never be
+      // interpreted as markup — only the pre-approved icon varies.
+      const TOAST_ICONS = {
+        success: "circle-check",
+        error: "circle-x",
+        warning: "triangle-alert",
+        info: "info",
+      };
       let toastTimer;
-      function showToast(msg) {
+      function showToast(msg, type = "info") {
         const t = document.getElementById("toast");
+        const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
+        document.getElementById("toast-icon").innerHTML =
+          `<i data-lucide="${icon}"></i>`;
         document.getElementById("toast-msg").textContent = msg;
+        lucide.createIcons();
         t.classList.add("show");
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => t.classList.remove("show"), 3200);
@@ -8863,7 +8960,7 @@
       const WORKFLOWS = {
         pflicht: {
           title: "Pflichtinhalte",
-          sub: "⚠️ Ohne vollständige Unterlagen: keine Einladung · keine Kommunikation",
+          sub: '<i data-lucide="triangle-alert" class="alert-icon"></i>Ohne vollständige Unterlagen: keine Einladung · keine Kommunikation',
           subCls: "alert-red",
           sections: [
             {
