@@ -5051,6 +5051,7 @@
           const card = document.createElement("div");
           card.className =
             "event-card" + (ev.id === currentEventId ? " active-event" : "");
+          card.onclick = () => selectEvent(ev.id);
           const evDate = parseISO(ev.event_date);
           const diff = evDate ? daysDiff(evDate) : null;
           const diffStr =
@@ -5084,7 +5085,7 @@
   <div class="event-card-menu-wrap">
     <button class="btn btn-secondary event-card-menu-btn" type="button" title="Weitere Aktionen" onclick="event.stopPropagation();toggleEventCardMenu('${ev.id}')">⋯</button>
     <div class="event-card-menu" id="event-card-menu-${ev.id}">
-      <button type="button" onclick="closeEventCardMenus();copyICSLink('${ev.id}')">📅 ICS-Link kopieren</button>
+      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();copyICSLink('${ev.id}')">📅 ICS-Link kopieren</button>
       <button type="button" onclick="event.stopPropagation();closeEventCardMenus();duplicateEvent('${ev.id}','${esc(ev.name)}')">📄 Duplizieren</button>
       ${archiveOrRestoreMenuItem}
       <button type="button" class="event-card-menu-danger" onclick="event.stopPropagation();closeEventCardMenus();deleteEvent('${ev.id}','${esc(ev.name)}')">🗑 Löschen</button>
