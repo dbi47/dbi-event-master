@@ -1425,13 +1425,18 @@
          Purely an additional rendering of the same data the table already
          shows — marker colors reuse getStatus()'s red/amber/green/grey/blue
          classes 1:1 (via the ms-tl-<cls> dot classes below) so the timeline
-         can never visually disagree with the table. */
+         can never visually disagree with the table. Dots carry no permanent
+         label (two milestones close together made text labels collide no
+         matter how they were stacked) — label/date/status only surface via
+         the dot's native `title` tooltip (desktop hover) or by tapping the
+         dot, which prints the same text into #ms-timeline-detail below the
+         track (touch, where hover doesn't exist). */
       .ms-timeline-wrap {
         background: white;
         border: 1px solid var(--line);
         border-radius: var(--radius);
         box-shadow: var(--shadow);
-        padding: 38px 24px 46px;
+        padding: 24px 24px 16px;
         margin-bottom: 20px;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -1459,6 +1464,11 @@
         position: absolute;
         top: 50%;
         transform: translate(-50%, -50%);
+        cursor: pointer;
+        /* Larger invisible hit target than the visible dot — comfortable
+           to tap on a touch screen without enlarging the dot itself. */
+        padding: 12px;
+        margin: -12px;
       }
       .ms-tl-dot {
         display: block;
@@ -1494,27 +1504,15 @@
         height: 17px;
         background: var(--accent);
       }
-      .ms-tl-label {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        white-space: nowrap;
-        font-size: 0.62rem;
+      .ms-tl-detail {
+        min-height: 1.1em;
+        margin-top: 10px;
+        font-size: 0.78rem;
         font-weight: 600;
-        color: var(--mid);
-      }
-      .ms-tl-label-above .ms-tl-label {
-        bottom: 13px;
-      }
-      .ms-tl-label-below .ms-tl-label {
-        top: 13px;
-      }
-      .ms-tl-marker.ms-tl-marker-event .ms-tl-label {
-        color: var(--accent);
-        font-weight: 700;
-      }
-      .ms-tl-marker.ms-tl-marker-today .ms-tl-label {
         color: var(--ink);
+      }
+      .ms-tl-detail:empty {
+        display: none;
       }
 
       /* ── ACTIVITY LOG (own "Aktivität" tab) ──
@@ -2233,7 +2231,7 @@
           gap: 10px;
         }
         .ms-timeline-wrap {
-          padding: 26px 14px 36px;
+          padding: 18px 14px 14px;
         }
         .form-grid {
           grid-template-columns: 1fr;
@@ -2934,6 +2932,7 @@
           <div class="section-title">Meilensteine</div>
           <div class="ms-timeline-wrap" id="ms-timeline-wrap">
             <div class="ms-timeline" id="ms-timeline"></div>
+            <div class="ms-tl-detail" id="ms-timeline-detail"></div>
           </div>
           <div class="table-wrap">
             <table>
@@ -7235,13 +7234,20 @@
       // Purely a second rendering of exactly the data the milestone table
       // already computes — reuses getMilestoneDate()/getStatus()/MILESTONES
       // directly rather than deriving dates or statuses itself, so it can
-      // never drift from the table. Positions are simple linear
-      // interpolation between the earliest and latest date shown (which
-      // always includes "today" and the event date, even if those fall
-      // outside the milestone span) — no timezone-sensitive Date math
-      // beyond the day-difference arithmetic already used elsewhere here.
+      // never drift from the table. Dots are spaced evenly by rank (not
+      // date-proportionally) so two milestones close in time never crowd
+      // each other regardless of the actual day gap between them — the
+      // permanent text labels that used to sit above/below the track did
+      // exactly that (collided whenever two dates fell close together), so
+      // label/date/status now only ever appears via the dot's `title`
+      // tooltip (desktop hover) or a tap, which writes the same text into
+      // #ms-timeline-detail (touch, where hover doesn't exist).
+      let msTimelineDetails = [];
       function renderMilestoneTimeline(eventDate, sizeWeeks, msDone) {
         const track = document.getElementById("ms-timeline");
+        const detailEl = document.getElementById("ms-timeline-detail");
+        if (detailEl) detailEl.textContent = "";
+        msTimelineDetails = [];
         if (!track) return;
         if (!eventDate) {
           track.innerHTML =
@@ -7255,63 +7261,55 @@
         if (!dated.length) return;
 
         const today = TODAY();
-        const allDates = [...dated.map((p) => p.date), today, eventDate];
-        const minTime = Math.min(...allDates.map((d) => d.getTime()));
-        const maxTime = Math.max(...allDates.map((d) => d.getTime()));
-        const totalSpanDays = Math.max(1, (maxTime - minTime) / 86400000);
-        const posPct = (d) =>
-          Math.min(
-            100,
-            Math.max(
-              0,
-              ((d.getTime() - minTime) / 86400000 / totalSpanDays) * 100,
-            ),
-          );
-
-        let markerIndex = 0;
-        const markerHtml = (extraCls, dotCls, left, label, title) => {
-          const stack = markerIndex % 2 === 0 ? "above" : "below";
-          markerIndex++;
-          return `<div class="ms-tl-marker ms-tl-label-${stack} ${extraCls}" style="left:${left}%" title="${esc(title)}">
-  <span class="ms-tl-dot ms-tl-${dotCls}"></span>
-  <span class="ms-tl-label">${esc(label)}</span>
-</div>`;
-        };
-
         // The event row is rendered specially in the table too (a plain
-        // "🎯 EVENT" line, no status pill) — so it's excluded here from the
-        // normal status-colored markers and drawn once below instead.
-        const milestoneMarkers = dated
+        // "🎯 EVENT" line, no status pill) — so it's excluded from the
+        // normal status-colored points and given its own type below.
+        const milestonePoints = dated
           .filter((p) => !p.ms.isEvent)
           .map((p) => {
             const done = parseISO(msDone[p.ms.key] || "");
             const st = getStatus(p.date, done);
-            return markerHtml(
-              "",
-              st.cls,
-              posPct(p.date),
-              p.ms.label,
-              `${p.ms.label} · ${fmtDE(p.date)} · ${st.label}`,
-            );
+            return {
+              date: p.date,
+              dotCls: st.cls,
+              extraCls: "",
+              detail: `${p.ms.label} · ${fmtDE(p.date)} · ${st.label}`,
+            };
+          });
+        const todayPoint = {
+          date: today,
+          dotCls: "today",
+          extraCls: "ms-tl-marker-today",
+          detail: `Heute · ${fmtDE(today)}`,
+        };
+        const eventPoint = {
+          date: eventDate,
+          dotCls: "event",
+          extraCls: "ms-tl-marker-event",
+          detail: `🎯 EVENT · ${fmtDE(eventDate)}`,
+        };
+
+        const points = [...milestonePoints, todayPoint, eventPoint].sort(
+          (a, b) => a.date - b.date,
+        );
+        msTimelineDetails = points.map((p) => p.detail);
+        const lastIdx = points.length - 1;
+
+        const markersHtml = points
+          .map((p, i) => {
+            const left = lastIdx > 0 ? (i / lastIdx) * 100 : 50;
+            return `<div class="ms-tl-marker ${p.extraCls}" style="left:${left}%" title="${esc(p.detail)}" onclick="showMsTimelineDetail(${i})">
+  <span class="ms-tl-dot ms-tl-${p.dotCls}"></span>
+</div>`;
           })
           .join("");
 
-        const todayMarker = markerHtml(
-          "ms-tl-marker-today",
-          "today",
-          posPct(today),
-          "Heute",
-          `Heute · ${fmtDE(today)}`,
-        );
-        const eventMarker = markerHtml(
-          "ms-tl-marker-event",
-          "event",
-          posPct(eventDate),
-          "🎯 Event",
-          `🎯 EVENT · ${fmtDE(eventDate)}`,
-        );
-
-        track.innerHTML = `<div class="ms-tl-axis"></div>${milestoneMarkers}${todayMarker}${eventMarker}`;
+        track.innerHTML = `<div class="ms-tl-axis"></div>${markersHtml}`;
+      }
+      function showMsTimelineDetail(idx) {
+        const detailEl = document.getElementById("ms-timeline-detail");
+        if (!detailEl) return;
+        detailEl.textContent = msTimelineDetails[idx] || "";
       }
 
       // ── ACTIVITY LOG — milestone check/uncheck history (own "Aktivität" tab) ──
