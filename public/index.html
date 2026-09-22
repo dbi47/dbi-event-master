@@ -1328,6 +1328,30 @@
         color: var(--blu-fg);
         border-left: 4px solid var(--blu-fg);
       }
+      /* Dashboard's overdue/soon-due alert banners — clickable only when
+         they actually have a count (see renderDashboard()), scrolling to
+         and flashing the matching milestone row(s) below. */
+      .alert-clickable {
+        cursor: pointer;
+        transition: filter 0.15s;
+      }
+      .alert-clickable:hover {
+        filter: brightness(0.95);
+      }
+      /* Flashed via box-shadow rather than background-color because
+         tr.status-red/amb/... already set background with !important —
+         an animated background-color would lose to that every frame. */
+      @keyframes msRowFlash {
+        0% {
+          box-shadow: inset 0 0 0 9999px rgba(194, 24, 91, 0.3);
+        }
+        100% {
+          box-shadow: inset 0 0 0 9999px rgba(194, 24, 91, 0);
+        }
+      }
+      .ms-row-flash {
+        animation: msRowFlash 1.6s ease-out;
+      }
       .wf-section-header td {
         background: linear-gradient(90deg, #eae8f4, #e8ecf8);
         font-weight: 700;
@@ -7604,17 +7628,25 @@
         const alertRed = document.getElementById("dash-alert-red");
         const alertAmb = document.getElementById("dash-alert-amb");
         alertRed.className =
-          cntRed > 0 ? "alert alert-red show" : "alert alert-red";
+          cntRed > 0
+            ? "alert alert-red show alert-clickable"
+            : "alert alert-red";
         alertRed.textContent =
           cntRed > 0
             ? `⚠️ ${cntRed} Frist${cntRed > 1 ? "en" : ""} überschritten – sofort handeln!`
             : "";
+        alertRed.onclick =
+          cntRed > 0 ? () => scrollToAndFlashStatusRows("red") : null;
         alertAmb.className =
-          cntAmb > 0 ? "alert alert-amb show" : "alert alert-amb";
+          cntAmb > 0
+            ? "alert alert-amb show alert-clickable"
+            : "alert alert-amb";
         alertAmb.textContent =
           cntAmb > 0
             ? `⚡ ${cntAmb} Meilenstein${cntAmb > 1 ? "e" : ""} werden knapp.`
             : "";
+        alertAmb.onclick =
+          cntAmb > 0 ? () => scrollToAndFlashStatusRows("amb") : null;
         const summaryBox = document.getElementById("summary-box");
         if (summaryBox) {
           const sizeLabel = ev.size
@@ -7670,6 +7702,25 @@
               </div>
             </div>`;
         }
+      }
+      // Scrolls to the first matching status row and flashes every matching
+      // row (not just the first) — the #dash-alert-red/amb banners' click
+      // handlers, wired up in renderDashboard(). statusCls is "red" or
+      // "amb", matching the tr.status-<cls> classes the table already sets.
+      function scrollToAndFlashStatusRows(statusCls) {
+        const tbody = document.getElementById("dash-milestones");
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll(`tr.status-${statusCls}`);
+        if (!rows.length) return;
+        rows[0].scrollIntoView({ behavior: "smooth", block: "center" });
+        rows.forEach((row) => {
+          row.classList.remove("ms-row-flash");
+          void row.offsetWidth; // restart the animation even if still fading
+          row.classList.add("ms-row-flash");
+        });
+        setTimeout(() => {
+          rows.forEach((row) => row.classList.remove("ms-row-flash"));
+        }, 1600);
       }
 
       // ══ WORKFLOWS ══
