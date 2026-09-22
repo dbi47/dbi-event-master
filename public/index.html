@@ -5090,9 +5090,17 @@
               : size === "24"
                 ? "Groß"
                 : "";
+        const leadTimeDays = (ev) => {
+          const start = parseISO(ev.start_date);
+          const end = parseISO(ev.event_date);
+          if (!start || !end) return "";
+          return Math.round((end - start) / 86400000);
+        };
         const headers = [
           "Name",
           "Datum",
+          "Startdatum",
+          "Vorlaufzeit (Tage)",
           "Größe",
           "Hub/Abteilung",
           "Fortschritt (%)",
@@ -5101,6 +5109,8 @@
         const rows = source.map((ev) => [
           ev.name || "",
           ev.event_date || "",
+          ev.start_date || "",
+          leadTimeDays(ev),
           sizeLabel(ev.size),
           translateLegacyOwner(ev.owner),
           Number.isFinite(ev.progress_pct) ? ev.progress_pct : "",
