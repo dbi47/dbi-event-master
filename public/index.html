@@ -1708,6 +1708,12 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .csel-label-icon {
+        width: 13px;
+        height: 13px;
+        vertical-align: -2px;
+        margin-right: 2px;
+      }
       .csel-arrow {
         font-size: 0.65rem;
         color: var(--mid);
@@ -3328,7 +3334,9 @@
                         onkeydown="cselKeydown(event, 'ev-room')"
                       >
                         <span class="csel-label" id="csel-label-ev-room"
-                          >Raum Wedau · 👤 6</span
+                          >Raum Wedau ·
+                          <i data-lucide="user" class="csel-label-icon"></i
+                          >6</span
                         >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
@@ -3344,12 +3352,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Wedau',
-                              'Raum Wedau · 👤 6',
+                              'Raum Wedau · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>6',
                               this,
                             )
                           "
                         >
-                          Raum Wedau · 👤 6
+                          Raum Wedau · <i data-lucide="user" class="csel-label-icon"></i>6
                         </div>
                         <div
                           class="csel-option"
@@ -3358,12 +3366,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Duissern',
-                              'Raum Duissern · 👤 4',
+                              'Raum Duissern · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>4',
                               this,
                             )
                           "
                         >
-                          Raum Duissern · 👤 4
+                          Raum Duissern · <i data-lucide="user" class="csel-label-icon"></i>4
                         </div>
                         <div
                           class="csel-option"
@@ -3372,12 +3380,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Neudorf',
-                              'Raum Neudorf · 👤 20',
+                              'Raum Neudorf · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>20',
                               this,
                             )
                           "
                         >
-                          Raum Neudorf · 👤 20
+                          Raum Neudorf · <i data-lucide="user" class="csel-label-icon"></i>20
                         </div>
                         <div
                           class="csel-option"
@@ -3386,12 +3394,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Rumeln',
-                              'Raum Rumeln · 👤 6',
+                              'Raum Rumeln · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>6',
                               this,
                             )
                           "
                         >
-                          Raum Rumeln · 👤 6
+                          Raum Rumeln · <i data-lucide="user" class="csel-label-icon"></i>6
                         </div>
                         <div
                           class="csel-option"
@@ -3400,12 +3408,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Marxloh',
-                              'Raum Marxloh · 👤 8',
+                              'Raum Marxloh · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>8',
                               this,
                             )
                           "
                         >
-                          Raum Marxloh · 👤 8
+                          Raum Marxloh · <i data-lucide="user" class="csel-label-icon"></i>8
                         </div>
                         <div
                           class="csel-option"
@@ -3414,12 +3422,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Homburg',
-                              'Raum Homburg · 👤 55',
+                              'Raum Homburg · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>55',
                               this,
                             )
                           "
                         >
-                          Raum Homburg · 👤 55
+                          Raum Homburg · <i data-lucide="user" class="csel-label-icon"></i>55
                         </div>
                         <div
                           class="csel-option"
@@ -3428,12 +3436,12 @@
                             cselSelect(
                               'ev-room',
                               'Raum Mitte',
-                              'Raum Mitte · 👤 10',
+                              'Raum Mitte · <i data-lucide=\'user\' class=\'csel-label-icon\'></i>10',
                               this,
                             )
                           "
                         >
-                          Raum Mitte · 👤 10
+                          Raum Mitte · <i data-lucide="user" class="csel-label-icon"></i>10
                         </div>
                       </div>
                       <input type="hidden" id="ev-room" value="Raum Wedau" />
@@ -3892,12 +3900,12 @@
                             cselSelect(
                               'ev-ablage',
                               'nein',
-                              'Nein (⚠️ Chats werden gelöscht!)',
+                              'Nein (<i data-lucide=\'triangle-alert\' class=\'csel-label-icon\'></i>Chats werden gelöscht!)',
                               this,
                             )
                           "
                         >
-                          Nein (⚠️ Chats werden gelöscht!)
+                          Nein (<i data-lucide="triangle-alert" class="csel-label-icon"></i>Chats werden gelöscht!)
                         </div>
                       </div>
                       <input type="hidden" id="ev-ablage" value="" />
@@ -4222,7 +4230,14 @@
         const hidden = document.getElementById(id);
         if (hidden) hidden.value = value;
         const labelEl = document.getElementById("csel-label-" + id);
-        if (labelEl) labelEl.textContent = label;
+        // innerHTML (not textContent) so a label can embed an icon (e.g.
+        // the room-capacity 👤 icon) — safe only because every call site is
+        // a hardcoded string from a fixed options list, never user/free
+        // text (verified across all 6 custom selects before this changed).
+        if (labelEl) {
+          labelEl.innerHTML = label;
+          lucide.createIcons();
+        }
         const dropdown = document.getElementById("csel-dropdown-" + id);
         if (dropdown) {
           dropdown.querySelectorAll(".csel-option").forEach((o) => {
@@ -4250,7 +4265,13 @@
         const hidden = document.getElementById(id);
         if (hidden) hidden.value = value;
         const labelEl = document.getElementById("csel-label-" + id);
-        if (labelEl) labelEl.textContent = label || value;
+        // Sibling of cselSelect()'s innerHTML switch, for the page-load /
+        // restore-saved-value path — same safety precondition (every call
+        // site passes a fixed, developer-authored label, never user text).
+        if (labelEl) {
+          labelEl.innerHTML = label || value;
+          lucide.createIcons();
+        }
         const dropdown = document.getElementById("csel-dropdown-" + id);
         if (dropdown) {
           dropdown.querySelectorAll(".csel-option").forEach((o) => {
@@ -5926,7 +5947,9 @@
       };
       function formatRoomOptionLabel(roomName) {
         const cap = ROOM_CAPACITY[roomName];
-        return cap ? `${roomName} · 👤 ${cap}` : roomName;
+        return cap
+          ? `${roomName} · <i data-lucide="user" class="csel-label-icon"></i>${cap}`
+          : roomName;
       }
 
       // ══ HUB-ANSPRECHPERSON — hardcoded staff directory ══
@@ -6415,7 +6438,7 @@
         const AB = {
           "": "– offen –",
           ja: "Ja",
-          nein: "Nein (⚠️ Chats werden gelöscht!)",
+          nein: "Nein (<i data-lucide='triangle-alert' class='csel-label-icon'></i>Chats werden gelöscht!)",
         };
         cselSetValue(
           "ev-size",
