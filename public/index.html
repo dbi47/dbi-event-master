@@ -4037,13 +4037,16 @@
             Verlauf aller Meilenstein-Änderungen für dieses Event.
           </div>
           <div class="events-toolbar">
-            <input
-              type="text"
-              id="activity-search"
-              class="events-search-input"
-              placeholder="🔍 Nach Person oder Meilenstein suchen…"
-              oninput="onActivityFilterChange()"
-            />
+            <div class="events-search-wrap">
+              <i data-lucide="search"></i>
+              <input
+                type="text"
+                id="activity-search"
+                class="events-search-input"
+                placeholder="Nach Person oder Meilenstein suchen…"
+                oninput="onActivityFilterChange()"
+              />
+            </div>
           </div>
           <div class="activity-log-wrap" id="activity-log-list"></div>
           <div id="activity-pagination"></div>
@@ -4061,13 +4064,16 @@
             <div class="loading-text">Lade Meine Woche…</div>
           </div>
           <div class="events-toolbar">
-            <input
-              type="text"
-              id="my-week-search"
-              class="events-search-input"
-              placeholder="🔍 Nach Meilenstein, Aufgabe oder Event suchen…"
-              oninput="onMyWeekFilterChange()"
-            />
+            <div class="events-search-wrap">
+              <i data-lucide="search"></i>
+              <input
+                type="text"
+                id="my-week-search"
+                class="events-search-input"
+                placeholder="Nach Meilenstein, Aufgabe oder Event suchen…"
+                oninput="onMyWeekFilterChange()"
+              />
+            </div>
             <select
               id="my-week-filter-urgency"
               style="max-width: 230px"
