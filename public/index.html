@@ -1833,7 +1833,18 @@
         color: var(--mid);
         pointer-events: none;
       }
-      .events-search-input {
+      /* Scoped to .events-search-wrap (not just .events-search-input) so
+         this reliably beats the global `input[type="text"], ... { padding:
+         10px 12px; ... }` reset above — that rule's element+attribute
+         selector has higher specificity than a bare class, so it was
+         silently winning on every property (including padding-left, which
+         is how the search icon ended up sitting under the placeholder
+         text) despite .events-search-input being declared later in the
+         file. Left unscoped, this would also restyle the two other inputs
+         that reuse .events-search-input (Aktivität/Meine Woche search) —
+         they have no icon wrapper, so that's a separate, pre-existing
+         issue left alone here. */
+      .events-search-wrap .events-search-input {
         flex: 1;
         border: 1px solid var(--line);
         background: white;
@@ -1845,7 +1856,7 @@
         min-height: 40px;
         transition: border-color 0.15s;
       }
-      .events-search-input:focus {
+      .events-search-wrap .events-search-input:focus {
         border-color: var(--accent);
       }
       .events-filters {
