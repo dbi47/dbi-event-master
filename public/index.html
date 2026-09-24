@@ -1899,6 +1899,21 @@
         border-color: var(--accent);
         background: white;
       }
+      /* The archive toggle is a <button class="btn-secondary"> — without
+         its usual sibling class .btn it has none of .btn's padding/
+         min-height/font-size, so it fell back to the browser's tiny
+         default button box (19px tall vs its 38px row-mates). Scoped to
+         .events-filter-field (the only button that lives inside one)
+         rather than editing .btn-secondary itself, which is used all over
+         the app. */
+      .events-filter-field button {
+        padding: 8px 10px;
+        font-family: "Instrument Sans", sans-serif;
+        font-size: 0.82rem;
+        border-radius: 4px;
+        min-height: 38px;
+        cursor: pointer;
+      }
       .events-filter-reset {
         border: 1px solid var(--line);
         background: white;
