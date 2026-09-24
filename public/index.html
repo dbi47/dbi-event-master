@@ -3102,7 +3102,7 @@
                 id="events-archive-toggle"
                 onclick="toggleArchivedEventsView()"
               >
-                📦 Archiv anzeigen
+                <i data-lucide="archive" class="btn-icon"></i>Archiv anzeigen
               </button>
             </div>
             <button
@@ -5322,13 +5322,20 @@
       document.addEventListener("click", (e) => {
         if (!e.target.closest(".event-card-menu-wrap")) closeEventCardMenus();
       });
+      // Fixed icon per state (never derived from arbitrary text) — same
+      // safe pattern as the toast icons: innerHTML only ever gets one of
+      // these two pre-built strings, then lucide.createIcons() renders it.
+      function setArchiveToggleLabel(showingArchived) {
+        const toggleBtn = document.getElementById("events-archive-toggle");
+        if (!toggleBtn) return;
+        toggleBtn.innerHTML = showingArchived
+          ? '<i data-lucide="layout-grid" class="btn-icon"></i>Aktuelle anzeigen'
+          : '<i data-lucide="archive" class="btn-icon"></i>Archiv anzeigen';
+        lucide.createIcons();
+      }
       async function toggleArchivedEventsView() {
         showArchivedEvents = !showArchivedEvents;
-        const toggleBtn = document.getElementById("events-archive-toggle");
-        if (toggleBtn)
-          toggleBtn.textContent = showArchivedEvents
-            ? "🗂 Aktuelle anzeigen"
-            : "📦 Archiv anzeigen";
+        setArchiveToggleLabel(showArchivedEvents);
         if (showArchivedEvents) {
           document.getElementById("events-loading").style.display = "flex";
           document.getElementById("event-grid").style.display = "none";
@@ -5365,8 +5372,7 @@
           archivedEvents = archivedEvents.filter((e) => e.id !== eventId);
           if (restored) allEvents.push(restored);
           showArchivedEvents = false;
-          const toggleBtn = document.getElementById("events-archive-toggle");
-          if (toggleBtn) toggleBtn.textContent = "📦 Archiv anzeigen";
+          setArchiveToggleLabel(false);
           renderEventGrid();
           showToast(`"${eventName}" wiederhergestellt`, "success");
         } catch {
