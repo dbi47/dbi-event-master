@@ -7534,14 +7534,6 @@
       function buildSummaryLinksHtml(source) {
         const links = [
           {
-            label: "Excel-Sheet",
-            value: (getWorkflowRowValue(source, "pflicht", "ei8") || "").trim(),
-          },
-          {
-            label: "Verteilerliste",
-            value: (getWorkflowRowValue(source, "pflicht", "ei7") || "").trim(),
-          },
-          {
             label: "Anmeldelink",
             value: [
               getWorkflowRowValue(source, "pflicht", "ei4"),
@@ -7549,6 +7541,14 @@
             ]
               .map((value) => (value || "").trim())
               .find(Boolean),
+          },
+          {
+            label: "Verteilerliste (Einladung)",
+            value: (getWorkflowRowValue(source, "pflicht", "ei7") || "").trim(),
+          },
+          {
+            label: "Verteilerliste (Erinnerung)",
+            value: (getWorkflowRowValue(source, "pflicht", "ei9") || "").trim(),
           },
         ].filter((link) => link.value);
         if (!links.length) {
@@ -9118,12 +9118,6 @@
                   sourceField: ["event.event_date", "event.room"],
                 },
                 {
-                  key: "ei5",
-                  label: "Finaler Verteiler",
-                  hint: "Vollständige Liste",
-                  offset: -56,
-                },
-                {
                   key: "ei6",
                   label: "Anzahl Empfänger:innen",
                   hint: "Ungefähre Zahl",
@@ -9131,15 +9125,19 @@
                 },
                 {
                   key: "ei7",
-                  label: "Link zur finalen Verteilerliste",
+                  label: "Link Zur Verteilerliste (Einladung)",
                   hint: "z. B. Google Sheets / SharePoint Link",
                   offset: -56,
                 },
+                // Fresh key on purpose (not a reused "ei8") — an old
+                // "ei8" (Excel link) value may still be saved on existing
+                // events, and reusing that key would show it under this
+                // field's label.
                 {
-                  key: "ei8",
-                  label: "Link zum Excel-Sheet",
+                  key: "ei9",
+                  label: "Link Zur Verteilerliste (Erinnerung)",
                   hint: "z. B. Google Sheets / SharePoint Link",
-                  offset: -56,
+                  offset: -28,
                 },
                 {
                   key: "ei4",
