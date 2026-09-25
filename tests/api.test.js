@@ -14,6 +14,8 @@ const {
   checkHubOnlyEventFields,
   HUB_ONLY_EVENT_FIELDS,
   checkEventCanBeArchived,
+  isPMTokenExpired,
+  PM_TOKEN_EXPIRY_DAYS,
   sanitizeEventUpdateFields,
   computeWeeklyDueItems,
   WEEKLY_MILESTONE_OFFSETS,
@@ -256,4 +258,31 @@ test("computeWeeklyDueItems returns both milestone and workflow task types", () 
     items.length <=
       WEEKLY_MILESTONE_OFFSETS.length + WEEKLY_WORKFLOW_TASKS.length,
   );
+});
+
+test("isPMTokenExpired: an event 100 days in the past is expired", () => {
+  assert.equal(isPMTokenExpired("2026-03-01", "2026-06-09"), true); // 100 days
+});
+
+test("isPMTokenExpired: exactly 90 days past is still valid, 91 is expired", () => {
+  assert.equal(PM_TOKEN_EXPIRY_DAYS, 90);
+  assert.equal(isPMTokenExpired("2026-03-01", "2026-05-30"), false); // 90 days
+  assert.equal(isPMTokenExpired("2026-03-01", "2026-05-31"), true); // 91 days
+});
+
+test("isPMTokenExpired: future, today and recent events are not expired", () => {
+  assert.equal(isPMTokenExpired("2026-12-01", "2026-06-15"), false);
+  assert.equal(isPMTokenExpired("2026-06-15", "2026-06-15"), false);
+  assert.equal(isPMTokenExpired("2026-05-01", "2026-06-15"), false); // 45 days
+});
+
+test("isPMTokenExpired: an event with no date never expires", () => {
+  assert.equal(isPMTokenExpired(null, "2030-01-01"), false);
+  assert.equal(isPMTokenExpired(undefined, "2030-01-01"), false);
+  assert.equal(isPMTokenExpired("", "2030-01-01"), false);
+});
+
+test("isPMTokenExpired: a timestamp-shaped event_date is compared by its date part", () => {
+  assert.equal(isPMTokenExpired("2026-03-01T12:00:00", "2026-06-09"), true);
+  assert.equal(isPMTokenExpired("2026-03-01T23:59:59", "2026-05-30"), false);
 });

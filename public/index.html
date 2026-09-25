@@ -4893,8 +4893,9 @@
             selectRole("proj");
           } else {
             document.getElementById("pm-no-token").style.display = "block";
-            document.getElementById("pm-no-token").textContent =
-              "Token ungültig oder abgelaufen.";
+            document.getElementById("pm-no-token").textContent = d.expired
+              ? "Dieser Link ist abgelaufen, da das Event bereits vorbei ist. Bitte wende dich an den Event-HUB."
+              : "Token ungültig oder abgelaufen.";
           }
         } catch {
           document.getElementById("pm-no-token").style.display = "block";

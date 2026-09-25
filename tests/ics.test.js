@@ -8,7 +8,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY =
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { foldLine, cleanText, safe, ds } = require("../netlify/functions/ics.js");
+const { foldLine, cleanText, safe, ds, isPMTokenExpired } = require("../netlify/functions/ics.js");
 
 test("foldLine leaves short lines untouched", () => {
   assert.equal(foldLine("SUMMARY:short"), "SUMMARY:short");
@@ -81,4 +81,11 @@ test("ds formats a date as YYYYMMDD, zero-padded", () => {
 test("ds pads single-digit month and day", () => {
   const d = new Date(2026, 8, 9); // Sep 9, 2026
   assert.equal(ds(d), "20260909");
+});
+
+test("ics isPMTokenExpired matches api.js's rule (90 days past the event date)", () => {
+  assert.equal(isPMTokenExpired("2026-03-01", "2026-05-30"), false); // 90 days
+  assert.equal(isPMTokenExpired("2026-03-01", "2026-05-31"), true); // 91 days
+  assert.equal(isPMTokenExpired("2026-12-01", "2026-06-15"), false); // future
+  assert.equal(isPMTokenExpired(null, "2030-01-01"), false); // no date
 });

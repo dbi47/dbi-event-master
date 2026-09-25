@@ -74,6 +74,27 @@ function checkEventCanBeArchived(
   return null;
 }
 
+// A PM link stops working once today is more than PM_TOKEN_EXPIRY_DAYS past
+// the linked event's own date — computed at lookup time from the event_date
+// already joined in getPMToken(), not stored as a column. An event with no
+// date has nothing to compare against and never expires. Plain
+// "YYYY-MM-DD" strings are compared as UTC midnights so timezones can't
+// shift the day count; `todayStr` is injectable so tests don't depend on the
+// system clock. Kept as its own copy in ics.js (one-copy-per-function
+// convention) — if the number or rule changes, change both.
+const PM_TOKEN_EXPIRY_DAYS = 90;
+function isPMTokenExpired(
+  eventDateStr,
+  todayStr = new Date().toISOString().slice(0, 10),
+  expiryDays = PM_TOKEN_EXPIRY_DAYS,
+) {
+  if (!eventDateStr) return false;
+  const daysPast =
+    (Date.parse(todayStr) - Date.parse(String(eventDateStr).slice(0, 10))) /
+    86400000;
+  return daysPast > expiryDays;
+}
+
 // Archiving/restoring must always go through the dedicated /archive
 // endpoint (which enforces the "only past events" rule above) — this
 // strips `archived` from any event UPDATE payload so it can never be
@@ -204,14 +225,25 @@ exports.handler = async (event) => {
     return b.password === HUB_PW;
   }
 
-  async function getPMToken(token) {
-    if (!token) return null;
+  // Raw lookup: { pm, expired }. Only GET /events needs the distinction (to
+  // tell a PM their link has expired rather than that it's invalid).
+  async function lookupPMToken(token) {
+    if (!token) return { pm: null, expired: false };
     const { data } = await supabase
       .from("pm_tokens")
       .select("*, events(*)")
       .eq("token", token)
       .single();
-    return data;
+    if (!data) return { pm: null, expired: false };
+    if (isPMTokenExpired(data.events?.event_date))
+      return { pm: null, expired: true };
+    return { pm: data, expired: false };
+  }
+
+  // Every other call site keeps its existing `if (!pm) return ...` check: an
+  // expired token is simply "not found" from their point of view.
+  async function getPMToken(token) {
+    return (await lookupPMToken(token)).pm;
   }
 
   async function notifyPMs(eventId, message) {
@@ -256,7 +288,9 @@ exports.handler = async (event) => {
     if (path === "/events" && method === "GET") {
       const token = event.queryStringParameters?.token;
       if (token) {
-        const pm = await getPMToken(token);
+        const { pm, expired } = await lookupPMToken(token);
+        if (expired)
+          return json(401, { error: "Link expired", expired: true });
         if (!pm) return json(401, { error: "Invalid token" });
         const full = await loadFullEvent(pm.event_id);
         return json(200, { role: "pm", pm_name: pm.pm_name, ...full });
@@ -1032,6 +1066,8 @@ exports.getAllowedEventFields = getAllowedEventFields;
 exports.checkHubOnlyEventFields = checkHubOnlyEventFields;
 exports.HUB_ONLY_EVENT_FIELDS = HUB_ONLY_EVENT_FIELDS;
 exports.checkEventCanBeArchived = checkEventCanBeArchived;
+exports.isPMTokenExpired = isPMTokenExpired;
+exports.PM_TOKEN_EXPIRY_DAYS = PM_TOKEN_EXPIRY_DAYS;
 exports.sanitizeEventUpdateFields = sanitizeEventUpdateFields;
 exports.computeWeeklyDueItems = computeWeeklyDueItems;
 exports.WEEKLY_MILESTONE_OFFSETS = WEEKLY_MILESTONE_OFFSETS;

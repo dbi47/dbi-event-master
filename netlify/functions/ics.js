@@ -73,6 +73,23 @@ function ds(d) {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 }
 
+// Own copy of api.js's isPMTokenExpired()/PM_TOKEN_EXPIRY_DAYS (one-copy-
+// per-function convention) — a PM link stops working once today is more than
+// 90 days past the linked event's date; an event with no date never
+// expires. If the number or rule changes, change both files.
+const PM_TOKEN_EXPIRY_DAYS = 90;
+function isPMTokenExpired(
+  eventDateStr,
+  todayStr = new Date().toISOString().slice(0, 10),
+  expiryDays = PM_TOKEN_EXPIRY_DAYS,
+) {
+  if (!eventDateStr) return false;
+  const daysPast =
+    (Date.parse(todayStr) - Date.parse(String(eventDateStr).slice(0, 10))) /
+    86400000;
+  return daysPast > expiryDays;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod && event.httpMethod !== "GET") {
     return {
@@ -109,6 +126,8 @@ exports.handler = async (event) => {
         .single();
       if (pmErr || !pm)
         return errRes(401, "Invalid token: " + (pmErr?.message || "not found"));
+      if (isPMTokenExpired(pm.events?.event_date))
+        return errRes(401, "Link expired: this event is over");
       ev = pm.events;
       pmName = pm.pm_name;
       pmWorkflows = pm.workflow_ids;
@@ -265,6 +284,7 @@ function errRes(code, msg) {
 }
 
 // Exported alongside `handler` purely for unit testing - see ics.test.js.
+exports.isPMTokenExpired = isPMTokenExpired;
 exports.foldLine = foldLine;
 exports.cleanText = cleanText;
 exports.safe = safe;
