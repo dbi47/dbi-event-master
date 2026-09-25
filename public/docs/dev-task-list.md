@@ -225,6 +225,34 @@ trail.
 
 ---
 
+## 11. Fix outgoing email (Resend) — BLOCKED on client / Resend access
+**Files:** Netlify env vars, `api.js` (`sendEmail`), `reminders.js`, `digest.js`
+
+**Symptom:** creating a PM access shows "Zugang erstellt, aber E-Mail konnte
+nicht gesendet werden". Netlify function log (api, 2026-09-25):
+`Could not email PM their link: API key is invalid`.
+
+**Why it's blocked:** we have no Resend access yet — waiting on the client
+for the account/API key and the verified sender domain.
+
+- [ ] Get Resend access from the client; create an API key with "Sending
+      access"
+- [ ] Netlify → Site configuration → Environment variables: set
+      `RESEND_API_KEY` (no quotes/spaces, starts with `re_`, enabled for
+      Functions), then trigger a new deploy
+- [ ] Get the client's verified sender address/domain in Resend
+- [ ] All three senders use `from: "DBI Event Planner "` — a display name with
+      no email address, which Resend will reject once the key is valid. Replace
+      with a single `EMAIL_FROM` env var (`DBI Event Planner <noreply@their-domain>`)
+      read by `api.js`, `reminders.js` and `digest.js`
+- [ ] Note: `reminders.js` and `digest.js` share the same key and `from`, so
+      the daily reminder + digest emails have very likely been failing too —
+      re-check them after the fix
+- [ ] Manual test: create a PM access with an email → mail arrives with the
+      link; trigger reminders/digest once and confirm delivery
+
+---
+
 ## Notes
 - Item 7 (all-events Gantt export) is **on hold** pending item 3's delivery
   and client approval — don't start it yet.
