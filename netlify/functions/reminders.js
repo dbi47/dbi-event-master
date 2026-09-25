@@ -62,6 +62,38 @@ function computeDueTasks(evDate, msDone, wfDone, in3Str) {
   return dueTasks;
 }
 
+// PostgREST silently caps any response at 1000 rows and long `.in()` id lists
+// can overflow URL limits, so a naive one-shot `.in('event_id', allIds)` would
+// quietly return a truncated set once there are enough events — which here
+// would read as "task not done / not yet reminded" and fire wrong emails.
+// Ids are chunked and each chunk is paged until exhausted. `orderBy` must be a
+// total order (unique columns) so paging can't skip or repeat rows. A failed
+// read throws instead of returning [] — an empty result would be
+// indistinguishable from "nothing done / nothing sent" and re-send everything.
+const ID_CHUNK = 100;
+const PAGE_SIZE = 1000;
+async function fetchByEventIds(table, columns, eventIds, orderBy) {
+  const rows = [];
+  for (let i = 0; i < eventIds.length; i += ID_CHUNK) {
+    const chunk = eventIds.slice(i, i + ID_CHUNK);
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let q = supabase.from(table).select(columns).in('event_id', chunk);
+      orderBy.forEach((col) => { q = q.order(col); });
+      const { data, error } = await q.range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`reminders: could not read ${table}: ${error.message}`);
+      rows.push(...(data || []));
+      if (!data || data.length < PAGE_SIZE) break;
+    }
+  }
+  return rows;
+}
+
+function groupByEvent(rows, pick) {
+  const map = {};
+  rows.forEach((r) => { (map[r.event_id] ||= []).push(pick(r)); });
+  return map;
+}
+
 exports.handler = async () => {
   const today = new Date(); today.setHours(0,0,0,0);
   const in3   = new Date(today); in3.setDate(in3.getDate() + 3);
@@ -71,41 +103,52 @@ exports.handler = async () => {
     .from('events').select('*').eq('archived', false);
   if (!events?.length) return { statusCode: 200, body: 'No active events' };
 
-  let totalSent = 0;
+  // Every read the loop below needs, fetched once up front. Undated events are
+  // skipped by the loop, so there's no point reading data for them.
+  const eventIds = events.filter((e) => e.event_date).map((e) => e.id);
+  const [msRows, wfRows, logRows, pmRows] = await Promise.all([
+    fetchByEventIds('milestones', 'event_id,ms_key,done_date', eventIds,
+      ['event_id', 'ms_key']),
+    fetchByEventIds('workflow_rows', 'event_id,workflow_id,row_key,done_date', eventIds,
+      ['event_id', 'workflow_id', 'row_key']),
+    fetchByEventIds('reminder_log', 'event_id,task_key', eventIds,
+      ['event_id', 'task_key']),
+    fetchByEventIds('pm_tokens', 'event_id,pm_email,pm_name', eventIds,
+      ['event_id', 'created_at']),
+  ]);
+  const msDoneByEvent = groupByEvent(msRows.filter((r) => r.done_date), (r) => r.ms_key);
+  const wfDoneByEvent = groupByEvent(wfRows.filter((r) => r.done_date),
+    (r) => r.workflow_id + '_' + r.row_key);
+  // A task is reminded ONCE ever per event, not once per calendar day, so
+  // dedup is purely "has this task_key already been logged for this event."
+  const sentKeysByEvent = groupByEvent(logRows, (r) => r.task_key);
+  const pmsByEvent = groupByEvent(pmRows, (p) => p);
 
+  let totalSent = 0;
+  // Collected across the whole run and written in one insert after the loop.
+  // Written in `finally` so events already emailed before an exception still
+  // get logged — same as when each event was logged right after its own send.
+  const newLogRows = [];
+
+  try {
   for (const ev of events) {
     if (!ev.event_date) continue;
     const evDate = new Date(ev.event_date + 'T12:00:00');
 
-    const [{ data: ms }, { data: wf }] = await Promise.all([
-      supabase.from('milestones')
-        .select('ms_key,done_date').eq('event_id', ev.id),
-      supabase.from('workflow_rows')
-        .select('workflow_id,row_key,done_date').eq('event_id', ev.id)
-    ]);
-    const msDone = new Set((ms||[]).filter(r=>r.done_date).map(r=>r.ms_key));
-    const wfDone = new Set((wf||[]).filter(r=>r.done_date)
-      .map(r=>r.workflow_id+'_'+r.row_key));
+    const msDone = new Set(msDoneByEvent[ev.id] || []);
+    const wfDone = new Set(wfDoneByEvent[ev.id] || []);
 
     const dueTasks = computeDueTasks(evDate, msDone, wfDone, in3Str);
     if (!dueTasks.length) continue;
 
-    // Check reminder log — a task is reminded ONCE ever per event, not once
-    // per calendar day, so no `sent_date` filter here: dedup is purely
-    // "has this task_key already been logged for this event."
-    const { data: alreadySent } = await supabase
-      .from('reminder_log').select('task_key')
-      .eq('event_id', ev.id);
-    const sentKeys = new Set((alreadySent||[]).map(r=>r.task_key));
+    const sentKeys = new Set(sentKeysByEvent[ev.id] || []);
     const toSend   = dueTasks.filter(t => !sentKeys.has(t.key));
     if (!toSend.length) continue;
 
     // Recipients: hub + all PMs who have an email address
-    const { data: pmTokens } = await supabase
-      .from('pm_tokens').select('pm_email,pm_name').eq('event_id', ev.id);
     const recipients = [
       { email: process.env.HUB_EMAIL, name: 'Stephanie' },
-      ...(pmTokens||[]).filter(p=>p.pm_email)
+      ...(pmsByEvent[ev.id] || []).filter(p=>p.pm_email)
         .map(p=>({ email: p.pm_email, name: p.pm_name }))
     ];
 
@@ -128,10 +171,14 @@ exports.handler = async () => {
       totalSent++;
     }
 
-    // Log sent — task_key alone is the dedup key (see query above)
-    await supabase.from('reminder_log').insert(
-      toSend.map(t => ({ event_id: ev.id, task_key: t.key, sent_date: in3Str }))
+    // Log sent — task_key alone is the dedup key (see sentKeysByEvent above)
+    toSend.forEach(t =>
+      newLogRows.push({ event_id: ev.id, task_key: t.key, sent_date: in3Str })
     );
+  }
+  } finally {
+    if (newLogRows.length)
+      await supabase.from('reminder_log').insert(newLogRows);
   }
 
   return { statusCode: 200, body: `Sent ${totalSent} reminder emails` };
