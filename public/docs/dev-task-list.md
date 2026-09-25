@@ -253,6 +253,20 @@ for the account/API key and the verified sender domain.
 
 ---
 
+## 12. Check archived-events list for the 1000-row Supabase cap — not urgent
+**Files:** `api.js` (`GET /events?archived=true`), `index.html` (archived view)
+
+- [ ] Check the archived-events list endpoint for the same 1000-row Supabase
+      cap issue found and fixed in `reminders.js`/`digest.js`. The archive is
+      the one part of this app explicitly designed to grow without pruning, so
+      it's the most likely place to eventually hit this same silent-truncation
+      risk. Not urgent at current usage (~100 events/year), but worth checking
+      proactively before it's large enough to actually matter, given this exact
+      bug class was proven (not just theorized) to produce silently wrong
+      output rather than a visible error.
+
+---
+
 ## Notes
 - Item 7 (all-events Gantt export) is **on hold** pending item 3's delivery
   and client approval — don't start it yet.
