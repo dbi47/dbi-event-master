@@ -81,6 +81,32 @@ function buildDigestEmailHtml(groups, horizonDays) {
     `;
 }
 
+// Same helper as reminders.js's fetchByEventIds (kept as this function's own
+// copy, per this codebase's one-copy-per-function convention — see api.js's
+// WEEKLY_* lists for the same pattern). PostgREST silently caps any response
+// at 1000 rows and long `.in()` id lists can overflow URL limits, so ids are
+// chunked and each chunk is paged until exhausted; `orderBy` must be a total
+// order (unique columns) so paging can't skip or repeat rows. A failed read
+// throws instead of returning [] — a truncated/empty result would read as
+// "nothing done" and produce a wrong digest.
+const ID_CHUNK = 100;
+const PAGE_SIZE = 1000;
+async function fetchByEventIds(table, columns, eventIds, orderBy) {
+  const rows = [];
+  for (let i = 0; i < eventIds.length; i += ID_CHUNK) {
+    const chunk = eventIds.slice(i, i + ID_CHUNK);
+    for (let from = 0; ; from += PAGE_SIZE) {
+      let q = supabase.from(table).select(columns).in('event_id', chunk);
+      orderBy.forEach((col) => { q = q.order(col); });
+      const { data, error } = await q.range(from, from + PAGE_SIZE - 1);
+      if (error) throw new Error(`digest: could not read ${table}: ${error.message}`);
+      rows.push(...(data || []));
+      if (!data || data.length < PAGE_SIZE) break;
+    }
+  }
+  return rows;
+}
+
 exports.handler = async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -92,13 +118,22 @@ exports.handler = async () => {
     .from('events').select('*').eq('archived', false);
   if (!events?.length) return { statusCode: 200, body: 'No active events' };
 
-  const eventIds = events.map((e) => e.id);
-  const [{ data: msRows }, { data: wfRows }] = await Promise.all([
-    supabase.from('milestones')
-      .select('event_id,ms_key,done_date').in('event_id', eventIds),
-    supabase.from('workflow_rows')
-      .select('event_id,workflow_id,row_key,done_date').in('event_id', eventIds)
-  ]);
+  // Undated events are skipped by buildDigestGroups, so no reads for them.
+  const eventIds = events.filter((e) => e.event_date).map((e) => e.id);
+  let msRows, wfRows;
+  try {
+    [msRows, wfRows] = await Promise.all([
+      fetchByEventIds('milestones', 'event_id,ms_key,done_date', eventIds,
+        ['event_id', 'ms_key']),
+      fetchByEventIds('workflow_rows', 'event_id,workflow_id,row_key,done_date', eventIds,
+        ['event_id', 'workflow_id', 'row_key']),
+    ]);
+  } catch (err) {
+    // Fail closed: a broken read must never look like a normal empty result.
+    // Nothing has been sent at this point, and nothing is sent on this path.
+    console.error('Digest aborted, no email sent:', err.message);
+    return { statusCode: 500, body: `Digest aborted, no email sent: ${err.message}` };
+  }
 
   const msDoneByEvent = {};
   (msRows || []).forEach((r) => {
