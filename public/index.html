@@ -1982,6 +1982,152 @@
         gap: 16px;
         margin-bottom: 28px;
       }
+      /* Cards/list view switch (Alle Events filter row). Defined after
+         .events-filter-field button so these win on equal specificity. */
+      .view-toggle {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        overflow: hidden;
+        background: white;
+      }
+      .view-toggle button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 0;
+        background: white;
+        color: var(--mid);
+        cursor: pointer;
+      }
+      .view-toggle button + button {
+        border-left: 1px solid var(--line);
+      }
+      .view-toggle button:hover {
+        background: var(--cream);
+      }
+      .view-toggle button.active {
+        background: var(--btn-primary);
+        color: white;
+      }
+      .view-toggle svg {
+        width: 16px;
+        height: 16px;
+      }
+      /* List view: same data and same actions as the cards, denser. Plain
+         grid rows (not a <table> in .table-wrap, which clips overflow and
+         would cut off the "⋯" menu). */
+      .event-list {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 28px;
+      }
+      .event-list-head,
+      .event-list-row {
+        display: grid;
+        /* Actions column is a fixed width (not auto): with auto, the header
+           (empty cell) and the rows (buttons) resolved to different column
+           widths and the headers drifted out of line with the data. */
+        grid-template-columns:
+          minmax(150px, 2fr) minmax(215px, 1.6fr) 84px minmax(150px, 1.6fr)
+          minmax(120px, 1fr) 140px;
+        column-gap: 14px;
+        align-items: center;
+        padding: 10px 16px;
+      }
+      .el-meta {
+        display: contents;
+      }
+      .event-list-head {
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--mid);
+        border-bottom: 1px solid var(--line);
+        border-left: 4px solid transparent; /* same as the rows, so columns line up */
+      }
+      .event-list-row {
+        border-bottom: 1px solid var(--line);
+        border-left: 4px solid transparent;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .event-list-row:last-child {
+        border-bottom: none;
+      }
+      .event-list-row:hover {
+        background: var(--cream);
+      }
+      .event-list-row.active-event {
+        border-left-color: var(--accent);
+      }
+      .el-name {
+        font-family: "Fraunces", serif;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--ink);
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .el-date {
+        font-family: "DM Mono", monospace;
+        font-size: 0.72rem;
+        color: var(--grn-fg);
+        white-space: nowrap;
+      }
+      .el-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .event-list-new {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px dashed var(--line);
+        color: var(--mid);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .event-list-new:hover {
+        background: var(--cream);
+        color: var(--ink);
+      }
+      /* 1180px, not a phone breakpoint: the fixed sidebar takes 220px, so the
+         six columns (~960px minimum) stop fitting well before the viewport is
+         narrow — below this the row stacks instead of overflowing sideways. */
+      @media (max-width: 1180px) {
+        .event-list-head {
+          display: none;
+        }
+        .event-list-row {
+          grid-template-columns: 1fr auto;
+          row-gap: 6px;
+        }
+        .el-meta {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 6px 12px;
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+        /* In a shrink-to-fit flex row the bar would collapse to 0 width. */
+        .el-meta .todo-progress {
+          flex: 1 1 120px;
+          min-width: 110px;
+        }
+      }
       .event-card {
         background: white;
         border: 1px solid var(--line);
@@ -3035,7 +3181,7 @@
                 id="events-search"
                 class="events-search-input"
                 placeholder="Nach Eventname suchen…"
-                oninput="renderEventGrid()"
+                oninput="onEventsFilterChange()"
               />
             </div>
             <button
@@ -3052,7 +3198,7 @@
               <input
                 type="date"
                 id="events-filter-date-from"
-                onchange="renderEventGrid()"
+                onchange="onEventsFilterChange()"
               />
             </div>
             <div class="events-filter-field">
@@ -3060,18 +3206,18 @@
               <input
                 type="date"
                 id="events-filter-date-to"
-                onchange="renderEventGrid()"
+                onchange="onEventsFilterChange()"
               />
             </div>
             <div class="events-filter-field">
               <label for="events-filter-owner">Hub/Abteilung</label>
-              <select id="events-filter-owner" onchange="renderEventGrid()">
+              <select id="events-filter-owner" onchange="onEventsFilterChange()">
                 <option value="">Alle</option>
               </select>
             </div>
             <div class="events-filter-field">
               <label for="events-filter-status">Status</label>
-              <select id="events-filter-status" onchange="renderEventGrid()">
+              <select id="events-filter-status" onchange="onEventsFilterChange()">
                 <option value="">Alle</option>
                 <option value="red">🔴 Kritisch / überschritten</option>
                 <option value="amb">🟡 Wird knapp</option>
@@ -3081,7 +3227,7 @@
             </div>
             <div class="events-filter-field">
               <label for="events-sort">Sortieren nach</label>
-              <select id="events-sort" onchange="renderEventGrid()">
+              <select id="events-sort" onchange="onEventsFilterChange()">
                 <option value="date-asc">Datum (aufsteigend)</option>
                 <option value="date-desc">Datum (absteigend)</option>
                 <option value="name-asc">Name (A–Z)</option>
@@ -3105,6 +3251,29 @@
                 <i data-lucide="archive" class="btn-icon"></i>Archiv anzeigen
               </button>
             </div>
+            <div class="events-filter-field">
+              <label>Darstellung</label>
+              <div class="view-toggle" role="group" aria-label="Darstellung">
+                <button
+                  type="button"
+                  id="events-view-cards"
+                  title="Kartenansicht"
+                  aria-label="Kartenansicht"
+                  onclick="setEventsViewMode('cards')"
+                >
+                  <i data-lucide="layout-grid"></i>
+                </button>
+                <button
+                  type="button"
+                  id="events-view-list"
+                  title="Listenansicht"
+                  aria-label="Listenansicht"
+                  onclick="setEventsViewMode('list')"
+                >
+                  <i data-lucide="list"></i>
+                </button>
+              </div>
+            </div>
             <button
               class="events-filter-reset"
               type="button"
@@ -3118,6 +3287,8 @@
             <div class="loading-text">Lade Events…</div>
           </div>
           <div class="event-grid" id="event-grid" style="display: none"></div>
+          <div class="event-list" id="event-list" style="display: none"></div>
+          <div id="events-pagination"></div>
         </div>
 
         <!-- DASHBOARD -->
@@ -4219,6 +4390,30 @@
       let showArchivedEvents = false;
       let archivedEvents = [];
 
+      // ══ ALLE EVENTS — VIEW MODE + PAGINATION ══
+      // eventsViewMode is null until the person clicks the cards/list toggle.
+      // While null, the view follows the archive toggle (cards for active,
+      // list for archived). The moment they pick one it's set explicitly,
+      // saved to sessionStorage (resets when the tab closes, not localStorage)
+      // and from then on never auto-switches.
+      let eventsViewMode = null;
+      try {
+        const savedView = sessionStorage.getItem("eventsViewMode");
+        if (savedView === "cards" || savedView === "list")
+          eventsViewMode = savedView;
+      } catch {
+        // sessionStorage can be unavailable (private mode etc.) — stay on the
+        // smart default.
+      }
+      let eventsPage = 1;
+      // Same numbered Prev/Next pagination (paginateItems +
+      // buildPaginationControlsHtml) already used by Meine Woche/Aktivität.
+      // Cards are bulkier than rows, so fewer per page.
+      const EVENTS_PAGE_SIZE = { cards: 12, list: 25 };
+      function getEffectiveEventsView() {
+        return eventsViewMode || (showArchivedEvents ? "list" : "cards");
+      }
+
       // ══ LIST PAGINATION (Meine Woche, Aktivität) ══
       const LIST_PAGE_SIZE = 10;
       let myWeekItems = [];
@@ -5207,14 +5402,192 @@
         });
         const sortSelect = document.getElementById("events-sort");
         if (sortSelect) sortSelect.value = "date-asc";
+        eventsPage = 1;
         renderEventGrid();
+      }
+      // Search, every filter and the sort all come through here: a changed
+      // result set must never leave someone stranded on a stale page.
+      function onEventsFilterChange() {
+        eventsPage = 1;
+        renderEventGrid();
+      }
+      function gotoEventsPage(page) {
+        eventsPage = page;
+        renderEventGrid();
+        document
+          .querySelector("#page-hub-events .events-filters")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      function setEventsViewMode(mode) {
+        if (mode !== "cards" && mode !== "list") return;
+        eventsViewMode = mode;
+        try {
+          sessionStorage.setItem("eventsViewMode", mode);
+        } catch {
+          // Not persisted, still applies for this page view.
+        }
+        eventsPage = 1; // the two views have different page sizes
+        renderEventGrid();
+      }
+      function updateEventsViewToggle(view) {
+        [
+          ["events-view-cards", "cards"],
+          ["events-view-list", "list"],
+        ].forEach(([id, mode]) => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          btn.classList.toggle("active", view === mode);
+          btn.setAttribute("aria-pressed", view === mode ? "true" : "false");
+        });
+      }
+      // Everything both layouts derive from one event, computed once so the
+      // cards and the list can never disagree about a date, status or rule.
+      function getEventDisplayData(ev) {
+        const evDate = parseISO(ev.event_date);
+        const diff = evDate ? daysDiff(evDate) : null;
+        const diffStr =
+          diff !== null
+            ? diff > 0
+              ? "in " + diff + " Tagen"
+              : diff === 0
+                ? "Heute!"
+                : "vor " + Math.abs(diff) + " Tagen"
+            : "Kein Datum";
+        // Archiving only makes sense once an event is actually over — an
+        // event with no date, today's event, or a future one can't be
+        // archived (mirrors the same rule enforced server-side).
+        const canArchive = Boolean(evDate) && diff < 0;
+        return {
+          evDate,
+          diff,
+          diffStr,
+          pct: Number.isFinite(ev.progress_pct) ? ev.progress_pct : 0,
+          canArchive,
+          archiveTitle: canArchive
+            ? "Event archivieren"
+            : "Nur bereits vergangene Events können archiviert werden",
+          sizeLabel:
+            ev.size === "12"
+              ? "Klein"
+              : ev.size === "18"
+                ? "Mittel"
+                : ev.size === "24"
+                  ? "Groß"
+                  : "–",
+          sizePillCls: evDate && diff < 0 ? "red" : diff <= 14 ? "amb" : "grn",
+        };
+      }
+      // "Öffnen →" plus the "⋯" overflow menu — the single implementation both
+      // the card and the list row use, so the actions are identical in both.
+      function buildEventActionsHtml(ev, d) {
+        const archiveOrRestoreMenuItem = showArchivedEvents
+          ? `<button type="button" onclick="event.stopPropagation();closeEventCardMenus();restoreEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="archive-restore"></i>Wiederherstellen</button>`
+          : `<button type="button" title="${d.archiveTitle}" ${d.canArchive ? `onclick="event.stopPropagation();closeEventCardMenus();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}><i data-lucide="archive"></i>Archivieren</button>`;
+        return `  <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
+  <div class="event-card-menu-wrap">
+    <button class="btn btn-secondary event-card-menu-btn" type="button" title="Weitere Aktionen" onclick="event.stopPropagation();toggleEventCardMenu('${ev.id}')">⋯</button>
+    <div class="event-card-menu" id="event-card-menu-${ev.id}">
+      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();copyICSLink('${ev.id}')"><i data-lucide="calendar-plus"></i>ICS-Link kopieren</button>
+      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();duplicateEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="copy"></i>Duplizieren</button>
+      ${archiveOrRestoreMenuItem}
+      <button type="button" class="event-card-menu-danger" onclick="event.stopPropagation();closeEventCardMenus();deleteEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="trash-2"></i>Löschen</button>
+    </div>
+  </div>`;
+      }
+      function getEventsEmptyMessage(hasActiveFilters) {
+        return hasActiveFilters
+          ? "Keine Events gefunden."
+          : showArchivedEvents
+            ? "Keine archivierten Events vorhanden."
+            : "Noch keine Events vorhanden.";
+      }
+      function renderEventCards(grid, events, hasActiveFilters) {
+        events.forEach((ev) => {
+          const d = getEventDisplayData(ev);
+          const card = document.createElement("div");
+          card.className =
+            "event-card" + (ev.id === currentEventId ? " active-event" : "");
+          card.onclick = () => selectEvent(ev.id);
+          card.innerHTML = `<div class="event-card-name">${esc(ev.name)}</div>
+<div class="event-card-date">${d.evDate ? fmtDE(d.evDate) : "– kein Datum –"} · ${d.diffStr}</div>
+<div class="event-card-badges">
+  <span class="pill pill-${d.sizePillCls}">${d.sizeLabel}</span>
+  ${ev.owner ? `<span class="pill pill-blu">${esc(translateLegacyOwner(ev.owner))}</span>` : ""}
+</div>
+<div class="todo-progress" title="${d.pct}% der Meilensteine erledigt"><div class="todo-progress-bar"><span style="width:${d.pct}%"></span></div><span>${d.pct}%</span></div>
+<div class="event-card-actions">
+${buildEventActionsHtml(ev, d)}
+</div>`;
+          grid.appendChild(card);
+        });
+        if (!events.length) {
+          const empty = document.createElement("div");
+          empty.className = "events-empty";
+          empty.textContent = getEventsEmptyMessage(hasActiveFilters);
+          grid.appendChild(empty);
+        }
+        if (!showArchivedEvents) {
+          const newCard = document.createElement("div");
+          newCard.className = "new-event-card";
+          newCard.innerHTML = `<div class="new-event-card-icon">+</div><div class="new-event-card-label">Neues Event anlegen</div>`;
+          newCard.onclick = createNewEvent;
+          grid.appendChild(newCard);
+        }
+      }
+      // Same already-filtered/sorted (and already-paginated) events the cards
+      // get, as dense rows: same data, same "⋯" menu, whole row opens the
+      // event — the same feature in a tighter layout.
+      function renderEventList(list, events, hasActiveFilters) {
+        if (events.length) {
+          const head = document.createElement("div");
+          head.className = "event-list-head";
+          head.innerHTML =
+            "<div>Name</div><div>Datum</div><div>Größe</div><div>Hub/Abteilung</div><div>Fortschritt</div><div></div>";
+          list.appendChild(head);
+        }
+        events.forEach((ev) => {
+          const d = getEventDisplayData(ev);
+          const row = document.createElement("div");
+          row.className =
+            "event-list-row" + (ev.id === currentEventId ? " active-event" : "");
+          row.onclick = () => selectEvent(ev.id);
+          row.innerHTML = `<div class="el-name" title="${esc(ev.name)}">${esc(ev.name)}</div>
+<div class="el-meta">
+  <div class="el-date">${d.evDate ? fmtDE(d.evDate) : "– kein Datum –"} · ${d.diffStr}</div>
+  <div class="el-size"><span class="pill pill-${d.sizePillCls}">${d.sizeLabel}</span></div>
+  <div class="el-owner">${ev.owner ? `<span class="pill pill-blu">${esc(translateLegacyOwner(ev.owner))}</span>` : "–"}</div>
+  <div class="todo-progress" title="${d.pct}% der Meilensteine erledigt"><div class="todo-progress-bar"><span style="width:${d.pct}%"></span></div><span>${d.pct}%</span></div>
+</div>
+<div class="el-actions">
+${buildEventActionsHtml(ev, d)}
+</div>`;
+          list.appendChild(row);
+        });
+        if (!events.length) {
+          const empty = document.createElement("div");
+          empty.className = "events-empty";
+          empty.style.padding = "24px 16px";
+          empty.textContent = getEventsEmptyMessage(hasActiveFilters);
+          list.appendChild(empty);
+        }
+        if (!showArchivedEvents) {
+          const add = document.createElement("div");
+          add.className = "event-list-new";
+          add.innerHTML = `<span class="new-event-card-icon" style="font-size:1.1rem;margin:0">+</span>Neues Event anlegen`;
+          add.onclick = createNewEvent;
+          list.appendChild(add);
+        }
       }
       function renderEventGrid() {
         const grid = document.getElementById("event-grid");
+        const list = document.getElementById("event-list");
+        const pagination = document.getElementById("events-pagination");
         const loading = document.getElementById("events-loading");
         loading.style.display = "none";
-        grid.style.display = "grid";
         grid.innerHTML = "";
+        list.innerHTML = "";
+        const view = getEffectiveEventsView();
+        updateEventsViewToggle(view);
         const source = showArchivedEvents ? archivedEvents : allEvents;
         populateEventOwnerFilterOptions(source);
         const filters = {
@@ -5235,70 +5608,28 @@
           filters.status,
         );
         const events = filterAndSortEvents(source, filters, sortBy);
-        events.forEach((ev) => {
-          const card = document.createElement("div");
-          card.className =
-            "event-card" + (ev.id === currentEventId ? " active-event" : "");
-          card.onclick = () => selectEvent(ev.id);
-          const evDate = parseISO(ev.event_date);
-          const diff = evDate ? daysDiff(evDate) : null;
-          const diffStr =
-            diff !== null
-              ? diff > 0
-                ? "in " + diff + " Tagen"
-                : diff === 0
-                  ? "Heute!"
-                  : "vor " + Math.abs(diff) + " Tagen"
-              : "Kein Datum";
-          const pct = Number.isFinite(ev.progress_pct) ? ev.progress_pct : 0;
-          // Archiving only makes sense once an event is actually over — an
-          // event with no date, today's event, or a future one can't be
-          // archived (mirrors the same rule enforced server-side).
-          const canArchive = Boolean(evDate) && diff < 0;
-          const archiveTitle = canArchive
-            ? "Event archivieren"
-            : "Nur bereits vergangene Events können archiviert werden";
-          const archiveOrRestoreMenuItem = showArchivedEvents
-            ? `<button type="button" onclick="event.stopPropagation();closeEventCardMenus();restoreEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="archive-restore"></i>Wiederherstellen</button>`
-            : `<button type="button" title="${archiveTitle}" ${canArchive ? `onclick="event.stopPropagation();closeEventCardMenus();archiveEvent('${ev.id}','${esc(ev.name)}')"` : "disabled"}><i data-lucide="archive"></i>Archivieren</button>`;
-          card.innerHTML = `<div class="event-card-name">${esc(ev.name)}</div>
-<div class="event-card-date">${evDate ? fmtDE(evDate) : "– kein Datum –"} · ${diffStr}</div>
-<div class="event-card-badges">
-  <span class="pill pill-${evDate && diff < 0 ? "red" : diff <= 14 ? "amb" : "grn"}">${ev.size === "12" ? "Klein" : ev.size === "18" ? "Mittel" : ev.size === "24" ? "Groß" : "–"}</span>
-  ${ev.owner ? `<span class="pill pill-blu">${esc(translateLegacyOwner(ev.owner))}</span>` : ""}
-</div>
-<div class="todo-progress" title="${pct}% der Meilensteine erledigt"><div class="todo-progress-bar"><span style="width:${pct}%"></span></div><span>${pct}%</span></div>
-<div class="event-card-actions">
-  <button class="btn" style="padding:8px 16px;font-size:.78rem" onclick="selectEvent('${ev.id}')">Öffnen →</button>
-  <div class="event-card-menu-wrap">
-    <button class="btn btn-secondary event-card-menu-btn" type="button" title="Weitere Aktionen" onclick="event.stopPropagation();toggleEventCardMenu('${ev.id}')">⋯</button>
-    <div class="event-card-menu" id="event-card-menu-${ev.id}">
-      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();copyICSLink('${ev.id}')"><i data-lucide="calendar-plus"></i>ICS-Link kopieren</button>
-      <button type="button" onclick="event.stopPropagation();closeEventCardMenus();duplicateEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="copy"></i>Duplizieren</button>
-      ${archiveOrRestoreMenuItem}
-      <button type="button" class="event-card-menu-danger" onclick="event.stopPropagation();closeEventCardMenus();deleteEvent('${ev.id}','${esc(ev.name)}')"><i data-lucide="trash-2"></i>Löschen</button>
-    </div>
-  </div>
-</div>`;
-          grid.appendChild(card);
-        });
-        if (!events.length) {
-          const empty = document.createElement("div");
-          empty.className = "events-empty";
-          empty.textContent = hasActiveFilters
-            ? "Keine Events gefunden."
-            : showArchivedEvents
-              ? "Keine archivierten Events vorhanden."
-              : "Noch keine Events vorhanden.";
-          grid.appendChild(empty);
+        // paginateItems clamps a stale page (e.g. after deleting the last
+        // event on the final page) back into range.
+        const { pageItems, totalPages, page } = paginateItems(
+          events,
+          eventsPage,
+          EVENTS_PAGE_SIZE[view],
+        );
+        eventsPage = page;
+        if (view === "list") {
+          grid.style.display = "none";
+          list.style.display = "block";
+          renderEventList(list, pageItems, hasActiveFilters);
+        } else {
+          list.style.display = "none";
+          grid.style.display = "grid";
+          renderEventCards(grid, pageItems, hasActiveFilters);
         }
-        if (!showArchivedEvents) {
-          const newCard = document.createElement("div");
-          newCard.className = "new-event-card";
-          newCard.innerHTML = `<div class="new-event-card-icon">+</div><div class="new-event-card-label">Neues Event anlegen</div>`;
-          newCard.onclick = createNewEvent;
-          grid.appendChild(newCard);
-        }
+        pagination.innerHTML = buildPaginationControlsHtml(
+          page,
+          totalPages,
+          "gotoEventsPage",
+        );
         lucide.createIcons();
       }
       // ── EVENT CARD OVERFLOW MENU ──
@@ -5336,10 +5667,12 @@
       }
       async function toggleArchivedEventsView() {
         showArchivedEvents = !showArchivedEvents;
+        eventsPage = 1; // different result set — never stay on a stale page
         setArchiveToggleLabel(showArchivedEvents);
         if (showArchivedEvents) {
           document.getElementById("events-loading").style.display = "flex";
           document.getElementById("event-grid").style.display = "none";
+          document.getElementById("event-list").style.display = "none";
           try {
             const r = await fetch(
               `${API}/events?password=${encodeURIComponent(hubPassword)}&archived=true`,
@@ -5373,6 +5706,7 @@
           archivedEvents = archivedEvents.filter((e) => e.id !== eventId);
           if (restored) allEvents.push(restored);
           showArchivedEvents = false;
+          eventsPage = 1;
           setArchiveToggleLabel(false);
           renderEventGrid();
           showToast(`"${eventName}" wiederhergestellt`, "success");
