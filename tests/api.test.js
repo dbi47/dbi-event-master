@@ -30,7 +30,7 @@ test("PIXLIP_ROW_KEYS covers every row in WORKFLOWS.pixlip (index.html), includi
     [...PIXLIP_ROW_KEYS].sort(),
     [
       "px1", "px2", "px3", "px4", "px5", "px6", "px7",
-      "pv1", "pv2", "pv3", "pv4",
+      "pv1", "pv2", "pv3", "pv4", "pv5",
       "pr1", "pr2", "pr3",
     ].sort(),
   );

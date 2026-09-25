@@ -64,7 +64,7 @@ test("buildDigestGroups excludes items marked done via msDoneByEvent/wfDoneByEve
     e1: new Set([
       "pflicht_ag1", "pflicht_ei3", "pflicht_ei4", "pflicht_ko3",
       "pflicht_lo1", "pflicht_lo2", "social_sa4", "social_sr3",
-      "pixlip_px6", "pixlip_pv2",
+      "pixlip_px6", "pixlip_pv2", "pixlip_pv5",
     ]),
   };
   const groups = buildDigestGroups(events, msDoneByEvent, wfDoneByEvent, HORIZON_STR, TODAY);

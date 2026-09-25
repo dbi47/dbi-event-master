@@ -27,7 +27,8 @@ const WORKFLOW_TASKS = [
   { id: "social", key: "sa4", label: "Social-Ankündigung live", offset: -42 },
   { id: "social", key: "sr3", label: "Social-Reminder live", offset: -14 },
   { id: "pixlip", key: "px6", label: "Pixlip Anfrage", offset: -70 },
-  { id: "pixlip", key: "pv2", label: "Pixlip Druckdaten", offset: -28 },
+  { id: "pixlip", key: "pv5", label: "Pixlip Druckdaten bestellt", offset: -42 },
+  { id: "pixlip", key: "pv2", label: "Pixlip Druckdaten erstellt", offset: -28 },
 ];
 
 // ── RFC 5545: fold lines longer than 75 chars (Outlook enforces this strictly with CRLF) ──
