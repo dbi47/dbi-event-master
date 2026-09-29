@@ -1111,6 +1111,69 @@
         font-size: 0.73rem;
         text-align: center;
       }
+      /* ── RESPONSIVE TABLE (stacked-block layout below ~900px) ──
+         Opt in per-table via .responsive-table on its .table-wrap (applied
+         so far to Pflichtinhalte/Social Media/Pixlip, Meine Aufgaben, and
+         the Dashboard's Meilensteine table — any future table can reuse
+         this by adding the class plus a data-label="<column header text>"
+         on each <td>, matching this app's existing ~900px breakpoint used
+         for Eventdaten/Agenda). Below the breakpoint the table becomes one
+         block per row, one line per cell, each cell's own column header
+         printed ahead of it via ::before — cells without a data-label
+         (colspan section-header bars, the icon-only expand-button column)
+         simply get no label, which is what we want for those. */
+      @media (max-width: 900px) {
+        .responsive-table {
+          overflow-x: visible;
+        }
+        .responsive-table table {
+          display: block;
+          min-width: 0;
+        }
+        .responsive-table thead {
+          display: none;
+        }
+        .responsive-table tbody,
+        .responsive-table tr,
+        .responsive-table td {
+          display: block;
+          width: 100%;
+        }
+        .responsive-table tbody td {
+          padding: 5px 12px;
+        }
+        .responsive-table tbody tr {
+          padding: 8px 0;
+        }
+        /* A long unbroken token (a URL, a file path — e.g. a mirrored
+           read-only field showing another field's raw link value) has no
+           spaces to wrap at, so it needs to be allowed to break mid-word,
+           or it pushes the row wider than the viewport same as before. */
+        .responsive-table td,
+        .responsive-table td * {
+          max-width: 100%;
+          overflow-wrap: break-word;
+          word-break: break-word;
+        }
+        .responsive-table td[data-label]::before {
+          content: attr(data-label);
+          display: block;
+          font-size: 0.64rem;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: var(--mid);
+          margin-bottom: 3px;
+        }
+        /* Centered/nowrap made sense in a narrow fixed column; stacked full-
+           width, left-aligned under its own label reads better and can't
+           clip. */
+        .responsive-table .td-days,
+        .responsive-table .td-date {
+          text-align: left;
+          white-space: normal;
+        }
+      }
       .pill {
         display: inline-flex;
         align-items: center;
@@ -3423,7 +3486,7 @@
             <div class="ms-timeline" id="ms-timeline"></div>
             <div class="ms-tl-detail" id="ms-timeline-detail"></div>
           </div>
-          <div class="table-wrap">
+          <div class="table-wrap responsive-table">
             <table>
               <thead>
                 <tr>
@@ -8265,11 +8328,11 @@ ${buildEventActionsHtml(ev, d)}
             "beforeend",
             `<tr class="status-${st.cls}">
   <td style="padding:8px 6px 8px 10px;width:32px">${expandBtn}</td>
-  <td class="td-label"><div class="ms-label-cell">${ms.label}</div>${miniProgress}</td>
-  <td class="td-date">${fd ? fmtDE(fd) : "–"}</td>
-  <td class="td-days" style="color:${dCol}">${dStr}</td>
-  <td>${pillHTML(st)}</td>
-  <td><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"${doneInputTitle}
+  <td class="td-label" data-label="Meilenstein"><div class="ms-label-cell">${ms.label}</div>${miniProgress}</td>
+  <td class="td-date" data-label="Fristdatum">${fd ? fmtDE(fd) : "–"}</td>
+  <td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td>
+  <td data-label="Status">${pillHTML(st)}</td>
+  <td data-label="Erledigt am"><input type="date" class="erledigt-input${done ? " done" : ""}" value="${msDone[ms.key] || ""}"${doneInputTitle}
     onmousedown="if (!handleMilestoneDateInteraction('${ms.key}', event)) return false;"
     onfocus="if (!handleMilestoneDateInteraction('${ms.key}', event)) this.blur();"
     onchange="if (!handleMilestoneDateInteraction('${ms.key}', event)) { this.value='${msDone[ms.key] || ""}'; return; } setMilestoneDone('${ms.key}',this.value,'${ms.label}')"></td>
@@ -9143,7 +9206,7 @@ ${buildEventActionsHtml(ev, d)}
           html += `<div class="alert alert-blu show" style="margin-bottom:20px"><i data-lucide="info" class="alert-icon"></i>Pixlip wurde unter Pflichtinhalte → Logistik als „nicht erforderlich“ markiert. Alle Aufgaben unten sind automatisch erledigt und gesperrt.</div>`;
         if (currentRole === "proj")
           html += `<div class="alert alert-blu show" style="margin-bottom:20px"><i data-lucide="pin" class="alert-icon"></i>Du siehst diese Ansicht als <strong>${pmData?.pm_name || "Projektverantwortliche:r"}</strong>${ev?.name ? " — Event: <strong>" + esc(ev.name) + "</strong>" : ""}. Deine Änderungen werden direkt gespeichert.</div>`;
-        html += `<div class="table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
+        html += `<div class="table-wrap responsive-table"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
         def.sections.forEach((sec) => {
           if (sec.type === "speakers") {
             html += renderSpeakerSection(sec, id, wfRows);
@@ -9235,7 +9298,7 @@ ${buildEventActionsHtml(ev, d)}
               : isHubOnlyLocked
                 ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
                 : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
-            html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label">${row.label}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td>${doneCell}</td></tr>`;
+            html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label" data-label="Aufgabe">${row.label}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am">${doneCell}</td></tr>`;
           });
         });
         html += "</tbody></table></div>";
@@ -9252,7 +9315,7 @@ ${buildEventActionsHtml(ev, d)}
           wfRows.find((r) => r.workflow_id === wid && r.row_key === rkey) || {};
         let html = `<div class="page-title">Meine Aufgaben</div>
 <div class="page-sub">${esc(ev?.name || "")} ${ev?.event_date ? "· " + fmtDE(parseISO(ev.event_date)) : ""}</div>
-<div class="table-wrap"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
+<div class="table-wrap responsive-table"><table><thead><tr><th>Aufgabe</th><th>Eingabe</th><th>Fristdatum</th><th style="text-align:center">Tage</th><th>Status</th><th>Erledigt am</th></tr></thead><tbody>`;
         PROJ_SECTIONS.forEach((sec) => {
           if (sec.type === "speakers") {
             html += renderSpeakerSection(sec, "pflicht", wfRows);
@@ -9309,7 +9372,7 @@ ${buildEventActionsHtml(ev, d)}
               : isYesNo
                 ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
                 : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
-            html += `<tr class="status-${st.cls}"><td class="td-label">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td>${inputCell}</td><td class="td-date" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" style="color:${dCol}">${dStr}</td><td>${pillHTML(st)}</td><td><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
+            html += `<tr class="status-${st.cls}"><td class="td-label" data-label="Aufgabe">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am"><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
           });
         });
         html += "</tbody></table></div>";
