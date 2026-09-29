@@ -76,6 +76,36 @@
         flex-shrink: 0;
         cursor: pointer;
       }
+      /* Hidden by default (the real sidebar is visible at this width) —
+         shown only inside the (max-width: 600px) block below, the same
+         breakpoint where the sidebar becomes an off-canvas drawer. */
+      .mobile-nav-toggle {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f0eeff;
+        cursor: pointer;
+      }
+      .mobile-nav-toggle svg {
+        width: 18px;
+        height: 18px;
+      }
+      .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(19, 15, 42, 0.55);
+        z-index: 290;
+      }
+      .sidebar-backdrop.show {
+        display: block;
+      }
       .topbar-logo span {
         background: linear-gradient(90deg, #c2185b, #9b59b6);
         -webkit-background-clip: text;
@@ -2579,16 +2609,43 @@
       @media (max-width: 600px) {
         :root {
           --main-pad: 16px 14px 80px;
+          --mobile-header-h: 54px;
         }
         .topbar {
           padding: 0 14px;
-          height: 54px;
+          height: var(--mobile-header-h);
         }
         .topbar-date {
           display: none;
         }
+        .mobile-nav-toggle {
+          display: inline-flex;
+        }
+        /* Off-canvas drawer, not display:none — same <nav> element and the
+           same nav-item children/onclick="showPage(...)" as the ≥600px
+           sidebar, just repositioned. Starts BELOW the topbar (rather than
+           z-index-fighting above it) specifically so the hamburger button
+           stays reachable — tapping it again while open must still close
+           the drawer, and a full-height overlay would cover the topbar and
+           the button along with it. Still above the backdrop (290) and page
+           content so it fully covers content while open. */
         .sidebar {
-          display: none;
+          position: fixed;
+          top: var(--mobile-header-h);
+          left: 0;
+          bottom: 0;
+          transform: translateX(-100%);
+          transition: transform 0.2s ease;
+          z-index: 300;
+          box-shadow: 8px 0 28px rgba(0, 0, 0, 0.35);
+        }
+        .sidebar.mobile-open {
+          transform: translateX(0);
+        }
+        /* Same reasoning as .sidebar above: stop short of the topbar so the
+           backdrop can't itself cover the hamburger button either. */
+        .sidebar-backdrop {
+          top: var(--mobile-header-h);
         }
         .app-body {
           flex-direction: column;
@@ -3035,6 +3092,17 @@
 
     <!-- TOP BAR -->
     <div class="topbar">
+      <button
+        class="mobile-nav-toggle"
+        id="mobile-nav-toggle"
+        type="button"
+        onclick="toggleMobileNav()"
+        aria-label="Menü öffnen"
+        aria-expanded="false"
+        aria-controls="sidebar"
+      >
+        <i data-lucide="menu"></i>
+      </button>
       <div class="topbar-logo" onclick="showRoleModal()" title="Rolle wechseln">
         DBI <span>Event</span> Master
       </div>
@@ -3055,8 +3123,17 @@
     </div>
 
     <div class="app-body">
-      <!-- SIDEBAR -->
-      <nav class="sidebar">
+      <!-- Only relevant ≤600px (see the .sidebar-backdrop rule): closes the
+           off-canvas sidebar drawer when tapped outside it. -->
+      <div
+        class="sidebar-backdrop"
+        id="sidebar-backdrop"
+        onclick="closeMobileNav()"
+      ></div>
+      <!-- SIDEBAR — the exact same nav used at ≥600px; ≤600px only repositions
+           it into an off-canvas drawer (see the (max-width: 600px) block),
+           never a second copy of the nav items. -->
+      <nav class="sidebar" id="sidebar">
         <div class="sidebar-section hub-only" style="display: none">
           Navigation
         </div>
@@ -5196,6 +5273,41 @@
         "summary",
         "activity",
       ];
+      // ══ MOBILE NAV DRAWER (≤600px) ══
+      // Repositions the SAME <nav class="sidebar"> used at wider widths —
+      // never a second nav — so these two can't drift out of sync with each
+      // other. See the (max-width: 600px) CSS block for the off-canvas
+      // positioning itself.
+      function toggleMobileNav() {
+        const isOpen = document
+          .getElementById("sidebar")
+          .classList.toggle("mobile-open");
+        document
+          .getElementById("sidebar-backdrop")
+          .classList.toggle("show", isOpen);
+        document
+          .getElementById("mobile-nav-toggle")
+          .setAttribute("aria-expanded", isOpen ? "true" : "false");
+        // Prevent the page behind the drawer from scrolling while it's open.
+        document.body.style.overflow = isOpen ? "hidden" : "";
+      }
+      function closeMobileNav() {
+        document.getElementById("sidebar").classList.remove("mobile-open");
+        document
+          .getElementById("sidebar-backdrop")
+          .classList.remove("show");
+        document
+          .getElementById("mobile-nav-toggle")
+          ?.setAttribute("aria-expanded", "false");
+        document.body.style.overflow = "";
+      }
+      // Tapping a nav item still runs its own unchanged onclick="showPage(...)"
+      // (this fires in addition to that, not instead of it) — the drawer just
+      // also closes, whichever item was picked. A no-op at ≥600px, since the
+      // drawer classes it removes are never applied there.
+      document.getElementById("sidebar").addEventListener("click", (e) => {
+        if (e.target.closest(".nav-item")) closeMobileNav();
+      });
       function showPage(id) {
         // A PM's token always carries exactly one event, so this gate only
         // ever applies to the Hub, who can browse the sidebar before ever
