@@ -1183,6 +1183,20 @@
           text-align: left;
           white-space: normal;
         }
+        /* The blanket ".responsive-table tr { display:block }" above (needed
+           to stack every ordinary row) outranks the base ".todo-drawer
+           {display:none}" rule by specificity (one class+tag beats one
+           class), so without this override the Meilensteine to-do drawer
+           would render permanently open on mobile regardless of its "open"
+           class. Re-assert collapsed-by-default here, and only switch to a
+           block (not table-row — there's no table structure left to be a
+           row of) once toggleMsTodos() adds "open". */
+        .responsive-table tbody tr.todo-drawer {
+          display: none;
+        }
+        .responsive-table tbody tr.todo-drawer.open {
+          display: block;
+        }
       }
       .pill {
         display: inline-flex;
