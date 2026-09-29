@@ -560,6 +560,16 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 7px;
       }
+      /* Same breakpoint convention as .agenda-layout/.responsive-table —
+         Firmenname/Beschreibung der Leistung etc. stack instead of sitting
+         two-up in an ever-narrower column. Only .speaker-grid itself
+         collapses; .agenda-item-toprow (time | title) is a different grid
+         and isn't affected. */
+      @media (max-width: 900px) {
+        .speaker-grid {
+          grid-template-columns: 1fr;
+        }
+      }
       .speaker-field {
         display: flex;
         flex-direction: column;
