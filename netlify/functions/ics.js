@@ -126,6 +126,10 @@ exports.handler = async (event) => {
         .single();
       if (pmErr || !pm)
         return errRes(401, "Invalid token: " + (pmErr?.message || "not found"));
+      // Own copy of api.js's revoked_at check (one-copy-per-function
+      // convention, same as isPMTokenExpired below) — a soft-revoked token
+      // must stop feeding the calendar feed too, not just the main app.
+      if (pm.revoked_at) return errRes(401, "Invalid token: revoked");
       if (isPMTokenExpired(pm.events?.event_date))
         return errRes(401, "Link expired: this event is over");
       ev = pm.events;

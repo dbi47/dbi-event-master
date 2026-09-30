@@ -7690,6 +7690,22 @@ ${buildEventActionsHtml(ev, d)}
       }
 
       // ══ PM TOKEN MANAGER ══
+      // Own copy of api.js's/ics.js's 90-day rule, for the one place the
+      // frontend needs to LABEL a token rather than just have the backend
+      // reject it outright — PM-Zugänge's three-state pill. A revoked token
+      // is checked first by the caller (pmTokenState below) so this only
+      // ever runs for tokens that aren't already revoked.
+      function isPMTokenExpiredClient(eventDateStr) {
+        const d = parseISO(eventDateStr);
+        if (!d) return false;
+        return daysDiff(d) < -90;
+      }
+      function pmTokenState(t, eventDateStr) {
+        if (t.revoked_at) return { cls: "red", label: "Widerrufen" };
+        if (isPMTokenExpiredClient(eventDateStr))
+          return { cls: "amb", label: "Abgelaufen" };
+        return { cls: "grn", label: "Aktiv" };
+      }
       async function loadPMTokens(eventId) {
         const r = await fetch(
           `${API}/pm-tokens?event_id=${eventId}&password=${encodeURIComponent(hubPassword)}`,
@@ -7702,19 +7718,56 @@ ${buildEventActionsHtml(ev, d)}
             '<div style="padding:16px;font-size:.82rem;color:var(--mid)">Noch keine Zugänge erstellt.</div>';
           return;
         }
+        const eventDateStr = eventDetail?.event?.event_date;
         list.innerHTML = `<div class="table-wrap" style="margin-bottom:0"><table>
-<thead><tr><th>Name</th><th>E-Mail</th><th>Link</th><th>ICS-Feed</th></tr></thead>
+<thead><tr><th>Name</th><th>E-Mail</th><th>Status</th><th>Link</th><th>ICS-Feed</th><th>Aktion</th></tr></thead>
 <tbody>${tokens
-          .map(
-            (t) => `<tr>
+          .map((t) => {
+            const st = pmTokenState(t, eventDateStr);
+            return `<tr>
 <td style="font-weight:600">${esc(t.pm_name)}</td>
 <td style="font-size:.75rem;color:var(--mid)">${esc(t.pm_email || "–")}</td>
+<td><span class="pill pill-${st.cls}"><span class="status-dot status-dot-${st.cls}"></span>${st.label}</span></td>
 <td><button class="token-copy" onclick="copyText('${esc(t.link)}','PM-Link kopiert!')"><i data-lucide="link" class="btn-icon"></i>Link kopieren</button></td>
 <td><button class="token-copy" onclick="copyText('${esc(t.ics_link)}','ICS-Link kopiert!')"><i data-lucide="calendar-plus" class="btn-icon"></i>ICS kopieren</button></td>
-</tr>`,
-          )
+<td>${
+              t.revoked_at
+                ? ""
+                : `<button class="token-copy" style="background:var(--red-bg);color:var(--red-fg)" onclick="revokePMToken('${t.id}','${esc(t.pm_name)}')"><i data-lucide="ban" class="btn-icon"></i>Widerrufen</button>`
+            }</td>
+</tr>`;
+          })
           .join("")}</tbody></table></div>`;
         lucide.createIcons();
+      }
+      // Soft-revoke: sets revoked_at (POST /pm-token/revoke) rather than
+      // deleting the row — see that endpoint's comment. Their name/email
+      // stay in /pm-directory's autocomplete for future events; only this
+      // one link/event's access is cut off, immediately (getPMToken() on
+      // the backend now treats it as dead on the very next request).
+      async function revokePMToken(id, pmName) {
+        if (
+          !confirm(
+            `Zugang für "${pmName}" widerrufen?\n\nIhr Link funktioniert danach sofort nicht mehr. Name und E-Mail bleiben für künftige Zugänge im Verzeichnis erhalten.`,
+          )
+        )
+          return;
+        try {
+          const r = await fetch(`${API}/pm-token/revoke`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: hubPassword, id }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            showToast(d.error || "Fehler beim Widerrufen", "error");
+            return;
+          }
+          showToast(`Zugang für "${pmName}" widerrufen`, "success");
+          loadPMTokens(currentEventId);
+        } catch {
+          showToast("Verbindungsfehler beim Widerrufen", "error");
+        }
       }
       async function generatePMToken() {
         if (!currentEventId) {

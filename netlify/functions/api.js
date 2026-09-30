@@ -234,6 +234,13 @@ exports.handler = async (event) => {
       .eq("token", token)
       .single();
     if (!data) return { pm: null, expired: false };
+    // A soft-revoked token (see POST /pm-token/revoke) is deliberately kept
+    // in the table — its history still needs to surface in /pm-directory's
+    // autocomplete — but from here on it's exactly as dead as one that was
+    // never valid. Checked before expiry so a revoked link never claims
+    // "expired" (which would wrongly suggest the event just ran its
+    // course, not that access was cut off on purpose).
+    if (data.revoked_at) return { pm: null, expired: false };
     if (isPMTokenExpired(data.events?.event_date))
       return { pm: null, expired: true };
     return { pm: data, expired: false };
@@ -942,6 +949,25 @@ exports.handler = async (event) => {
       return json(200, { token: data.token, link, ics_link, email_sent });
     }
 
+    // POST /pm-token/revoke — soft-revoke a PM's access (hub only). Sets
+    // revoked_at instead of deleting the row: getPMToken()/lookupPMToken()
+    // above treat a revoked token as dead from this moment on, but the row
+    // (and its pm_name/pm_email) stays put so it keeps showing up in
+    // /pm-directory's autocomplete for a future event — deleting it would
+    // silently lose that history, which is the whole reason this is a
+    // revoke, not a delete.
+    if (path === "/pm-token/revoke" && method === "POST") {
+      if (!isHub(body)) return json(401, { error: "Unauthorized" });
+      const { id } = body;
+      if (!id) return json(400, { error: "Missing id" });
+      const { error } = await supabase
+        .from("pm_tokens")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true });
+    }
+
     // GET /pm-directory — every distinct PM name/email pair ever used
     // across ALL events (hub only), not just the current one. Powers the
     // "select an existing PM" autocomplete on PM-Zugänge's create-new-access
@@ -1013,7 +1039,7 @@ exports.handler = async (event) => {
       const event_id = event.queryStringParameters?.event_id;
       const { data } = await supabase
         .from("pm_tokens")
-        .select("id,token,pm_name,pm_email,workflow_ids,created_at")
+        .select("id,token,pm_name,pm_email,workflow_ids,created_at,revoked_at")
         .eq("event_id", event_id)
         .order("created_at");
       const site = process.env.SITE_URL || "";
