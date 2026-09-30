@@ -126,7 +126,14 @@
       .topbar-date {
         font-family: "DM Mono", monospace;
         font-size: 0.72rem;
-        color: #6860a0;
+        /* #6860a0 read fine against the old dark-navy end of the topbar
+           gradient (~1.06:1 here since the lightened #2563eb fix) but is
+           basically invisible on the new lighter blue end this sits next
+           to. Reuses the same light tone already used for the topbar's
+           icons (.notification-btn, .mobile-nav-toggle: #f0eeff) — ~5.2:1
+           against the sampled background here, clears the 4.5:1 text
+           minimum with margin. */
+        color: #f0eeff;
         white-space: nowrap;
         flex-shrink: 0;
       }
@@ -140,6 +147,16 @@
         border-radius: 20px;
         white-space: nowrap;
         flex-shrink: 0;
+        /* The badge's own text-on-background already clears 4.5:1 (its
+           rgba fill is semi-transparent, but composited over even the
+           lightened topbar it stays dark enough for the light text). What
+           broke is the boundary: composited over the new lighter blue, the
+           badge's own tinted background is now too close in value to the
+           surrounding topbar to read as a distinct shape (~1:1–1.1:1).
+           A light edge reliably separates it regardless of which badge
+           color (pink hub / navy proj) sits on which point of the
+           gradient. */
+        border: 1px solid rgba(255, 255, 255, 0.68);
       }
       .role-badge-icon {
         width: 12px;
