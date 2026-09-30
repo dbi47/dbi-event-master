@@ -148,7 +148,6 @@ const PIXLIP_ROW_KEYS = [
   "px2",
   "px3",
   "px4",
-  "px5",
   "px6",
   "px7",
   "pv1",
