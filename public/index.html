@@ -5267,6 +5267,7 @@
             pmData = d;
             saveSessionToStorage();
             selectRole("proj");
+            await syncSourceFieldDoneDates(); // same catch-up as selectEvent() — see its comment
           } else {
             document.getElementById("pm-no-token").style.display = "block";
             document.getElementById("pm-no-token").textContent = d.expired
@@ -5299,6 +5300,7 @@
             if (r.ok && d.role === "pm") {
               pmData = d;
               selectRole("proj");
+              await syncSourceFieldDoneDates(); // same catch-up as selectEvent() — see its comment
               return true;
             }
           }
@@ -6310,6 +6312,11 @@ ${buildEventActionsHtml(ev, d)}
         renderDashboard();
         renderAllWorkflows();
         loadPMTokens(id);
+        // Picks up any sourceField row whose source was already filled in
+        // before this auto-sync feature existed (or was edited by someone
+        // else since this event was last open) — not just changes made
+        // live in THIS session.
+        await syncSourceFieldDoneDates();
       }
       async function createNewEvent() {
         const r = await fetch(`${API}/event`, {
@@ -6450,6 +6457,11 @@ ${buildEventActionsHtml(ev, d)}
             renderDashboard();
             renderAllWorkflows();
             renderProjTodosFromPMData();
+            // This save may have just filled in (or cleared) an event.*
+            // field that a sourceField row mirrors — e.g. "room" for "ei3",
+            // "name" for "sm1" — re-check their done dates now that the
+            // resolved values may have changed.
+            await syncSourceFieldDoneDates();
             showToast("Gespeichert", "success");
           } else showToast(d.error, "error");
         } catch {
@@ -7495,6 +7507,12 @@ ${buildEventActionsHtml(ev, d)}
         // a link typed here saved fine but stayed invisible on Summary until
         // a full reload re-fetched the event.
         renderDashboard();
+        // This row's own new value may be exactly what some OTHER row's
+        // sourceField mirrors (e.g. this is "ei4" and "sm5" mirrors it, or
+        // this is "lo4" and "px1"/"fr2" mirror it) — re-check every
+        // sourceField row's done date now that it might have changed. Also
+        // covers setWorkflowYesNoReason, which always saves through here.
+        await syncSourceFieldDoneDates();
       }
 
       // ══ YES/NO + REASON FIELD TYPE ══
@@ -7621,6 +7639,14 @@ ${buildEventActionsHtml(ev, d)}
         // not when just the "Warum nicht?" reason text is edited.
         if (workflowId === "pflicht" && rowKey === "lo4" && patch.value) {
           await applyPixlipGate(patch.value);
+          // applyPixlipGate just bulk-set every OTHER pixlip row's done date
+          // based on the gate value — "px1" ("Pixlip benötigt?") happens to
+          // be a sourceField row mirroring this same "lo4" answer, so its
+          // done date isn't "does Pixlip gate say closed/open", it's
+          // "has lo4 been answered at all" (true either way once we're
+          // here). Re-sync now so px1 (and PROJ_SECTIONS' matching "fr2")
+          // end up correct regardless of which way the gate just wrote them.
+          await syncSourceFieldDoneDates();
         }
         // Auto-fill "Erledigt am" with today's date the FIRST time an answer
         // is chosen (the done-date input is disabled until then — see
@@ -8576,9 +8602,83 @@ ${buildEventActionsHtml(ev, d)}
               ? `${parsed.value} (${parsed.reason})`
               : parsed.value;
           }
+          // parsed.value is only ever "" here because `raw` WAS a
+          // yesno_reason JSON payload (e.g. {"value":"","reason":""}) whose
+          // answer was reset back to unanswered — parseYesNoReason's other
+          // branch (plain legacy text) always yields a truthy value since
+          // `raw` itself is non-empty at this point. Without this, the
+          // source would look "answered" (a non-empty string) to both this
+          // row's own display AND syncSourceFieldDoneDates, when the
+          // question behind it hasn't actually been answered.
+          if (parsed.value === "") return "";
           return raw;
         }
         return "";
+      }
+      // Every row with a `sourceField`, across all three WORKFLOWS tabs plus
+      // PROJ_SECTIONS — same tree-walk convention as buildGanttRows'
+      // walkSections (composite "speakers"/"agenda" sections skipped, no
+      // single row to check; PROJ_SECTIONS rows are saved under workflow_id
+      // "pflicht" just like WORKFLOWS.pflicht's own rows). Walked fresh each
+      // time rather than cached in a static list, so a row added/removed
+      // from WORKFLOWS/PROJ_SECTIONS is picked up automatically with
+      // nothing else to keep in sync.
+      function getAllSourceFieldRows() {
+        const out = [];
+        const walk = (workflowId, sections) => {
+          (sections || []).forEach((sec) => {
+            if (sec.type === "speakers" || sec.type === "agenda") return;
+            (sec.rows || []).forEach((row) => {
+              if (row.sourceField) out.push({ workflowId, row });
+            });
+          });
+        };
+        walk("pflicht", WORKFLOWS.pflicht.sections);
+        walk("social", WORKFLOWS.social.sections);
+        walk("pixlip", WORKFLOWS.pixlip.sections);
+        walk("pflicht", PROJ_SECTIONS);
+        return out;
+      }
+      // ══ SOURCE-FIELD ROWS: DONE-DATE AUTO-SYNC ══
+      // Generalizes setWorkflowYesNoReason's "auto-fill done date the first
+      // time an answer is chosen" rule to sourceField rows: there's nothing
+      // for a person to manually do on one of these rows — both its
+      // displayed value and its completion are derived from elsewhere — so
+      // its done date should just track whether resolveSourceFieldValue()
+      // (the exact function that already decides what to DISPLAY) is
+      // currently empty or not. Going empty→non-empty sets it to today,
+      // exactly like the yesno_reason rule (and reuses the same
+      // setWorkflowDone() call every other done-date write already goes
+      // through); going back to empty reverts it to unset — the same
+      // forgiving direction clearMilestoneDoneIfIncomplete already
+      // established for the milestone checklist. Called after anything that
+      // could change a sourceField's resolved value (a plain event field
+      // save, or any other row's input_value changing — see
+      // setWorkflowInput/setWorkflowYesNoReason) rather than wired to each
+      // source individually, so it can't silently miss a new sourceField
+      // row later added to WORKFLOWS/PROJ_SECTIONS.
+      async function syncSourceFieldDoneDates() {
+        const source = currentRole === "hub" ? eventDetail : pmData;
+        const ev = source?.event;
+        if (!ev) return;
+        for (const { workflowId, row } of getAllSourceFieldRows()) {
+          const wfRows = source.workflow_rows || [];
+          const stored =
+            wfRows.find(
+              (r) => r.workflow_id === workflowId && r.row_key === row.key,
+            ) || {};
+          const resolved = resolveSourceFieldValue(row, ev, wfRows);
+          if (resolved && !stored.done_date) {
+            await setWorkflowDone(
+              workflowId,
+              row.key,
+              row.label,
+              TODAY().toISOString().slice(0, 10),
+            );
+          } else if (!resolved && stored.done_date) {
+            await setWorkflowDone(workflowId, row.key, row.label, "");
+          }
+        }
       }
       // ══ CONTACT PERSONS / SERVICE PROVIDERS DATA MODEL ══
       // Order here is also the display order used when grouping the Summary
@@ -9337,7 +9437,7 @@ ${buildEventActionsHtml(ev, d)}
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
               : isHubOnlyLocked
                 ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
-                : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
+                : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : isSourceField ? ' disabled title="Wird automatisch anhand der Quelle gesetzt"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
             html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label" data-label="Aufgabe">${row.label}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am">${doneCell}</td></tr>`;
           });
         });
@@ -9412,7 +9512,7 @@ ${buildEventActionsHtml(ev, d)}
               : isYesNo
                 ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
                 : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
-            html += `<tr class="status-${st.cls}"><td class="td-label" data-label="Aufgabe">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am"><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
+            html += `<tr class="status-${st.cls}"><td class="td-label" data-label="Aufgabe">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am"><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : isSourceField ? ' disabled title="Wird automatisch anhand der Quelle gesetzt"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
           });
         });
         html += "</tbody></table></div>";
