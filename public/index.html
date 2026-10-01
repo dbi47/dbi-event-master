@@ -4564,6 +4564,7 @@
         pmToken = null,
         pmData = null,
         currentEventId = null,
+        currentPageId = null,
         allEvents = [],
         eventDetail = null;
 
@@ -4737,9 +4738,20 @@
       const INACTIVITY_LOGOUT_TIME = 5 * 60 * 1000; // 5 minutes
       let countdownInterval = null;
 
+      // currentEventId/currentPageId are restored straight into the live
+      // globals here, same as hubPassword/pmToken always have been — but
+      // resumeStoredSession() must capture them into its OWN locals
+      // immediately after calling this, before doing anything else: both
+      // selectRole() and selectEvent() call showPage() internally (to
+      // "hub-events"/"dashboard" respectively), and showPage() now
+      // overwrites currentPageId as a side effect of just running. Reading
+      // currentPageId back out any later than that would see whichever
+      // page those defaults last landed on, not what was actually stored.
       function restoreSessionFromStorage() {
         const storedPassword = sessionStorage.getItem("hubPassword");
         const storedToken = sessionStorage.getItem("pmToken");
+        currentEventId = sessionStorage.getItem("currentEventId") || null;
+        currentPageId = sessionStorage.getItem("currentPageId") || null;
 
         if (storedPassword) {
           hubPassword = storedPassword;
@@ -4752,6 +4764,10 @@
         return false;
       }
 
+      // Called again (not just once at login) from selectEvent() and
+      // showPage() — the only two places currentEventId/currentPageId ever
+      // change — so a refresh always resumes wherever the Hub/PM actually
+      // were, not just where they logged in.
       function saveSessionToStorage() {
         if (hubPassword) {
           sessionStorage.setItem("hubPassword", hubPassword);
@@ -4759,11 +4775,19 @@
         if (pmToken) {
           sessionStorage.setItem("pmToken", pmToken);
         }
+        if (currentEventId) {
+          sessionStorage.setItem("currentEventId", currentEventId);
+        }
+        if (currentPageId) {
+          sessionStorage.setItem("currentPageId", currentPageId);
+        }
       }
 
       function clearSessionStorage() {
         sessionStorage.removeItem("hubPassword");
         sessionStorage.removeItem("pmToken");
+        sessionStorage.removeItem("currentEventId");
+        sessionStorage.removeItem("currentPageId");
       }
 
       function resetInactivityTimer() {
@@ -5284,6 +5308,13 @@
       }
       async function resumeStoredSession() {
         if (!restoreSessionFromStorage()) return false;
+        // Captured BEFORE selectRole()/selectEvent() run below — both call
+        // showPage() internally (to "hub-events"/"dashboard"), which would
+        // otherwise overwrite currentPageId with their own default before
+        // this function gets a chance to read back what was actually
+        // stored. See restoreSessionFromStorage()'s comment.
+        const storedEventId = currentEventId;
+        const storedPageId = currentPageId;
         try {
           if (hubPassword) {
             const r = await fetch(
@@ -5292,7 +5323,45 @@
             const d = await r.json();
             if (r.ok && d.role === "hub") {
               allEvents = d.events || [];
-              selectRole("hub");
+              selectRole("hub"); // lands on "hub-events" by default — overridden below if there's a remembered event+page
+              if (storedEventId) {
+                let eventStillExists = allEvents.some(
+                  (e) => e.id === storedEventId,
+                );
+                // Not in the active list — it may have been archived (not
+                // deleted) since the last session. Only worth the extra
+                // round trip when the cheap check above didn't already
+                // find it.
+                if (!eventStillExists) {
+                  try {
+                    const ar = await fetch(
+                      `${API}/events?password=${encodeURIComponent(hubPassword)}&archived=true`,
+                    );
+                    const ad = await ar.json();
+                    if (ar.ok) {
+                      archivedEvents = ad.events || [];
+                      eventStillExists = archivedEvents.some(
+                        (e) => e.id === storedEventId,
+                      );
+                    }
+                  } catch {
+                    // Leave eventStillExists false — falls back to the
+                    // default landing page below, same as a genuinely
+                    // gone event would.
+                  }
+                }
+                if (eventStillExists) {
+                  await selectEvent(storedEventId); // defaults to "dashboard" internally
+                  if (storedPageId) showPage(storedPageId); // override with the actually-remembered page
+                } else {
+                  // Stale — don't keep trying to reopen something that's
+                  // gone on every future refresh.
+                  currentEventId = null;
+                  currentPageId = null;
+                  sessionStorage.removeItem("currentEventId");
+                  sessionStorage.removeItem("currentPageId");
+                }
+              }
               return true;
             }
           }
@@ -5303,8 +5372,16 @@
             const d = await r.json();
             if (r.ok && d.role === "pm") {
               pmData = d;
-              selectRole("proj");
+              selectRole("proj"); // lands on "dashboard" by default — overridden below if there's a remembered page
               await syncSourceFieldDoneDates(); // same catch-up as selectEvent() — see its comment
+              // A PM's token always scopes to exactly one event already, so
+              // only the page needs restoring here — but still sanity-
+              // checked against PROJ_PAGE_IDS rather than restored blindly,
+              // in case the stored id is a hub-only page from a previous
+              // session as a different role in the same browser.
+              if (storedPageId && PROJ_PAGE_IDS.includes(storedPageId)) {
+                showPage(storedPageId);
+              }
               return true;
             }
           }
@@ -5313,6 +5390,8 @@
         }
         hubPassword = "";
         pmToken = null;
+        currentEventId = null;
+        currentPageId = null;
         clearSessionStorage();
         return false;
       }
@@ -5431,6 +5510,11 @@
           showPage("hub-events");
           return;
         }
+        // Only the page that actually ends up showing gets remembered —
+        // never the originally-requested id when the guard above redirected
+        // away from it instead.
+        currentPageId = id;
+        saveSessionToStorage();
         document
           .querySelectorAll(".page")
           .forEach((p) => p.classList.remove("active"));
@@ -5441,6 +5525,22 @@
         if (pg) pg.classList.add("active");
         document.getElementById("nav-" + id)?.classList.add("active");
       }
+      // Pages a PM's token can actually reach — mirrors the sidebar's
+      // hub-only/proj-only class split (every nav-item NOT marked
+      // "hub-only"). Used only to sanity-check a page id restored from
+      // sessionStorage before resumeStoredSession() restores straight to
+      // it — a PM should never land back on a page their role can't
+      // navigate to in the first place.
+      const PROJ_PAGE_IDS = [
+        "dashboard",
+        "eventdaten",
+        "pflicht",
+        "social",
+        "proj-todos",
+        "pixlip",
+        "summary",
+        "activity",
+      ];
 
       // ══ EVENT GRID — SEARCH / FILTER / SORT ══
       // Pure: takes the already-loaded events array (allEvents or
