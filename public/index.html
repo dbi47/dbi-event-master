@@ -770,8 +770,11 @@
         gap: 8px;
       }
       .agenda-copy-preview {
+        display: block;
         width: 100%;
         min-height: 140px;
+        max-height: 320px;
+        overflow-y: auto;
         font-family: "DM Mono", monospace;
         font-size: 0.76rem;
         line-height: 1.5;
@@ -779,8 +782,9 @@
         border-radius: 6px;
         padding: 10px;
         background: white;
-        resize: vertical;
         color: var(--ink);
+        cursor: text;
+        box-sizing: border-box;
       }
 
       /* Compact sizing — scoped specifically to the agenda widget (via the
@@ -9198,7 +9202,7 @@ ${buildEventActionsHtml(ev, d)}
         const preview = document.getElementById(
           `agenda-copy-preview-${workflowId}`,
         );
-        if (preview) preview.value = buildAgendaCopyText(data);
+        if (preview) preview.innerHTML = buildAgendaCopyHtml(data);
         const saveBtn = document.getElementById(
           `agenda-save-btn-${workflowId}`,
         );
@@ -9258,6 +9262,50 @@ ${buildEventActionsHtml(ev, d)}
           .filter(Boolean)
           .join("\n");
       }
+      // Same structure/content as buildAgendaCopyText() (one line per head
+      // line / person, same flattening, same "- Person" indent) but as an
+      // HTML fragment: the head line wrapped in <strong>, person lines left
+      // plain, every line joined with <br> rather than "\n". Deliberately
+      // self-contained — no reliance on this page's own CSS (no
+      // white-space:pre, no classes) — since this exact string is also
+      // what gets handed to the clipboard as "text/html" in
+      // copyAgendaText(): a rich-text target pastes whatever HTML it's
+      // given verbatim, not whatever stylesheet happened to be on the page
+      // it was copied from. "&nbsp;&nbsp;" (not two plain spaces) is what
+      // keeps the person-line indent from collapsing to one space the way
+      // ordinary HTML whitespace would.
+      function buildAgendaCopyHtml(data) {
+        const lines = [];
+        (data.items || []).forEach((item) => {
+          const timePart = (item.time || "").trim();
+          const titlePart = (item.title || "").trim();
+          const headLine = [timePart, titlePart].filter(Boolean).join(" ");
+          const peopleLines = (item.people || [])
+            .map((p) => (p || "").trim())
+            .filter(Boolean)
+            .map((p) => `&nbsp;&nbsp;- ${esc(p)}`);
+          const itemLines = [
+            headLine ? `<strong>${esc(headLine)}</strong>` : "",
+            ...peopleLines,
+          ].filter(Boolean);
+          lines.push(...itemLines);
+        });
+        return lines.join("<br>");
+      }
+      // Selection/Range API equivalent of a <textarea>'s .select() — the
+      // preview is a plain <div> now (see buildAgendaLayoutHtml), which has
+      // no .select() of its own, but still needs a one-click "select
+      // everything so Ctrl+C works" fallback for manual copying. Selecting
+      // via Range (rather than e.g. execCommand) preserves the <strong>
+      // markup in whatever the browser then puts on the clipboard, same as
+      // copyAgendaText()'s own explicit HTML write.
+      function selectAgendaPreview(el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
       async function copyAgendaText(workflowId) {
         const data = getAgendaDraft(workflowId, currentWfRowsForRole());
         const text = buildAgendaCopyText(data);
@@ -9265,17 +9313,45 @@ ${buildEventActionsHtml(ev, d)}
           showToast("Keine Agenda-Einträge vorhanden", "warning");
           return;
         }
+        const html = buildAgendaCopyHtml(data);
+        // Write both flavors at once so a rich-text destination (Word,
+        // Google Docs) gets the bold head lines, while a plain-text
+        // destination (Notepad, a plain textarea) still gets clean text
+        // with no stray tags — the OS/browser clipboard picks whichever
+        // flavor the paste target actually asked for, same mechanism as
+        // copying from any formatted web page. ClipboardItem's constructor
+        // can exist but .write() can still reject (insecure context,
+        // permissions, an older browser that only half-implements it), so
+        // this falls back to the plain writeText() path in either failure
+        // case rather than ever leaving the button non-functional.
         try {
-          await navigator.clipboard.writeText(text);
+          if (window.ClipboardItem && navigator.clipboard?.write) {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/plain": new Blob([text], { type: "text/plain" }),
+                "text/html": new Blob([html], { type: "text/html" }),
+              }),
+            ]);
+          } else {
+            await navigator.clipboard.writeText(text);
+          }
           showToast("Agenda in Zwischenablage kopiert", "success");
         } catch {
-          showToast("Kopieren fehlgeschlagen – bitte manuell markieren", "error");
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast("Agenda in Zwischenablage kopiert", "success");
+          } catch {
+            showToast(
+              "Kopieren fehlgeschlagen – bitte manuell markieren",
+              "error",
+            );
+          }
         }
       }
       function buildAgendaLayoutHtml(workflowId, wfRows) {
         const data = getAgendaDraft(workflowId, wfRows);
         const items = data.items.length ? data.items : [getDefaultAgendaItem()];
-        const copyText = buildAgendaCopyText(data);
+        const copyHtml = buildAgendaCopyHtml(data);
         const dirty = isAgendaDirty(workflowId);
         const infoPanel = `<div class="agenda-info-panel">
   <h4>Anforderungen an die Agenda</h4>
@@ -9325,7 +9401,7 @@ ${buildEventActionsHtml(ev, d)}
   <div class="speaker-actions"><button class="speaker-add-btn" type="button" onclick="addAgendaItem('${workflowId}')">＋ Agendapunkt hinzufügen</button></div>
   <div class="agenda-copy-box">
     <div class="speaker-field"><label>Vorschau zum Kopieren (für Berichte)</label>
-      <textarea class="agenda-copy-preview" id="agenda-copy-preview-${workflowId}" readonly onclick="this.select()">${esc(copyText)}</textarea>
+      <div class="agenda-copy-preview" id="agenda-copy-preview-${workflowId}" onclick="selectAgendaPreview(this)">${copyHtml}</div>
     </div>
     <div class="agenda-save-row">
       <button class="agenda-save-btn${dirty ? " dirty" : ""}" type="button" id="agenda-save-btn-${workflowId}" onclick="saveAgendaDraft('${workflowId}')">${dirty ? '<i data-lucide="save" class="btn-icon"></i>Änderungen speichern' : "✅ Gespeichert"}</button>
