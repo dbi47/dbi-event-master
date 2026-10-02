@@ -8,6 +8,18 @@ const supabase = createClient(
 // Password comes ONLY from Netlify environment variable — no fallback
 const HUB_PW = process.env.HUB_PASSWORD;
 
+// Trims any trailing slash(es) off SITE_URL before it's used to build a PM
+// link or ICS link — SITE_URL set with a trailing slash (e.g.
+// "https://example.com/") would otherwise leave a double slash right
+// before the "?token=..." query string. Read fresh on every call (not
+// frozen into a module-level const like HUB_PW) so it reflects whatever
+// SITE_URL is at request time. Defined once, used by both the /pm-token
+// POST handler and the /pm-tokens GET handler — the two places that build
+// these links.
+function getSiteUrl() {
+  return (process.env.SITE_URL || "").replace(/\/+$/, "");
+}
+
 // Event fields a PM (token auth) may NEVER change — locked to Event-HUB no
 // matter what a request payload contains. The frontend also disables these
 // inputs for PMs, but that's UI-only; this is the actual enforcement point.
@@ -911,7 +923,7 @@ exports.handler = async (event) => {
         .select()
         .single();
       if (error) return json(500, { error: error.message });
-      const site = process.env.SITE_URL || "";
+      const site = getSiteUrl();
       const link = `${site}/?token=${data.token}`;
       const ics_link = `${site}/.netlify/functions/ics?token=${data.token}`;
 
@@ -1042,7 +1054,7 @@ exports.handler = async (event) => {
         .select("id,token,pm_name,pm_email,workflow_ids,created_at,revoked_at")
         .eq("event_id", event_id)
         .order("created_at");
-      const site = process.env.SITE_URL || "";
+      const site = getSiteUrl();
       const tokens = (data || []).map((t) => ({
         ...t,
         link: `${site}/?token=${t.token}`,
@@ -1099,6 +1111,7 @@ exports.WEEKLY_MILESTONE_OFFSETS = WEEKLY_MILESTONE_OFFSETS;
 exports.WEEKLY_WORKFLOW_TASKS = WEEKLY_WORKFLOW_TASKS;
 exports.WEEKLY_HORIZON_DAYS = WEEKLY_HORIZON_DAYS;
 exports.PIXLIP_ROW_KEYS = PIXLIP_ROW_KEYS;
+exports.getSiteUrl = getSiteUrl;
 
 // Mirrors reminders.js's/digest.js's own sendEmail() (same Resend endpoint,
 // same auth, same request shape) — kept as this file's own copy rather than

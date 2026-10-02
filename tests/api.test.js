@@ -21,6 +21,7 @@ const {
   WEEKLY_MILESTONE_OFFSETS,
   WEEKLY_WORKFLOW_TASKS,
   PIXLIP_ROW_KEYS,
+  getSiteUrl,
 } = require("../netlify/functions/api.js");
 
 test("HUB_ONLY_EVENT_FIELDS locks exactly name and event_date", () => {
@@ -36,6 +37,46 @@ test("PIXLIP_ROW_KEYS covers every row in WORKFLOWS.pixlip (index.html), includi
       "pr1", "pr2", "pr3",
     ].sort(),
   );
+});
+
+// process.env always stringifies whatever's assigned to it — restoring a
+// genuinely-unset var with `process.env.SITE_URL = undefined` would leave
+// the literal string "undefined" behind for later tests, so an unset
+// original is restored with delete instead.
+function withSiteUrl(value, fn) {
+  const original = process.env.SITE_URL;
+  if (value === undefined) delete process.env.SITE_URL;
+  else process.env.SITE_URL = value;
+  try {
+    fn();
+  } finally {
+    if (original === undefined) delete process.env.SITE_URL;
+    else process.env.SITE_URL = original;
+  }
+}
+
+test("getSiteUrl: a trailing slash is trimmed off", () => {
+  withSiteUrl("https://example.com/", () => {
+    assert.equal(getSiteUrl(), "https://example.com");
+  });
+});
+
+test("getSiteUrl: multiple trailing slashes are all trimmed off", () => {
+  withSiteUrl("https://example.com///", () => {
+    assert.equal(getSiteUrl(), "https://example.com");
+  });
+});
+
+test("getSiteUrl: already-correct (no trailing slash) is left untouched", () => {
+  withSiteUrl("https://example.com", () => {
+    assert.equal(getSiteUrl(), "https://example.com");
+  });
+});
+
+test("getSiteUrl: unset SITE_URL returns an empty string, not 'undefined'", () => {
+  withSiteUrl(undefined, () => {
+    assert.equal(getSiteUrl(), "");
+  });
 });
 
 test("PM (token) allowed event fields exclude name and event_date", () => {
