@@ -2202,6 +2202,9 @@
       .event-list-row:hover {
         background: var(--cream);
       }
+      .event-list-row {
+        position: relative;
+      }
       .event-list-row.active-event {
         border-left-color: var(--accent);
       }
@@ -2280,6 +2283,11 @@
         border-color: #2d3a8c;
         transform: translateY(-2px);
         box-shadow: 0 6px 28px rgba(45, 58, 140, 0.18);
+      }
+      .event-card.menu-open,
+      .event-list-row.menu-open {
+        position: relative;
+        z-index: 30;
       }
       .event-card.active-event {
         border-left: 4px solid var(--accent);
@@ -3305,7 +3313,8 @@
           onclick="showPage('pixlip')"
           id="nav-pixlip"
         >
-          <i data-lucide="image" class="nav-icon"></i><span class="nav-label">Pixlip</span>
+          <i data-lucide="image" class="nav-icon"></i
+          ><span class="nav-label">Pixlip</span>
           <span class="nav-badge" id="badge-pixlip"></span>
         </div>
         <div class="nav-item" onclick="showPage('summary')" id="nav-summary">
@@ -3374,7 +3383,8 @@
               type="button"
               onclick="exportEventsCSV()"
             >
-              <i data-lucide="file-spreadsheet" class="btn-icon"></i>CSV exportieren
+              <i data-lucide="file-spreadsheet" class="btn-icon"></i>CSV
+              exportieren
             </button>
           </div>
           <div class="events-filters">
@@ -3396,13 +3406,19 @@
             </div>
             <div class="events-filter-field">
               <label for="events-filter-owner">Hub/Abteilung</label>
-              <select id="events-filter-owner" onchange="onEventsFilterChange()">
+              <select
+                id="events-filter-owner"
+                onchange="onEventsFilterChange()"
+              >
                 <option value="">Alle</option>
               </select>
             </div>
             <div class="events-filter-field">
               <label for="events-filter-status">Status</label>
-              <select id="events-filter-status" onchange="onEventsFilterChange()">
+              <select
+                id="events-filter-status"
+                onchange="onEventsFilterChange()"
+              >
                 <option value="">Alle</option>
                 <option value="red">🔴 Kritisch / überschritten</option>
                 <option value="amb">🟡 Wird knapp</option>
@@ -3484,22 +3500,30 @@
           <div id="dash-alert-amb" class="alert alert-amb"></div>
           <div class="dash-grid">
             <div class="dash-card card-red">
-              <div class="card-label"><span class="status-dot status-dot-red"></span>Überschritten</div>
+              <div class="card-label">
+                <span class="status-dot status-dot-red"></span>Überschritten
+              </div>
               <div class="card-value" id="cnt-red">–</div>
               <div class="card-sub">Fristen verpasst</div>
             </div>
             <div class="dash-card card-amb">
-              <div class="card-label"><span class="status-dot status-dot-amb"></span>Wird knapp</div>
+              <div class="card-label">
+                <span class="status-dot status-dot-amb"></span>Wird knapp
+              </div>
               <div class="card-value" id="cnt-amb">–</div>
               <div class="card-sub">Weniger als 2 Wochen</div>
             </div>
             <div class="dash-card card-grn">
-              <div class="card-label"><span class="status-dot status-dot-grn"></span>Im Zeitplan</div>
+              <div class="card-label">
+                <span class="status-dot status-dot-grn"></span>Im Zeitplan
+              </div>
               <div class="card-value" id="cnt-grn">–</div>
               <div class="card-sub">Im Plan</div>
             </div>
             <div class="dash-card card-ink">
-              <div class="card-label"><span class="status-dot status-dot-blu"></span>Erledigt</div>
+              <div class="card-label">
+                <span class="status-dot status-dot-blu"></span>Erledigt
+              </div>
               <div class="card-value" id="cnt-done">–</div>
               <div class="card-sub" id="progress-label">0% abgeschlossen</div>
               <div class="progress-bar-wrap">
@@ -3524,7 +3548,8 @@
               type="button"
               onclick="exportEventGanttCSV()"
             >
-              <i data-lucide="chart-gantt" class="btn-icon"></i>Gantt exportieren
+              <i data-lucide="chart-gantt" class="btn-icon"></i>Gantt
+              exportieren
             </button>
           </div>
           <div class="ms-timeline-wrap" id="ms-timeline-wrap">
@@ -3570,7 +3595,10 @@
                 </div>
                 <div class="evd-preview-body">
                   <div class="evd-preview-row">
-                    <i data-lucide="calendar-days" class="evd-preview-row-icon"></i>
+                    <i
+                      data-lucide="calendar-days"
+                      class="evd-preview-row-icon"
+                    ></i>
                     <div class="evd-preview-row-text">
                       <div class="evd-preview-row-label">Datum</div>
                       <div class="evd-preview-row-value" id="evd-preview-date">
@@ -3742,7 +3770,8 @@
                             )
                           "
                         >
-                          Raum Wedau · <i data-lucide="user" class="csel-label-icon"></i>6
+                          Raum Wedau ·
+                          <i data-lucide="user" class="csel-label-icon"></i>6
                         </div>
                         <div
                           class="csel-option"
@@ -3756,7 +3785,8 @@
                             )
                           "
                         >
-                          Raum Duissern · <i data-lucide="user" class="csel-label-icon"></i>4
+                          Raum Duissern ·
+                          <i data-lucide="user" class="csel-label-icon"></i>4
                         </div>
                         <div
                           class="csel-option"
@@ -3770,7 +3800,8 @@
                             )
                           "
                         >
-                          Raum Neudorf · <i data-lucide="user" class="csel-label-icon"></i>20
+                          Raum Neudorf ·
+                          <i data-lucide="user" class="csel-label-icon"></i>20
                         </div>
                         <div
                           class="csel-option"
@@ -3784,7 +3815,8 @@
                             )
                           "
                         >
-                          Raum Rumeln · <i data-lucide="user" class="csel-label-icon"></i>6
+                          Raum Rumeln ·
+                          <i data-lucide="user" class="csel-label-icon"></i>6
                         </div>
                         <div
                           class="csel-option"
@@ -3798,7 +3830,8 @@
                             )
                           "
                         >
-                          Raum Marxloh · <i data-lucide="user" class="csel-label-icon"></i>8
+                          Raum Marxloh ·
+                          <i data-lucide="user" class="csel-label-icon"></i>8
                         </div>
                         <div
                           class="csel-option"
@@ -3812,7 +3845,8 @@
                             )
                           "
                         >
-                          Raum Homburg · <i data-lucide="user" class="csel-label-icon"></i>55
+                          Raum Homburg ·
+                          <i data-lucide="user" class="csel-label-icon"></i>55
                         </div>
                         <div
                           class="csel-option"
@@ -3826,7 +3860,8 @@
                             )
                           "
                         >
-                          Raum Mitte · <i data-lucide="user" class="csel-label-icon"></i>10
+                          Raum Mitte ·
+                          <i data-lucide="user" class="csel-label-icon"></i>10
                         </div>
                       </div>
                       <input type="hidden" id="ev-room" value="Raum Wedau" />
@@ -3998,9 +4033,7 @@
                       <option value="Wasserstoff & Nachhaltigkeit">
                         Wasserstoff & Nachhaltigkeit
                       </option>
-                       <option value="Young Talent Hub">
-                        Young Talent Hub
-                      </option>
+                      <option value="Young Talent Hub">Young Talent Hub</option>
                       <option value="Investoren- & Start-up-Kooperation">
                         Investoren- & Start-up-Kooperation
                       </option>
@@ -4293,7 +4326,11 @@
                             )
                           "
                         >
-                          Nein (<i data-lucide="triangle-alert" class="csel-label-icon"></i>Chats werden gelöscht!)
+                          Nein (<i
+                            data-lucide="triangle-alert"
+                            class="csel-label-icon"
+                          ></i
+                          >Chats werden gelöscht!)
                         </div>
                       </div>
                       <input type="hidden" id="ev-ablage" value="" />
@@ -5485,9 +5522,7 @@
       }
       function closeMobileNav() {
         document.getElementById("sidebar").classList.remove("mobile-open");
-        document
-          .getElementById("sidebar-backdrop")
-          .classList.remove("show");
+        document.getElementById("sidebar-backdrop").classList.remove("show");
         document
           .getElementById("mobile-nav-toggle")
           ?.setAttribute("aria-expanded", "false");
@@ -5875,7 +5910,8 @@ ${buildEventActionsHtml(ev, d)}
           const d = getEventDisplayData(ev);
           const row = document.createElement("div");
           row.className =
-            "event-list-row" + (ev.id === currentEventId ? " active-event" : "");
+            "event-list-row" +
+            (ev.id === currentEventId ? " active-event" : "");
           row.onclick = () => selectEvent(ev.id);
           row.innerHTML = `<div class="el-name" title="${esc(ev.name)}">${esc(ev.name)}</div>
 <div class="el-meta">
@@ -5966,16 +6002,24 @@ ${buildEventActionsHtml(ev, d)}
       // is ever open at a time; a document-level click listener closes it
       // when the click lands outside the menu/its toggle button.
       function closeEventCardMenus() {
-        document
-          .querySelectorAll(".event-card-menu.open")
-          .forEach((menu) => menu.classList.remove("open"));
+        document.querySelectorAll(".event-card-menu.open").forEach((menu) => {
+          menu.classList.remove("open");
+          menu
+            .closest(".event-card, .event-list-row")
+            ?.classList.remove("menu-open");
+        });
       }
       function toggleEventCardMenu(eventId) {
         const menu = document.getElementById("event-card-menu-" + eventId);
         if (!menu) return;
         const isOpen = menu.classList.contains("open");
         closeEventCardMenus();
-        if (!isOpen) menu.classList.add("open");
+        if (!isOpen) {
+          menu.classList.add("open");
+          menu
+            .closest(".event-card, .event-list-row")
+            ?.classList.add("menu-open");
+        }
       }
       document.addEventListener("click", (e) => {
         if (!e.target.closest(".event-card-menu-wrap")) closeEventCardMenus();
@@ -6715,7 +6759,10 @@ ${buildEventActionsHtml(ev, d)}
         { name: "Mehmet Erdoğan", email: "erdogan@duisburg.business" },
         { name: "Marie Meinhardt", email: "meinhardt@duisburg.business" },
         { name: "Simbarashe Dzvairo", email: "dzvairo@duisburg.business" },
-        { name: "Akanksha Vijayvergiya", email: "vijayvergiya@duisburg.business" },
+        {
+          name: "Akanksha Vijayvergiya",
+          email: "vijayvergiya@duisburg.business",
+        },
         { name: "Christopher Olvis", email: "olvis@duisburg.business" },
       ];
       // Shared <option> markup for every dropdown sourced from HUB_CONTACTS
@@ -6729,7 +6776,9 @@ ${buildEventActionsHtml(ev, d)}
         return (
           '<option value="">– bitte wählen –</option>' +
           sorted
-            .map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`)
+            .map(
+              (c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`,
+            )
             .join("")
         );
       }
@@ -6854,10 +6903,7 @@ ${buildEventActionsHtml(ev, d)}
         if (!select || document.activeElement === select) return;
         populateHubContactOptions();
         const trimmed = (name || "").trim();
-        if (
-          trimmed &&
-          ![...select.options].some((o) => o.value === trimmed)
-        ) {
+        if (trimmed && ![...select.options].some((o) => o.value === trimmed)) {
           const opt = document.createElement("option");
           opt.value = trimmed;
           opt.textContent = `${trimmed} (nicht in der Liste)`;
@@ -6878,10 +6924,7 @@ ${buildEventActionsHtml(ev, d)}
           .querySelectorAll("option[data-injected]")
           .forEach((o) => o.remove());
         const trimmed = (name || "").trim();
-        if (
-          trimmed &&
-          ![...select.options].some((o) => o.value === trimmed)
-        ) {
+        if (trimmed && ![...select.options].some((o) => o.value === trimmed)) {
           const opt = document.createElement("option");
           opt.value = trimmed;
           opt.textContent = `${trimmed} (nicht in der Liste)`;
@@ -7697,7 +7740,9 @@ ${buildEventActionsHtml(ev, d)}
             return;
           }
           PIXLIP_ROW_KEYS.forEach((rk) =>
-            updateLocalWorkflow("pixlip", rk, { done_date: d.done_date ?? null }),
+            updateLocalWorkflow("pixlip", rk, {
+              done_date: d.done_date ?? null,
+            }),
           );
           renderWorkflow("pixlip");
           showToast(
@@ -7767,7 +7812,12 @@ ${buildEventActionsHtml(ev, d)}
         // person may have since corrected or backdated. Reuses
         // setWorkflowDone — the same function/endpoint every other done-date
         // write already goes through — rather than writing done_date here.
-        if (patch.value && !current.value && merged.value && !stored.done_date) {
+        if (
+          patch.value &&
+          !current.value &&
+          merged.value &&
+          !stored.done_date
+        ) {
           await setWorkflowDone(
             workflowId,
             rowKey,
@@ -8102,7 +8152,10 @@ ${buildEventActionsHtml(ev, d)}
         if (!nextChecked) {
           const cleared = await clearMilestoneDoneIfIncomplete(msKey);
           if (cleared) {
-            showToast("Erledigt-Datum zurückgesetzt – To-do wieder offen", "info");
+            showToast(
+              "Erledigt-Datum zurückgesetzt – To-do wieder offen",
+              "info",
+            );
             // renderDashboard() rebuilds the whole milestone table, which
             // would otherwise collapse the drawer the user is actively
             // working in — reopen it right after so this stays a live,
@@ -8142,7 +8195,8 @@ ${buildEventActionsHtml(ev, d)}
           miniBar.style.width = pct + "%";
           miniBar.classList.toggle("partial", pct > 0 && pct < 100);
         }
-        if (miniLabel) miniLabel.textContent = `${checkedCount}/${todos.length}`;
+        if (miniLabel)
+          miniLabel.textContent = `${checkedCount}/${todos.length}`;
       }
 
       function buildTodoDrawer(msKey, colSpan) {
@@ -9263,7 +9317,9 @@ ${buildEventActionsHtml(ev, d)}
         // entirely (never blocks) whenever either side can't be parsed,
         // e.g. the previous item's time is still blank.
         if (field === "time" && index > 0) {
-          const prevMinutes = parseDotTimeToMinutes(data.items[index - 1]?.time);
+          const prevMinutes = parseDotTimeToMinutes(
+            data.items[index - 1]?.time,
+          );
           const newMinutes = parseDotTimeToMinutes(value);
           if (
             prevMinutes !== null &&
@@ -9647,32 +9703,32 @@ ${buildEventActionsHtml(ev, d)}
             const inputCell = pixlipGatedOff
               ? `<div style="font-size:.82rem;color:var(--mid);font-style:italic">Nicht benötigt</div>`
               : isAutoStatus
-              ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
-              : isSourceField
                 ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
-                : isHubOnlyLocked
+                : isSourceField
                   ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
-                  : isYesNoReason
-                    ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
-                    : isYesNo
-                      ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
-                      : isDatePair
-                        ? `<div class="date-pair-row">
+                  : isHubOnlyLocked
+                    ? `<div style="font-size:.82rem;color:var(--mid)">${esc(valToShow) || "–"}</div>`
+                    : isYesNoReason
+                      ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('${id}','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('${id}','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
+                      : isYesNo
+                        ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)"><option value="" ${!valToShow ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${valToShow === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${valToShow === "Nein" ? "selected" : ""}>Nein</option></select>`
+                        : isDatePair
+                          ? `<div class="date-pair-row">
   <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.primaryLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div></div>
   <div class="date-pair-item"><span class="date-pair-item-label">${esc(row.pairLabel)}</span><div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(pairValToShow)}" onchange="setWorkflowInput('${id}','${row.pairKey}',this.value)"></div></div>
 </div>`
-                        : isDateType
-                          ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
-                          : isContactSelect
-                            ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${buildContactSelectOptionsHtml(valToShow)}</select>`
-                            : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
+                          : isDateType
+                            ? `<div class="date-field"><input type="date" class="erledigt-input" value="${toDateInputValue(valToShow)}" onchange="setWorkflowInput('${id}','${row.key}',this.value)"></div>`
+                            : isContactSelect
+                              ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${buildContactSelectOptionsHtml(valToShow)}</select>`
+                              : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('${id}','${row.key}',this.value)">${esc(valToShow)}</textarea>`;
             const doneCell = pixlipGatedOff
               ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">✅ ${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "Nicht benötigt"}</div>`
               : isAutoStatus
-              ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
-              : isHubOnlyLocked
-                ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
-                : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : isSourceField ? ' disabled title="Wird automatisch anhand der Quelle gesetzt"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
+                ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${autoSatisfied ? "✅ Automatisch" : "–"}</div>`
+                : isHubOnlyLocked
+                  ? `<div style="font-size:.78rem;color:var(--mid);text-align:center">${stored.done_date ? fmtDE(parseISO(stored.done_date)) : "–"}</div>`
+                  : `<input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : isSourceField ? ' disabled title="Wird automatisch anhand der Quelle gesetzt"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('${id}','${row.key}','${row.label}',this.value)">`;
             html += `<tr class="status-${st.cls}${pixlipGatedOff ? " row-disabled" : ""}"><td class="td-label" data-label="Aufgabe">${row.label}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am">${doneCell}</td></tr>`;
           });
         });
@@ -9743,10 +9799,10 @@ ${buildEventActionsHtml(ev, d)}
             const inputCell = isSourceField
               ? `<div style="font-size:.82rem;color:var(--mid)">${esc(rawVal) || "–"}</div>`
               : isYesNoReason
-              ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
-              : isYesNo
-                ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
-                : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
+                ? `<div><select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{value:this.value},'${row.label}','${reasonOnValue}')"><option value="" ${!ynr.value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${ynr.value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${ynr.value === "Nein" ? "selected" : ""}>Nein</option></select>${ynr.value === reasonOnValue ? `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.78rem;min-height:36px;margin-top:6px" placeholder="${esc(reasonPlaceholder)}" onchange="setWorkflowYesNoReason('pflicht','${row.key}',{reason:this.value},'','${reasonOnValue}')">${esc(ynr.reason)}</textarea>` : ""}</div>`
+                : isYesNo
+                  ? `<select class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem" onchange="setWorkflowInput('pflicht','${row.key}',this.value)"><option value="" ${!stored.input_value ? "selected" : ""}>– bitte wählen –</option><option value="Ja" ${stored.input_value === "Ja" ? "selected" : ""}>Ja</option><option value="Nein" ${stored.input_value === "Nein" ? "selected" : ""}>Nein</option></select>`
+                  : `<textarea class="erledigt-input" style="width:100%;font-family:inherit;font-size:.82rem;min-height:48px" placeholder="${esc(row.hint) || "Eingabe…"}" onchange="setWorkflowInput('pflicht','${row.key}',this.value)">${esc(stored.input_value || getFallbackValue("pflicht", row.key, ev))}</textarea>`;
             html += `<tr class="status-${st.cls}"><td class="td-label" data-label="Aufgabe">${row.label}${row.req ? '<span style="color:var(--accent);margin-left:3px">*</span>' : ""}</td><td data-label="Eingabe">${inputCell}</td><td class="td-date" data-label="Fristdatum" style="color:var(--blu-fg)">${fd ? fmtDE(fd) : "–"}</td><td class="td-days" data-label="Tage" style="color:${dCol}">${dStr}</td><td data-label="Status">${pillHTML(st)}</td><td data-label="Erledigt am"><input type="date" class="erledigt-input${done ? " done" : ""}"${yesNoReasonUnanswered ? ' disabled title="Erst nach Ja/Nein-Auswahl möglich"' : isSourceField ? ' disabled title="Wird automatisch anhand der Quelle gesetzt"' : ""} value="${stored.done_date || ""}" onchange="setWorkflowDone('pflicht','${row.key}','${row.label}',this.value)"></td></tr>`;
           });
         });
