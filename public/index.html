@@ -3611,7 +3611,7 @@
                     <div class="evd-preview-row-text">
                       <div class="evd-preview-row-label">Ort</div>
                       <div class="evd-preview-row-value" id="evd-preview-room">
-                        Internes DBI
+                        DBI Intern
                       </div>
                     </div>
                   </div>
@@ -3682,7 +3682,7 @@
                         onkeydown="cselKeydown(event, 'ev-room-type')"
                       >
                         <span class="csel-label" id="csel-label-ev-room-type"
-                          >Internes DBI</span
+                          >DBI Intern</span
                         >
                         <span class="csel-arrow">&#9660;</span>
                       </div>
@@ -7083,7 +7083,7 @@ ${buildEventActionsHtml(ev, d)}
       }
 
       const ROOM_TYPE_LABELS = {
-        internal: "Internes DBI",
+        internal: "DBI Intern",
         external: "Externer Raum",
         online: "Online",
       };
@@ -7276,7 +7276,7 @@ ${buildEventActionsHtml(ev, d)}
           } else {
             roomLabel =
               document.getElementById("csel-label-ev-room")?.textContent ||
-              "Internes DBI";
+              "DBI Intern";
           }
           roomEl.textContent = roomLabel;
         }
