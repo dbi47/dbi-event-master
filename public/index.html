@@ -7079,7 +7079,10 @@ ${buildEventActionsHtml(ev, d)}
       }
 
       function isOnlineRoom(value) {
-        return Boolean(getOnlineRoomUrl(value));
+        const raw = (value || "").trim();
+        if (!/^(https?:\/\/|www\.)/i.test(raw) && !raw.includes("."))
+          return false;
+        return Boolean(getOnlineRoomUrl(raw));
       }
 
       const ROOM_TYPE_LABELS = {
@@ -8355,8 +8358,9 @@ ${buildEventActionsHtml(ev, d)}
           })
           .join("");
       }
-      function buildSummaryRoomHtml(roomValue) {
-        const onlineUrl = getOnlineRoomUrl(roomValue);
+      function buildSummaryRoomHtml(roomValue, roomType) {
+        const onlineUrl =
+          roomType === "online" ? getOnlineRoomUrl(roomValue) : "";
         if (onlineUrl) {
           return `<a class="summary-link" href="${esc(onlineUrl)}" target="_blank" rel="noopener">Online-Meeting öffnen ↗</a>`;
         }
@@ -8659,8 +8663,14 @@ ${buildEventActionsHtml(ev, d)}
           const sizeLabel = ev.size
             ? { 12: "Klein", 18: "Mittel", 24: "Groß" }[ev.size] || ev.size
             : "–";
+          const roomType =
+            ev.room_type === "internal" ||
+            ev.room_type === "external" ||
+            ev.room_type === "online"
+              ? ev.room_type
+              : inferLegacyRoomType(ev.room || "");
           const roomLabel = getRoomLabel(ev.room);
-          const roomSummary = buildSummaryRoomHtml(ev.room);
+          const roomSummary = buildSummaryRoomHtml(ev.room, roomType);
           const cateringLabel = ev.catering
             ? {
                 brezel: "Brezeln",
@@ -8675,7 +8685,7 @@ ${buildEventActionsHtml(ev, d)}
                 <h3>${esc(ev.name || "Event")}</h3>
                 <p>${ev.event_date ? fmtDE(parseISO(ev.event_date)) : "–"} · ${esc(sizeLabel)} · ${esc(translateLegacyOwner(ev.owner) || "–")}</p>
                 <div class="summary-inline-list">
-                  <span class="summary-pill"><i data-lucide="map-pin"></i>${isOnlineRoom(ev.room) ? "Online" : esc(roomLabel)}</span>
+                  <span class="summary-pill"><i data-lucide="map-pin"></i>${roomType === "online" ? "Online" : esc(roomLabel)}</span>
                   <span class="summary-pill"><i data-lucide="utensils"></i>${esc(cateringLabel)}</span>
                   <span class="summary-pill"><i data-lucide="trending-up"></i>${pct}% abgeschlossen</span>
                 </div>
